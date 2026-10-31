@@ -1,0 +1,27 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Main window: core defaults, the custom title bar's window controls and the RemMods commands.",
+  "windows": ["main"],
+  "permissions": [
+    "core:app:default",
+    "core:event:default",
+    "core:window:default",
+    "core:webview:default",
+    "log:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-start-resize-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close",
+    "allow-platform-info",
+    "allow-settings-get",
+    "allow-settings-update",
+    "allow-set-ui-scale",
+    "allow-app-ready",
+    "allow-open-logs",
+    "allow-smoke-report"
+  ]
+}

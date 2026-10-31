@@ -1,0 +1,56 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RemMods",
+  "version": "../package.json",
+  "identifier": "com.remirudev.remmods",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "RemMods",
+        "width": 1200,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 560,
+        "decorations": false,
+        "visible": false,
+        "shadow": true,
+        "backgroundColor": "#0b0b0f",
+        "theme": "Dark",
+        "dragDropEnabled": true,
+        "zoomHotkeysEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src ipc: http://ipc.localhost ws://localhost:1430 http://localhost:1430",
+      "dangerousDisableAssetCspModification": ["style-src"],
+      "assetProtocol": {
+        "enable": false
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "Mod manager for TEKKEN 8",
+    "publisher": "remirudev",
+    "copyright": "Copyright (c) 2026 remirudev"
+  }
+}

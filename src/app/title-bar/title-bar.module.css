@@ -1,0 +1,119 @@
+.bar {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  /* WebKitGTK ignores the unprefixed property. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  color: var(--mantine-color-dimmed);
+  pointer-events: none;
+}
+
+.controls {
+  position: relative;
+  display: flex;
+  margin-left: auto;
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  color: var(--mantine-color-dimmed);
+  transition:
+    color var(--qc-t-fast) var(--qc-ease),
+    background-color var(--qc-t-fast) var(--qc-ease);
+}
+
+.control:hover {
+  color: var(--mantine-color-text);
+  background-color: var(--mantine-color-default-hover);
+}
+
+.close:hover {
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-red-filled);
+}
+
+/* Undecorated windows get no resize border from KWin, so these thin strips start a resize drag. */
+.resizeHandle {
+  position: fixed;
+  z-index: var(--mantine-z-index-max);
+}
+
+.resizeHandle[data-edge="North"] {
+  top: 0;
+  right: var(--rmods-resize-corner);
+  left: var(--rmods-resize-corner);
+  height: var(--rmods-resize-edge);
+  cursor: ns-resize;
+}
+
+.resizeHandle[data-edge="South"] {
+  right: var(--rmods-resize-corner);
+  bottom: 0;
+  left: var(--rmods-resize-corner);
+  height: var(--rmods-resize-edge);
+  cursor: ns-resize;
+}
+
+.resizeHandle[data-edge="West"] {
+  top: var(--rmods-resize-corner);
+  bottom: var(--rmods-resize-corner);
+  left: 0;
+  width: var(--rmods-resize-edge);
+  cursor: ew-resize;
+}
+
+.resizeHandle[data-edge="East"] {
+  top: var(--rmods-resize-corner);
+  right: 0;
+  bottom: var(--rmods-resize-corner);
+  width: var(--rmods-resize-edge);
+  cursor: ew-resize;
+}
+
+.resizeHandle[data-edge="NorthWest"] {
+  top: 0;
+  left: 0;
+  width: var(--rmods-resize-corner);
+  height: var(--rmods-resize-corner);
+  cursor: nwse-resize;
+}
+
+.resizeHandle[data-edge="NorthEast"] {
+  top: 0;
+  right: 0;
+  width: var(--rmods-resize-corner);
+  height: var(--rmods-resize-corner);
+  cursor: nesw-resize;
+}
+
+.resizeHandle[data-edge="SouthWest"] {
+  bottom: 0;
+  left: 0;
+  width: var(--rmods-resize-corner);
+  height: var(--rmods-resize-corner);
+  cursor: nesw-resize;
+}
+
+.resizeHandle[data-edge="SouthEast"] {
+  right: 0;
+  bottom: 0;
+  width: var(--rmods-resize-corner);
+  height: var(--rmods-resize-corner);
+  cursor: nwse-resize;
+}

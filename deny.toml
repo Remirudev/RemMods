@@ -1,0 +1,98 @@
+# cargo-deny 0.20.2 policy (docs/PLAN.md §10). CI runs `cargo deny --locked check` in the policy job.
+# scripts/check-native.sh reads the [bans] deny list below: keep one `{ crate = "…" }` entry per line.
+
+[graph]
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# Optional features of our own crates (e.g. a future `rar-builtin`) are checked too.
+all-features = true
+
+[advisories]
+# Vulnerability advisories always fail. Unmaintained notices fail only for our direct dependencies:
+# Tauri's tree carries crates RustSec lists as unmaintained (proc-macro-error, paste, parts of zbus).
+unmaintained = "workspace"
+yanked = "warn"
+
+[licenses]
+# Everything not listed is denied, including GPL, LGPL and the UnRAR licence.
+# MPL-2.0 is needed for Tauri's option-ext and cssparser.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "ISC",
+    "CC0-1.0",
+    "MIT-0",
+    "Unlicense",
+    "Unicode-3.0",
+    "bzip2-1.0.6",
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+# The list is policy, not an inventory: licences for later phases (bzip2, notify) stay listed.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+# Named one by one: cargo-deny takes no globs.
+deny = [
+    { crate = "ring", reason = "C/asm crypto; TLS uses the system OpenSSL or SChannel" },
+    { crate = "aws-lc-rs", reason = "C crypto (rustls default provider)" },
+    { crate = "aws-lc-sys", reason = "C crypto (rustls default provider)" },
+    { crate = "aws-lc-fips-sys", reason = "C crypto (rustls FIPS provider)" },
+    { crate = "openssl-src", reason = "vendored OpenSSL; link the system library (OPENSSL_NO_VENDOR=1)" },
+    { crate = "libz-sys", reason = "C zlib; use the pure-Rust deflate backends" },
+    { crate = "libz-ng-sys", reason = "C zlib-ng; use the pure-Rust deflate backends" },
+    { crate = "zstd-sys", reason = "C zstd" },
+    { crate = "bzip2-sys", reason = "C bzip2; bzip2 uses the pure-Rust libbz2-rs-sys" },
+    { crate = "lzma-sys", reason = "C liblzma; use lzma-rust2" },
+    { crate = "libsqlite3-sys", reason = "bundled C SQLite; RemMods stores JSON" },
+    { crate = "blake3", reason = "C/asm build (CachyOS linker risk); pulled in by retoc" },
+    { crate = "psm", reason = "assembly stack switching (stacker)" },
+    { crate = "unrar_sys", reason = "UnRAR licence and C++" },
+    { crate = "retoc", reason = "never linked; run a user-installed retoc via host_command" },
+    { crate = "repak", reason = "never linked; run a user-installed retoc via host_command" },
+    { crate = "oodle_loader", reason = "downloads Oodle at runtime" },
+]
+
+[[bans.features]]
+crate = "zip"
+deny = ["zstd", "bzip2-rs", "deflate-flate2-zlib", "deflate-flate2-zlib-ng", "deflate-flate2-zlib-ng-compat"]
+reason = "C codecs; zip uses zlib-rs, bzip2 (libbz2-rs-sys) and lzma-rust2"
+
+[[bans.features]]
+crate = "sevenz-rust2"
+deny = ["zstd"]
+reason = "C zstd"
+
+[[bans.features]]
+crate = "bzip2"
+deny = ["bzip2-sys", "static"]
+reason = "C bzip2; the default libbz2-rs-sys backend is pure Rust"
+
+[[bans.features]]
+crate = "tauri"
+deny = ["rustls-tls", "native-tls-vendored", "linux-libxdo"]
+reason = "ring via rustls, vendored OpenSSL, libxdo"
+
+[[bans.features]]
+crate = "tauri-plugin-updater"
+deny = ["rustls-tls", "native-tls-vendored"]
+reason = "ring via rustls, vendored OpenSSL; the updater uses native-tls"
+
+[[bans.features]]
+crate = "libdbus-sys"
+deny = ["vendored"]
+reason = "vendored C libdbus; link the system library"
+
+[[bans.features]]
+crate = "openssl"
+deny = ["vendored"]
+reason = "vendored OpenSSL; link the system library"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

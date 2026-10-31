@@ -1,0 +1,51 @@
+[package]
+name = "remmods"
+description = "RemMods: mod manager for TEKKEN 8"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+default-run = "remmods"
+
+[lib]
+name = "remmods_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+test = false
+doctest = false
+
+[[bin]]
+name = "remmods"
+path = "src/main.rs"
+test = false
+
+[[bin]]
+name = "export-bindings"
+path = "src/bin/export-bindings.rs"
+required-features = ["bindings"]
+test = false
+
+[features]
+bindings = []
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+remmods-core.workspace = true
+remmods-ipc.workspace = true
+tauri.workspace = true
+tauri-plugin-single-instance.workspace = true
+tauri-plugin-log.workspace = true
+tauri-plugin-window-state.workspace = true
+tauri-plugin-opener.workspace = true
+tauri-specta.workspace = true
+specta.workspace = true
+specta-typescript.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

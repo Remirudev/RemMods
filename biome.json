@@ -1,0 +1,65 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!!**/target",
+      "!**/dist",
+      "!**/src-tauri",
+      "!src/lib/ipc/bindings.ts",
+      "!**/.claude",
+      "!**/.idea",
+      "!**/.vscode",
+      "!**/.mcp.json"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "markdown": {
+    "formatter": { "enabled": false },
+    "linter": { "enabled": false }
+  },
+  "yaml": {
+    "formatter": { "enabled": false },
+    "linter": { "enabled": false }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noUnknownFunction": {
+          "level": "error",
+          "options": { "ignore": ["alpha", "rem", "em", "lighten", "darken", "color-mix"] }
+        }
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "useImportType": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noUnknownAtRules": {
+          "level": "error",
+          "options": { "ignore": ["mixin"] }
+        }
+      }
+    }
+  }
+}

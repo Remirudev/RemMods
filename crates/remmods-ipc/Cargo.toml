@@ -1,0 +1,26 @@
+[package]
+name = "remmods-ipc"
+description = "RemMods IPC DTOs and AppError: serde + specta, no Tauri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "remmods_ipc"
+doctest = false
+
+[dependencies]
+remmods-core.workspace = true
+serde.workspace = true
+specta.workspace = true
+specta-typescript.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

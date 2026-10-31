@@ -1,0 +1,215 @@
+name: ci
+
+# Merge gate (docs/PLAN.md §1, §9, §10): linux, windows, smoke (linux), smoke (windows) and policy.
+# Actions are pinned by full commit SHA; Dependabot bumps the SHA and the version comment together.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+defaults:
+  run:
+    # Git Bash on Windows, so every step behaves the same on both runners.
+    shell: bash
+
+jobs:
+  checks:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-24.04
+          - name: windows
+            os: windows-2025
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (.node-version)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev build-essential pkg-config libssl-dev
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo --version
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Lint (Biome)
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Frontend tests
+        run: npm test
+
+      - name: Frontend build
+        run: npm run build
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --locked
+
+      - name: IPC bindings are committed and current
+        run: |
+          npm run bindings
+          if ! git ls-files --error-unmatch src/lib/ipc/bindings.ts > /dev/null 2>&1; then
+            echo "::error file=src/lib/ipc/bindings.ts::bindings.ts is not committed: run 'npm run bindings' and commit it"
+            exit 1
+          fi
+          if ! git diff --exit-code -- src/lib/ipc/bindings.ts; then
+            echo "::error file=src/lib/ipc/bindings.ts::bindings.ts is stale: run 'npm run bindings' and commit the result"
+            exit 1
+          fi
+
+      # The policy job builds nothing, so the build-script output part of the native guard runs here.
+      - name: Native-code guard on build-script outputs
+        if: runner.os == 'Linux'
+        run: bash scripts/check-native.sh
+
+  smoke:
+    name: smoke (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-24.04
+          - name: windows
+            os: windows-2025
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (.node-version)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev build-essential pkg-config libssl-dev xvfb dbus-x11
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustc --version
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Build the app (debug, production assets and CSP)
+        run: npm run tauri -- build --debug --no-bundle
+
+      # The smoke run keeps its data under the temp dir; pointing it at runner.temp lets the
+      # failure upload below find the log folder.
+      - name: Smoke test (Xvfb)
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" ./target/debug/remmods --smoke
+
+      - name: Smoke test
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: ./target/debug/remmods.exe --smoke
+
+      - name: Upload smoke logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke-logs-${{ matrix.name }}
+          path: ${{ runner.temp }}/remmods-smoke-*/data/logs/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  policy:
+    name: policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustc --version
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
+        with:
+          tool: cargo-deny@0.20.2
+          fallback: none
+
+      - name: cargo deny (advisories, bans, licences, sources)
+        run: cargo deny --locked check
+
+      - name: cfg placement guard
+        run: bash scripts/check-cfg.sh
+
+      - name: Native-code guard (dependency trees)
+        run: bash scripts/check-native.sh
