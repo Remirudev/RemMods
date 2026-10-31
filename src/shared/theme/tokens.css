@@ -1,0 +1,83 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: the reduced-motion reset has to beat
+   component transitions, which only !important can do. */
+/*
+ * RemMods "Quiet Canvas" tokens, ported from RemKitForge. Mantine's CSS is imported as
+ * styles.layer.css, so everything here wins the cascade. The Mantine theme owns the colour scales
+ * and the scheme-dependent text roles (css-variables.ts); this file owns motion, glow, the ambient
+ * background, scrollbars and the app's own layout tokens.
+ */
+
+:root {
+  --qc-glow: color-mix(in srgb, var(--mantine-primary-color-filled) 40%, transparent);
+
+  --qc-t-fast: 120ms;
+  --qc-t-base: 200ms;
+  --qc-t-expressive: 320ms;
+  --qc-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --rmods-rail-button-size: 46px;
+  --rmods-panel-max-width: 1200px;
+  --rmods-resize-edge: 5px;
+  --rmods-resize-corner: 12px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  /* Inter's disambiguation set: tailed l, serifed I and a slashed zero. */
+  font-feature-settings:
+    "cv05" 1,
+    "cv08" 1,
+    "ss02" 1;
+  transition:
+    background-color var(--qc-t-base) var(--qc-ease),
+    color var(--qc-t-base) var(--qc-ease);
+}
+
+/* Subtle violet bloom behind the app, dark scheme only. */
+[data-mantine-color-scheme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 560px at 78% -12%, rgba(124, 92, 255, 0.07), transparent 60%),
+    radial-gradient(820px 520px at -8% 110%, rgba(124, 92, 255, 0.045), transparent 60%);
+}
+
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 138, 0.35);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 138, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,35 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+
+# Every std call that creates, writes, truncates, links or removes files lives in
+# remmods_core::safe_fs (module-level allow there). Opening for writing counts too, so
+# OpenOptions' write/append/create/truncate are listed one by one. The OS-specific symlink
+# functions only resolve on their own OS, hence `allow-invalid`.
+disallowed-methods = [
+  { path = "std::fs::write", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::copy", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::rename", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::remove_file", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::remove_dir", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::remove_dir_all", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::create_dir", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::create_dir_all", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::hard_link", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::soft_link", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::set_permissions", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::create", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::create_new", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::set_len", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::set_permissions", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::set_times", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::File::set_modified", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::OpenOptions::write", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::OpenOptions::append", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::OpenOptions::create", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::OpenOptions::create_new", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::OpenOptions::truncate", reason = "use remmods_core::safe_fs" },
+  { path = "std::fs::DirBuilder::create", reason = "use remmods_core::safe_fs" },
+  { path = "std::os::unix::fs::symlink", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "std::os::windows::fs::symlink_file", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "std::os::windows::fs::symlink_dir", reason = "use remmods_core::safe_fs", allow-invalid = true },
+]

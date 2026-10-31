@@ -1,0 +1,74 @@
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-lg);
+  height: 100%;
+  padding-block: var(--mantine-spacing-md);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  /* WebKitGTK ignores the unprefixed property. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.brand {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--mantine-spacing-sm);
+  border-radius: 11px;
+  color: var(--mantine-color-white);
+  /* The app icon's gradient, independent of the accent. */
+  background: linear-gradient(135deg, #7c5cff, #5f3ccf);
+}
+
+.button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--rmods-rail-button-size);
+  height: var(--rmods-rail-button-size);
+  border-radius: 13px;
+  color: var(--mantine-color-dimmed);
+  transition:
+    color var(--qc-t-fast) var(--qc-ease),
+    background-color var(--qc-t-fast) var(--qc-ease),
+    transform var(--qc-t-fast) var(--qc-ease);
+}
+
+.button:hover {
+  color: var(--mantine-color-text);
+  background-color: var(--mantine-color-default-hover);
+}
+
+.button:active {
+  transform: scale(0.94);
+}
+
+.button[data-active] {
+  color: var(--mantine-primary-color-light-color);
+  background-color: var(--mantine-primary-color-light);
+  box-shadow: 0 8px 22px -12px var(--qc-glow);
+}
+
+/* The 3px marker sits on the rail's left edge: (72px rail - 46px button) / 2 = 13px. */
+.button[data-active]::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 13px;
+  width: 3px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--mantine-primary-color-filled);
+  box-shadow: 0 0 10px var(--qc-glow);
+}

@@ -1,0 +1,55 @@
+# Windows release checklist
+
+**Status: later.** There is no Windows PC, VM or tester yet (docs/PLAN.md §15). Until this list has
+run once on a real PC or VM, Windows builds are labelled "beta, CI-tested only" (§1, §14).
+
+Already covered by CI on windows-2025: every core test, the `smoke (windows)` launch of the built app,
+the `interop-diff` job against the original's code (from P3) and a silent NSIS install with `--smoke`
+in the artifacts workflow (from P5). This list is what CI cannot see.
+
+## Install and first start
+
+- [ ] The NSIS installer (per user, no UAC) installs and starts RemMods. Note the SmartScreen prompt,
+      and Smart App Control's behaviour if the machine has it.
+- [ ] Without WebView2, RemMods shows a native message with the Evergreen download link instead of
+      exiting silently.
+- [ ] Custom title bar: drag, double-click to maximise, minimise / maximise / close, resize from the
+      edges and corners. Drag-to-edge snapping works (UNVERIFIED, §5); Windows 11 shows rounded corners
+      and a shadow.
+- [ ] After switching to the system title bar and restarting, the native caption shows the Snap
+      Layouts flyout.
+
+## Steam and the game
+
+- [ ] Steam is found through the registry. Record the HKCU `SteamPath` value (casing, separators) and
+      the HKLM `InstallPath` value (WOW6432Node).
+- [ ] Record the Toolhelp32 process names of the running game.
+- [ ] Launch through `steam://rungameid/1778820` starts the game.
+
+## Files while the game runs
+
+- [ ] TEKKEN 8 holds its paks without `FILE_SHARE_DELETE`: the lock probe reports `InUse`, and
+      toggling while the game runs changes nothing on disk.
+- [ ] Enabling a disabled mod while the game runs works.
+- [ ] Record the `MoveFileExW` error code for an existing target (183 or 80).
+- [ ] Record which holder Restart Manager names while Defender scans a freshly installed mod.
+
+## Shell integration
+
+- [ ] The release build suppresses F5, Ctrl+R, Ctrl+Shift+R, Ctrl+P, Ctrl+F, F3, F7 and the browser
+      context menu.
+- [ ] Dropping an archive from Explorer starts an install.
+
+## Coexistence and updates
+
+- [ ] Coexistence UI check with the original TekkenModManager v1.1.1: the banner shows while
+      `ModManager.exe` runs, and delete / rename / overwrite ask first. (The file-level rules are
+      covered by `interop-diff`.)
+- [ ] Passive update from the previous release.
+- [ ] Uninstalling keeps the app data unless "delete app data" is ticked; with it ticked, both app
+      folders are removed.
+
+## Runs
+
+| Date | Machine (Windows version, PC or VM) | RemMods version | Result | Notes |
+|------|-------------------------------------|-----------------|--------|-------|

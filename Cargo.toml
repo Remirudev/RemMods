@@ -1,0 +1,54 @@
+[workspace]
+resolver = "3"
+members = ["crates/remmods-core", "crates/remmods-ipc", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+repository = "https://github.com/Remirudev/RemMods"
+
+[workspace.dependencies]
+remmods-core = { path = "crates/remmods-core" }
+remmods-ipc = { path = "crates/remmods-ipc" }
+
+tauri = { version = "=2.12.5" }
+tauri-build = { version = "=2.7.4" }
+tauri-plugin-single-instance = { version = "=2.5.5" }
+tauri-plugin-log = { version = "=2.10.1" }
+tauri-plugin-window-state = { version = "=2.5.0" }
+tauri-plugin-opener = { version = "=2.7.2" }
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta-typescript = { version = "=0.0.13" }
+
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154" }
+thiserror = { version = "=2.0.21" }
+log = { version = "=0.4.35" }
+chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
+dirs = { version = "=7.0.0" }
+atomic-write-file = { version = "=0.3.1" }
+dunce = { version = "=1.0.5" }
+
+rustix = { version = "=1.1.6", features = ["std"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+tempfile = { version = "=3.27.0" }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# No unwrap()/expect() outside tests; a provably infallible one needs an allow and a reason.
+unwrap_used = "warn"
+expect_used = "warn"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3
+panic = "unwind"
