@@ -1,0 +1,347 @@
+# RemMods – plan v3.1 (Windows + Linux, Linux first)
+
+2026-10-31. Final plan: v2 plus the Windows, Linux/CachyOS and architecture/data-safety reviews; `REVIEW-LOG.md` has one line per issue with the sources; v3.1 adds your answers to the open questions (§15). "Verified" = re-checked today against crates.io, docs.rs, Tauri/Microsoft docs, upstream source or local experiments. "UNVERIFIED" = still open.
+
+## 1. Decisions and principles
+
+- [both] Architecture: Rust `remmods-core` (all logic, synchronous, no Tauri), `remmods-ipc` (DTOs + `AppError`, specta, no Tauri), a thin `src-tauri` shell and a React 19 + Mantine 9 UI. Identifier `com.remirudev.remmods`; MIT, keeping Unfug's notice and credit.
+- [both] Repo `Remirudev/RemMods`: public, but only you can change it. No collaborators; Issues, Wiki and Discussions off; Pull requests set to "Collaborators only" (Settings → General → Features; new in Feb 2026); a ruleset on `main` without bypass blocks force pushes and deletion and requires pull requests with green CI, so Windows can't break silently. Anyone can read and fork the code (MIT); nobody else can push, merge, open issues or open pull requests. Public GitHub Releases feed the updater and the AUR. UNVERIFIED until P0: GitHub's docs don't say whether "Collaborators only" lets your own and Dependabot's PRs through; if it blocks them, PRs go back to open, since only you can merge anyway.
+- [both] Merge gate: `main` is protected; PRs need `ci / linux` (ubuntu-24.04), `ci / windows` (windows-2025), `ci / smoke` (the built app launched on both) and `ci / policy`, plus `fs-matrix` from P2 and `interop-diff` from P3. A red Windows job blocks like a red Linux job.
+- [both] Never Linux-first: on-disk and interop rules, `safe_fs` semantics, name validation, profile and settings formats, archive safety. PRs touching these carry tests that run on both OSes.
+- [Linux] May land Linux-first: Linux-only features (graphics fallback, AppImage env cleanup, Flatpak/Snap Steam) and features whose Windows half needs a real Windows machine.
+- [Windows] A Linux-first feature still builds and passes tests on Windows and either works or reports `unsupported` via `platform_info().features`. It gets an entry in `docs/windows-gaps.md` (Issues are off; PR template: "Windows impact: none / covered by CI / windows-gap WG-n"); a release needs zero open entries marked release-blocking. Real-PC Windows tests come later (no Windows PC yet; your call): until the Windows checklist has run on a real PC or VM, Windows builds are labelled "beta, CI-tested only".
+- [both] Same behaviour everywhere: Windows name rules, case-insensitive collision checks and never-overwrite renames on both OSes. IPC bindings and UI strings are byte-identical.
+- [both] Supported: [Linux] glibc ≥ 2.39 (Ubuntu 24.04+, Mint 22+, Debian 13+, Fedora 40+, SteamOS 3.7+, Arch/CachyOS), published in the README and release notes. [Windows] 10 22H2 and 11, x64, WebView2 Evergreen.
+- [both] Platform code lives only in `remmods-core/src/platform/`, `src-tauri/src/os/` and the per-OS Tauri configs. CI fails on `cfg(windows|unix|target_os)` anywhere else.
+- [both] Pure-Rust crates preferred: the CachyOS linker bug did not reproduce today (plan graph and blake3 linked in dev and LTO with rustup 1.94.1 and system 1.99.1), but C/asm stays a toolchain risk. pkg-config system libraries are fine; CI guards the rest (§10).
+- [both] Safety: writes only inside the 3 mod roots, RemMods' app dirs and the Trash (checked `Scope`); Steam files are read-only. Removal is always a rename; permanent delete needs a second confirm. Batches are all-or-none and journaled, and one cross-process lock serialises writers. Extra roots outside Paks (P6+) need an explicit amendment of this rule.
+- [both] Interop: folders made by the original keep working in both directions, checked in CI against the original's own code. RemMods never writes the original's `profiles.json`.
+- [both] Least privilege: no fs, shell or process plugins. The webview can only call RemMods commands listed in one capability file.
+- Out of scope for v1: macOS, Flatpak/Snap packages, Steam Deck Game Mode, a standalone Windows exe, installing UE4SS, Lua/DLL mods.
+
+| Concern | Linux (priority) | Windows |
+|---|---|---|
+| Steam roots | `~/.steam/steam`, `~/.local/share/Steam`, `~/.steam/debian-installation`, `~/Steam`, Flatpak, Snap | HKCU `SteamPath` (normalised) → HKLM (WOW6432Node) `InstallPath` → `Program Files (x86)\Steam` |
+| Launch | `xdg-open` / `flatpak run` / `snap run` + `steam://rungameid/1778820`, env cleaned | ShellExecute `steam://rungameid/1778820` |
+| Game running | Steam reaper `AppId=1778820`, argv[0] basename split on `/` and `\`, comm | Toolhelp32 (+ `ModManager.exe`) |
+| No-overwrite rename | `renameat2(NOREPLACE)`; EINVAL → `link` + `unlink` (files), empty-dir placeholder (folders) | `MoveFileExW` flags 0 on `\\?\` paths |
+| Locks / retries | none / one attempt | lock probe; files ≤1.6 s, folders ≤30 s with Cancel; Restart Manager names the holder |
+| Trash | own freedesktop mover: rename only, same mount + device | own `IFileOperation` recycle: aborts instead of deleting |
+| App origin | `tauri://localhost` | `http://tauri.localhost` |
+| Watcher | inotify | ReadDirectoryChangesW + focus rescan |
+| Webview | WebKitGTK ≥ 2.52 (design target) | WebView2 Evergreen |
+| File dialog | xdg-desktop-portal (zenity fallback) | IFileDialog |
+| Title bar | custom Quiet Canvas bar, in-app resize handles | custom bar, 1 px border + shadow + Windows 11 rounded corners; no Snap Layouts flyout |
+| Packages | AppImage (self-update), deb, rpm, AUR `remmods-bin` | NSIS per-user (self-update) |
+| Graphics fallback | NVIDIA/Wayland env, crash marker, safe-graphics launcher action | none |
+
+## 2. Stack with versions
+
+- [both] Rust 1.99.1 pinned in `rust-toolchain.toml` (current stable; nothing needs 1.94), also in CI. Edition 2024, `rust-version = "1.99"`; toolchain bumps get their own PR. [Linux] CachyOS's /usr/bin `rust` ignores the file, so it goes (your decision): on P0 day 1 you run `sudo pacman -Rns rust` (nothing requires it; checked) plus `rustup update`, and Claude adds `~/.config/plasma-workspace/env/rustup.sh` so apps started from the KDE menu also find `~/.cargo/bin` (from the next login). RemGallery is unaffected: it has no toolchain pin, hard-codes no /usr/bin path and already builds with rustup's stable from the terminal. `build.rs` still warns when `RUSTUP_TOOLCHAIN` is unset.
+- [both] Tauri 2.12.5, tauri-build 2.7.4, @tauri-apps/cli + api 2.12.4 (same minor). No Tauri 3 alpha.
+- [both] Plugins: single-instance 2.5.5, log 2.10.1 (+ JS), window-state 2.5.0, opener 2.7.2, dialog 2.8.4 (`xdg-portal`), updater 2.14.1 (`native-tls` + `system-proxy`). Defaults are off on both; no ring/rustls (feature names verified).
+- [both] IPC: tauri-specta =2.0.0-rc.26 + specta =2.0.0-rc.26 + specta-typescript =0.0.13. Verified: rc.26 pins specta exactly, so rc.27 is out. Fallback: ts-rs 12.0.1.
+- [both] Core: serde 1.0.229, serde_json 1.0.154, thiserror 2.0.21, log 0.4.35, chrono 0.4.45, uuid 1.29.0, dirs 7.0.0. Tauri 2.12.5 also uses dirs 7 (verified), so the GUI and the CLI resolve the same paths.
+- [both] Files: atomic-write-file 0.3.1, notify 8.2.1, walkdir 2.5.0, same-file 1.0.6, unicase 2.10.0, unicode-normalization 0.1.26, dunce 1.0.5, fs4 1.1.0; locks via std `File::try_lock` (1.89+). [Linux] rustix 1.1.6. [Windows] windows-sys 0.61.2 + windows 0.62.2 (COM; already in the tree via wry). No trash crate (§4).
+- [both] Archives, defaults off: zip =9.2.0 (zlib-rs deflate, deflate64, bzip2, lzma, xz, ppmd, aes), sevenz-rust2 =0.24.2 (aes256, bzip2, ppmd, deflate), rars =0.12.3 (encryption), encoding_rs 0.8.44 (manual name-encoding override).
+- [both] UI and data: React 19.3.1, every @mantine/* package (core, hooks, modals, notifications, spotlight, form) at =9.7.4, postcss-preset-mantine 1.18.0, @tabler/icons-react 3.50.0, @fontsource-variable inter + jetbrains-mono 5.3.0, @tanstack/react-query 5.105.0, react-table 9.3.1, react-virtual 3.14.24, zustand 5.0.16, i18next 26.5.12, react-i18next 17.1.9.
+- [both] Tooling: Node 26 LTS, Vite 8.3.5 + plugin-react 6.1.2, TypeScript 6.0.3 (7.x has no tsserver), Biome 2.6.4, Vitest 5.0.5 + jsdom 30.1.3, Playwright 1.64.1 (Chromium), proptest 1.12.0. Dev port 1430 (RemGallery uses 1420).
+- [both] CI tooling: cargo-deny 0.20.2, cargo-about 0.9.3, tauri-action v1, Swatinem/rust-cache v2.9.3, checkout/setup-node v7, setup-dotnet (interop harness). Dependabot weekly, except the specta chain, which is bumped together by hand.
+- [both] Release profile: `lto`, `codegen-units=1`, `strip`, `opt-level=3`, `panic="unwind"` (unlike RemGallery, a worker panic becomes an error, not a dead app). Archive crates get opt-level 3 in dev too.
+- Rejected: trash, steamlocate, sysinfo, procfs, winreg, unrar crates, compress-tools, notify debouncers, renamore, retoc/repak as libraries, tauri-driver/WebdriverIO, mantine-react-table, mantine-datatable, @mantine/dropzone, TanStack Router, Tailwind/shadcn, fs/shell/store plugins, bundled 7-Zip.
+
+## 3. Repo layout
+
+```
+RemMods/
+├─ Cargo.toml                 workspace; exact pins in [workspace.dependencies]
+├─ rust-toolchain.toml        1.99.1 + clippy + rustfmt
+├─ clippy.toml                std::fs mutators banned outside safe_fs
+├─ deny.toml · about.toml     bans, feature bans, licences · THIRD-PARTY-NOTICES
+├─ .cargo/config.toml         [env] OPENSSL_NO_VENDOR=1 (harmless everywhere)
+├─ package.json · .node-version · biome.json · tsconfig.json · vite.config.ts · vitest.config.ts
+├─ .gitattributes · LICENSE (MIT: Unfug + remirudev) · README.md · CLAUDE.md
+├─ docs/                      PLAN.md · windows-gaps.md · checklists/{ingame-linux,windows-release}.md
+├─ .github/                   workflows/{ci,release,artifacts}.yml · dependabot.yml · PR template
+├─ scripts/                   check-cfg.sh · check-native.sh · paks-snapshot.sh · make-fixtures.py
+├─ packaging/aur/             PKGBUILD.in (no .install file; release CI renders and pushes it)
+├─ interop/                   C# harness + copied helpers (MIT notice) · scenarios/*.json
+├─ crates/remmods-core/       all logic; sync; no Tauri; #![deny(unsafe_code)] outside platform/
+│  ├─ src/platform/           ONLY cfg + unsafe: mod.rs (shared API) · linux/{fs,trash,process}.rs · windows/{fs,recycle,restart,process,registry}.rs
+│  ├─ src/safe_fs/            scope names listing rename batch dirs set_aside journal lock atomic retry volume watch error
+│  ├─ src/game/               locate validate steam/{vdf,library,manifest} launch process
+│  ├─ src/mods/               model modref strategy/{pak,logic,loose} scan toggle rename metadata conflicts unmanaged repair
+│  ├─ src/archive/            open names validate sink progress zip_backend sevenz_backend rar_backend
+│  ├─ src/install/            detect_root plan stage commit job
+│  ├─ src/profiles/           model store diff apply import_tmm rekey
+│  ├─ src/                    lib.rs · settings.rs · paths.rs · ops.rs · error.rs
+│  └─ tests/                  ported_*.rs · fs_matrix.rs · platform_{linux,windows}.rs · interop.rs · support/
+├─ crates/remmods-ipc/        DTOs + AppError (serde, specta; no Tauri) and their tests
+├─ src-tauri/                 thin shell; no Rust tests ([lib] test/doctest = false, bin test = false)
+│  ├─ tauri.conf.json · tauri.{linux,windows,release}.conf.json
+│  ├─ capabilities/main.json · linux/remmods.desktop (safe-graphics action) · icons/
+│  ├─ build.rs                AppManifest::commands; tauri-build's default Windows manifest
+│  └─ src/                    main.rs lib.rs state.rs events.rs specta.rs watcher.rs monitor.rs smoke.rs
+│     ├─ bin/                 export-bindings.rs (required-features = ["bindings"], never bundled)
+│     ├─ commands/            game mods install profiles repair settings shell update
+│     └─ os/                  ONLY other cfg place: graphics.rs [Linux] · launch.rs · navigation.rs · webview.rs [Windows]
+├─ src/                       React 19 + Mantine 9 (≤3 levels)
+│  ├─ main.tsx · app/         shell, title bar + resize handles, rail, panels, palette, providers, drop overlay, input guards, smoke (lazy)
+│  ├─ features/               mods · install · profiles · settings · onboarding · repair
+│  ├─ shared/                 theme/ · components/ · query-keys.ts
+│  ├─ lib/                    ipc/ (bindings.ts GENERATED) · query/ · i18n/
+│  ├─ locales/                en/ · de/
+│  └─ test/                   setup, render helper, fixtures
+└─ e2e/                       Playwright specs (Chromium) + mock backend
+```
+
+- [both] `cfg` is allowed only in: `platform/`, `src-tauri/src/os/`, `tests/platform_*.rs`, `build.rs` and target-specific dependencies. The frontend never branches on OS; it reads `platform_info()`.
+- [both] `platform/` has one safe API with identical signatures on both OSes: `fs_path`, `rename_noreplace`, `file_id`, `lock_probe`, `who_holds`, `classify` + `retry_policy`, `volume_info`, `trash`, `processes`, `steam_root_candidates`, `registry_string`, `host_command`. A missing feature returns `Unsupported`.
+- [both] `unsafe` appears only in `platform/windows/*` (FFI, COM), `platform/linux/*` (`pre_exec` + setsid) and `os/graphics.rs` (`env::set_var`, unsafe in edition 2024, first thing in `main`).
+- [Windows] No custom app manifest: it would replace tauri-build's default, whose Common-Controls v6 dependency the dialog plugin's rfd needs, and the exe would die before `main` (`STATUS_ENTRYPOINT_NOT_FOUND`; verified). `longPathAware` needs a registry policy anyway.
+- [both] `src-tauri` has no Rust tests: the manifest is linked into bins only, so its test binaries would crash on Windows. Logic tests live in core and ipc; the smoke job covers the wiring.
+- [both] A new feature = core module `src/<feature>/` + `commands/<feature>.rs` + DTOs in `remmods-ipc` + `src/features/<feature>/` + `locales/{en,de}/<feature>.ts` + tests on both OSes.
+- [both] Later crates go under `crates/`: `remmods-cli` (core only, same lock) and `remmods-pak` (pure-Rust `.utoc` reader). retoc is never linked (blake3, zstd-sys, libz-sys, runtime Oodle downloads via ureq/ring; verified); recolour tools call a user-installed `retoc` via `host_command`.
+- [both] Your CLAUDE.md rules apply: ≤500 lines per file, one component per file, `types.ts` per module, no cross-feature imports, ≤3 levels under `src/`.
+
+## 4. Rust core
+
+- **Modules**: `platform`, `safe_fs`, `game`, `mods`, `archive`, `install`, `profiles`, `settings`, `ops`, `paths`, `error`. A `Core` facade owns the scope, settings, OpGate and lock. Root kinds share a `RootStrategy` (scan rows, `plan_toggle` → ops, conflicts): Pak, Logic and Loose now, Deploy for extra roots later.
+- **Scope**: `Scope::check` requires an absolute path, no `.`/`..`, a location strictly below a canonical root (Mods, ~mods, LogicMods, app dirs; the Trash only via `platform::trash`) and no symlink or junction component. Roots compare as canonical components, case-insensitively on Windows.
+- [Windows] Every `std::fs` call gets a verbatim `\\?\` path from `platform::fs_path`: std passes short paths unprefixed, so Win32 strips a trailing dot or space and `Foo.` would hit `Foo` (verified). `dunce` is for display only.
+- **ModRef**: rows carry an opaque `ModRef` (canonical root + on-disk name bytes + inode or Windows file ID). Commands take ModRef + expected key and need exactly one match in a fresh scan, else `Stale` and the UI refreshes. Keys are for profiles and interop only.
+- [both] Ambiguous keys: rows sharing a key (`Mods/Cool` + `mods/Cool`; `X` + `.disabled_X` + `.DISABLED_X`) block every mutation, are skipped by profile apply (listed in the diff) and go to Repair (rename or merge).
+- **Names**: `validate_name` applies Windows rules on both OSes (no `<>:"/\|?*`, control or bidi characters, trailing dots or spaces, CON–LPT9 incl. superscripts and extensions, >255 bytes or UTF-16 units, `.disabled_`, the temp pattern). Collisions use `fold_key` (NFC + full case folding); bad existing names are flagged, never blocked; order is (fold key, bytes); paths past 259 characters warn.
+- [both] Non-Unicode names ([Linux] raw bytes from legacy unzip/7z, [Windows] unpaired surrogates) become issue rows with a lossless escaped key and a "Rename to a valid name" repair; keys never use `to_string_lossy`.
+- **Rename**: `rename_noreplace` stays within one folder and never replaces anything. [Linux] `renameat2(NOREPLACE)`; on EINVAL (ntfs-3g, NFS) files use `link` + `unlink` (a crash leaves two names for one inode, never an empty live `.pak`) and folders an exclusive empty-dir placeholder. [Windows] `MoveFileExW(\\?\…, 0)`.
+- [both] Case-only renames always go through a journaled temp name and are verified by re-listing. Per kernel source a direct one is a silent no-op on exFAT/vfat/casefold (UNVERIFIED by test; the fs-matrix covers it).
+- **Batch**: `rename_batch` runs a preflight that writes nothing (sources exist; targets and case-insensitive siblings are absent; no duplicate or chained targets), renames in order and rolls back in reverse on failure. Logic batches rename the folder first, so they fail before any file changes.
+- [Windows] The preflight opens every file with DELETE access, so a holder without `FILE_SHARE_DELETE` (the game) fails before anything changes. Share-compatible handles (antivirus, indexer, Explorer preview) pass it but still block folder renames (NTFS rule; verified). Failures return `BatchError { failed, rolled_back, stuck }`; the caller always rescans.
+- **Errors**: `platform::classify` maps `io::Error` to `OsErrorClass` (InUse, AccessDenied, NoSpace, ReadOnlyFs, CrossDevice, NameTooLong, Unsupported, Other), because raw codes collide (Windows 5/32/33 are EIO/EPIPE/EDOM on Linux). One thiserror enum per module (`FsError`, `ArchiveError`, `GameError`, `InstallError`, `ProfileError`) with stable snake_case codes builds on the classes; raw codes only go to the log.
+- **Retry**: [Linux] one attempt. [Windows] Never while the game holds the file. File renames retry InUse ≤1.6 s; folder renames (commit, rename, Logic toggle, set-aside, cleanup) treat AccessDenied as `FolderBusy` and retry ≤30 s behind a toast with Cancel that names the holder via Restart Manager ("close TEKKEN 8" only if it is the game).
+- **Trash**: `platform::trash` only ever renames. The trash crate is out: on Windows it lets the shell show its own "delete permanently?" dialog, and on Linux it copies + deletes across devices (verified in 5.2.9).
+- [Linux] Own freedesktop mover: the home trash or else `$topdir/.Trash-$uid` (created 0700 where allowed), whichever shares the mod's mount (statx mount ID; `rename(2)` fails across mounts) and device (st_dev; btrfs subvolumes differ). It writes the `.trashinfo` first, then `renameat2(NOREPLACE)` into `files/`.
+- [Windows] Own recycle on a fresh STA thread: `IFileOperation` with `FOF_NO_UI | FOF_ALLOWUNDO | FOFX_RECYCLEONDELETE | FOFX_EARLYFAILURE`, no `FOF_WANTNUKEWARNING`, and a sink whose `PreDeleteItem` returns `E_ABORT` without `TSF_DELETE_RECYCLE_IF_POSSIBLE` (Electron's approach; verified). Names Win32 normalises never reach the shell: Trash and Reveal are blocked and Repair offers a verbatim rename.
+- [both] Anything else (other device, no usable topdir trash, bin off or too small, network drive) returns `TrashUnavailable { size }`: "Delete permanently" (second confirm) or Cancel. Nothing is copied, and nothing is destroyed without RemMods' token.
+- **Set-aside**: permanent delete and install-replace first make the mod inert (`-x` batch) and rename it to a hidden, journaled `_<name>_tmp_<32hex>` in the same root (atomic; fails cleanly on Windows while files are busy). Delete then removes it in the background; leftovers stay hidden and inert in Repair. The delete token binds to the ModRef, not the key.
+- **Atomic writes**: `write_atomic` uses atomic-write-file (temp file in the same dir, fsync of file and dir); [Windows] the whole write is retried on InUse; a corrupt file is first copied to `.backup.yyyyMMdd_HHmmss`. Clippy `disallowed-methods` bans the `std::fs` mutators (`rename`, `remove_*`, `write`, `copy`, `create_dir*`, `File::create`) outside `safe_fs`.
+- **Lock**: `remmods.lock` (app-local data) via std `File::try_lock` (flock / LockFileEx): exclusive for mutations, app-data writes and recovery, shared for scans; held → `Busy`. It also covers a second GUI (single-instance needs D-Bus on Linux; verified) and the CLI. JSON stores: lock → re-read → merge → `write_atomic` with a `revision`.
+- **Journal**: one record per batch, fsynced before the first op: ops with pre/post paths, placeholders before creation, the files staging made inert, owner PID + session id. Recovery runs under the lock for dead owners only, reads each op's state from disk and rolls back by default; Repair can resume a complete install.
+- **Archives**: `archive::open` → `list()` (headers only) → `extract(plan, staging, progress, cancel)`. One backend file per crate; rars sits behind cargo feature `rar-builtin`; library `extract()` helpers are never used. Multi-volume sets, spanned `.z01` and passwords return typed `unsupported` errors with a hint (install from an extracted folder) until after 1.0.
+- [both] Archive names: `\` is a separator in every format (Windows tools write it; the original converts it) before NFC, traversal checks and `validate_name`. UTF-8 when flagged or valid, else CP437, with a per-archive encoding override in the preview (Shift_JIS, GBK, Big5, EUC-KR, IBM866, windows-1251).
+- [both] Entry safety: traversal, absolute, drive and UNC paths are never allowed. Links and devices are skipped. Identical duplicates are deduped, differing ones block, and case clashes go to a picker. "Rename automatically" fixes Windows-invalid names together with companion files.
+- [both] Write discipline: `create_new` in staging, bytes capped at the declared size, free space ≥1.1× (fs4), decoder memory ≤ min(4 GiB, 50 % RAM), checksums verified, mtimes kept, owners/permissions ignored. Staging is removed on error or cancel.
+- **Install**: `inspect` lists and validates, detects the root, strips the root segment and single wrapper folders, checks all roots + `.disabled_` + fold keys, and groups variants. `stage` writes the payload as inert `-x` and journals each file it made inert.
+- [both] `commit` (journaled, under the lock): set aside any old folder, rename staging into place, strip `-x` from the journaled files only (archive-shipped `*.pak-x` options stay off), then trash the aside folder as a separate retryable step; without Trash it stays hidden and inert in Repair. No drive type blocks an install.
+- **Profiles**: `{id, name, description, mode, mods: {key → {state}}, dates, source}`; the map takes files/variant/order later without a migration. `additive` (default) changes only listed keys; `exclusive` also turns unlisted mods off. Apply = diff → confirm → auto snapshot → one `rename_batch`. One `rekey()` updates every key-indexed store (profiles, `mod-meta.json`) on rename and Repair.
+- **Steam**: own `game::steam` with a ~120-line VDF reader: case-insensitive keys, escapes, old and new `libraryfolders.vdf`, Flatpak path fix-up. Missing libraries are skipped and shown in diagnostics. [Windows] Registry paths (reportedly lowercase with `/`; UNVERIFIED) are normalised with `std::path::absolute` + canonicalize; libraries are deduped with same-file.
+- [both] `resolve_pick` walks up ≤8 levels to the first folder with `Polaris/Content/Paks` and `Polaris/Binaries/Win64/Polaris-Win64-Shipping.exe` (case-insensitive) and stores the paths in their on-disk casing.
+- [both] Update notice: compares the appmanifest `buildid` with the last seen value (first run silent) and offers "disable all". Update-pending detection and manual-install fingerprints come after 1.0.
+- [both] Launch: core returns a `LaunchPlan` for `steam://rungameid/1778820` and never starts the exe. [Linux] `host_command("xdg-open")` (or the Flatpak/Snap Steam), setsid. [Windows] ShellExecute via opener.
+- [both] Running check, polled every 2 s visible / 10 s hidden and inside every mutation. [Linux] The reaper `AppId=1778820` line first; else argv[0]'s basename after the last `/` or `\` (Wine passes Windows paths; verified) is `tekken 8.exe` / `polaris-win64-shipping.exe` (case-insensitive), or comm is `Polaris-Win64-S` / `TEKKEN 8.exe`. [Windows] Toolhelp32 names.
+- [both] While the game runs, mutations ask "Apply for next launch?" with no retries. [Windows] The lock probe runs first, so locked paks get "close TEKKEN 8 first" (or the named holder) without a prompt. Installs stay allowed (inert staging). Fallback: hard block if the P2 test shows crashes.
+- **Storage**: paths come from `dirs` 7, resolved like Tauri's PathResolver (verified). All JSON is versioned (`"version": 1`) and written with `write_atomic`. [Windows] The NSIS uninstaller's opt-in "delete app data" removes both dirs (verified in the 2.12.5 template), so the Profiles panel offers export/import.
+
+| Data | Linux | Windows |
+|---|---|---|
+| `settings.json`, `graphics.json` + `graphics-pending` [Linux] | `~/.config/com.remirudev.remmods/` | `%APPDATA%\com.remirudev.remmods\` |
+| `profiles.json`, `mod-meta.json`, `journal.json`, `remmods.lock` | `~/.local/share/com.remirudev.remmods/` | `%LOCALAPPDATA%\com.remirudev.remmods\` |
+| Logs (5 × 2 MB) | `~/.local/share/com.remirudev.remmods/logs/` | `%LOCALAPPDATA%\com.remirudev.remmods\logs\` |
+| Webview data | `~/.local/share/com.remirudev.remmods/` | `%LOCALAPPDATA%\com.remirudev.remmods\EBWebView\` |
+| Original's profiles (import) | file picked by the user | `%LOCALAPPDATA%\TekkenModManager\profiles.json` |
+
+- **Concurrency**: the OpGate is an RwLock mirroring the file lock (mutations write, scans read), so no scan publishes a half-done batch; each mutation publishes its own final snapshot as the next revision. Scans are single-flight (≤1 queued rerun). One install job at a time, cancellable. Tauri runs core calls in `spawn_blocking`.
+- **Scan**: one sequential pass collects state, conflicts, sizes and issues (per-mod `Result`), plus a read-only "Unmanaged (still loaded)" list: live `.pak/.ucas/.utoc` under Paks that are neither game files (`pakchunk*-Windows*`, `global.*`) nor in a row, and symlinked folders (Wine follows them).
+- [both] Scan CI guard: a counting hook asserts one directory walk per mod on both OSes; the <50 ms warm scan of 300 mods (measured ≈4 ms) gates on Linux only.
+- **Watcher**: notify 8.2.1, recursive on Paks, symlinks not followed, temp names dropped. Own debounce (400 ms trailing, 2 s max) → single-flight rescan → `mods-changed`; rescan flags and errors also trigger a rescan. Tests use a fake clock, plus one real watcher test per OS.
+- [both] Watcher gaps: [Windows] notify 8.2.1 emits no rescan on overflow (fixed in 9.0.0-rc.5, #964, verified) → also rescan on focus and after each command; notify 9 once stable. [Linux] inotify limit hit → "auto-refresh off" banner.
+
+## 5. Tauri layer
+
+- **Commands**: one file per domain. All are async, use `spawn_blocking` and return `Result<T, AppError>`:
+  - game: `game_detect`, `game_set_location`, `game_status`, `game_launch`, `game_ack_update`
+  - mods (ModRef + key): `mods_list`, `mods_refresh`, `mods_toggle`, `mods_rename`, `mods_set_metadata`, `mods_trash`, `mods_delete_permanently`, `mods_reveal`
+  - install: `install_inspect`, `install_start` (+ `Channel<InstallProgress>`), `install_cancel`
+  - profiles: `profiles_list`, `profiles_save`, `profiles_delete`, `profiles_diff`, `profiles_apply`, `profiles_import_tmm`, `profiles_export`
+  - repair: `repair_list`, `repair_apply`
+  - shell: `settings_get`, `settings_update`, `pick_archives`, `pick_folder`, `open_external`, `open_logs`, `set_window_theme`, `set_ui_scale`, `platform_info`, `app_ready`, `smoke_report`
+  - update: `update_channel`, `update_check`, `update_install` (+ `Channel`)
+- **Events and state**: typed through tauri-specta: `mods-changed { revision }` and `game-status-changed { running, session, update }`; progress goes only through `Channel<T>`. `AppState { core: Arc<Core>, job, watcher, monitor }`; the watcher and game-monitor threads start in `setup`.
+- **DTOs** live in `crates/remmods-ipc` (core stays specta-free; their tests never link Tauri). No `PathBuf`/`OsString` (display strings only; actions use ModRefs), `u64` as `f64`, RFC 3339 times, camelCase, no `cfg` fields.
+- **AppError**: a union tagged with `kind`, carrying parameters but no English (the frontend translates). The raw OS code goes to the log; toasts offer "Copy details".
+- **Plugins**, in order: single-instance (focus + forward argv), log (`remmods.log`, 2 MB × 5, local time), window-state (all flags except VISIBLE), dialog, opener, updater.
+- **Capabilities**: one `capabilities/main.json` for window `main` with the four `core:*:default` sets (app, event, window, webview), `log:default`, the title bar's window controls (`core:window:allow-start-dragging`, `-start-resize-dragging`, `-minimize`, `-toggle-maximize`, `-internal-toggle-maximize`, `-is-maximized`, `-close`; names verified in Tauri's source, RemGallery grants the same kind), and one allow permission per app command via `AppManifest::commands`. No `core:default`, no asset protocol, `withGlobalTauri: false`.
+- **CSP**: `default-src 'self'`, `style-src 'self' 'unsafe-inline'`, `font-src 'self' data:`, `connect-src ipc: http://ipc.localhost`. Plus `dangerousDisableAssetCspModification: ["style-src"]`: Mantine injects runtime `<style>` tags, and Tauri's nonce would cancel `unsafe-inline`.
+- **Window**: built in Rust from config. 1200×760 (min 900×560), `decorations: false` (custom title bar), `backgroundColor #0b0b0f`, theme Dark, hidden until `app_ready` (3 s Rust fallback). [Windows] If `tauri::webview_version()` fails, a native message links the WebView2 Evergreen installer instead of a silent exit.
+- [both] Navigation: `os/navigation.rs` allows only the runtime origin (`tauri://localhost` [Linux], `http://tauri.localhost` [Windows]) plus `devUrl` under `cfg!(dev)`. Tauri's doc example (`scheme == "tauri"`) would blank every Windows release window (verified).
+- [both] Title bar (your choice: modern look): a custom Quiet Canvas bar on both OSes, ported from RemGallery's `TitleBar.tsx` + `ResizeHandles.tsx` to Mantine: drag region (`data-tauri-drag-region`), double-click maximises, minimise/maximise/close buttons, edge handles via `startResizeDragging`. [Windows] `shadow: true` gives the undecorated window a 1 px border, a shadow and Windows 11's rounded corners; the Snap Layouts flyout on the maximise button is lost (tauri#4531), and drag-to-edge snapping should keep working (UNVERIFIED until a Windows PC run). [Linux] KWin draws no frame, so the in-app handles do the resizing, as in RemGallery.
+- [both] Fallback: Settings → "Use system title bar" (applies on restart) switches to the native frame: KWin's Breeze frame on KDE (follows the Plasma colour scheme; GTK3 can't pass it a palette; verified), the GTK header bar on GNOME and the native caption with Snap Layouts on Windows. `set_window_theme` syncs it on Windows and GNOME only.
+- [both] `set_ui_scale` calls `Webview::set_zoom` (verified) for 80–150 % via Ctrl+= / − / 0; `zoomHotkeysEnabled: false`.
+- [Linux] `open_external` and launch use `platform::host_command`: under `$APPDIR` it drops AppDir entries from path lists (PATH, LD_LIBRARY_PATH, XDG_DATA_DIRS, …) instead of unsetting them, unsets AppRun/GTK-hook values (PYTHONHOME, GTK_THEME, GTK_PATH, GIO_MODULE_DIR, APPDIR, APPIMAGE, OWD, …) and RemMods' graphics vars, and starts in `$HOME` (AppRun chdirs into the mount; verified). CLI paths resolve against `$OWD`.
+- [Windows] `open_external` uses opener `open_url`. Revealing files uses opener's `reveal_item_in_dir` on both OSes.
+- **Drag and drop**: `dragDropEnabled: true`, one full-window overlay, positions ignored. Rust accepts dropped `.zip/.7z/.rar` files or folders outside Paks and calls `install_inspect`; KIO/virtual drags are rejected with a hint. No HTML5 DnD, no @mantine/dropzone.
+- [Linux] `os/graphics.rs` runs first in `main()`. Auto mode sets `__NV_DISABLE_EXPLICIT_SYNC=1` on NVIDIA + Wayland. A `graphics-pending` marker is written before GTK starts and cleared 10 s after the window shows or on clean exit; if it survives, the next start steps the mode once (revert banner). User-set env always wins.
+- [Linux] Mode chain: auto → `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` (GPU kept; UNVERIFIED on NVIDIA) → `WEBKIT_DISABLE_DMABUF_RENDERER=1` (CPU; also disables compositing in 2.54, so v2's compositing step is dropped; verified). `--safe-graphics`, a `.desktop` action "Start in safe graphics mode" and a Settings choice work even with a blank window.
+- [both] `--smoke [--paks <fixture>]`: the real UI with a temp data dir runs lazy `app/smoke` checks (title bar and rail render, a Mantine CSS variable is set, `platform_info` round-trips, external navigation is refused, a fake mod toggles, but only in a folder marked `remmods-smoke-fixture`). Exit 0, else failure after 30 s or on any console error or ACL denial.
+
+## 6. Frontend
+
+- **Theme files** in `src/shared/theme/`: `quiet-canvas.ts` (RemKitForge values: violet `#7c5cff`, near-black dark scale, radii 6/8/12/16/20, Inter/JetBrains Mono), `components.ts`, `css-variables.ts`, `build-theme.ts`, `color-scheme-manager.ts`, `tokens.css`. Restyle in one place: `theme.components.<X>.extend({ defaultProps, classNames, vars })` or a `--qc-*` token (app tokens are `--rmods-*`); component CSS goes in `*.module.css` via postcss-preset-mantine.
+- [both] Import Mantine's `styles.layer.css` so app CSS always wins. Glow uses `color-mix()` with `--mantine-primary-color-filled`, so the accent can change at runtime.
+- [Linux] WebKitGTK rules: no blur (Spotlight overlay blur 0), `-webkit-user-select: none` on app chrome (WebKitGTK ignores unprefixed `user-select`), ScrollArea for every pane, no `scrollbar-color`, no Chromium-only CSS, bundled fonts.
+- **Appearance** (saved in Rust `settings.json`, applied by a pure `buildTheme(settings)`): v1 offers scheme Dark/Light/System and UI scale. Accent, radius and density stay `buildTheme` parameters (Settings UI after 1.0), so restyling the whole app stays a one-file change for you.
+- **Shell**: AppShell with the custom title bar on top and the 72 px rail (Mods, Profiles, Settings, theme toggle). Lazy panels kept alive with React 19 `<Activity>`, one ErrorBoundary per panel, Spotlight on Ctrl+K, toasts bottom-right, @mantine/modals confirms, no router.
+- **Features**: `mods` (table, filters, profile quick-apply, details drawer, bulk ActionBar), `install` (overlay, preview with root/name/encoding/variants/fixes), `profiles` (diff, apply, import/export), `settings` (+ diagnostics, About), `onboarding`, `repair`.
+- **Data**: TanStack Query with `networkMode 'always'`, `retry 0` and `staleTime Infinity`. `mods-changed` invalidates queries and focus triggers `mods_refresh`. Toggles are optimistic with rollback; fs mutations run in serial scope `fs`. MutationCache shows error toasts; `Busy`, `Stale` and `TrashUnavailable` get their own dialogs. Zustand holds UI state only.
+- **Typed IPC**: generated `src/lib/ipc/bindings.ts` is committed and excluded from Biome. `ErrorHandlingMode::Result` is set explicitly, and `unwrap()` throws `IpcError`. `cargo run --bin export-bindings --features bindings` regenerates it (a bin gets Tauri's manifest; `required-features` keeps it out of bundles, verified in tauri-cli), and CI runs `git diff --exit-code` on both OSes.
+- **Mod table**: Mantine `Table` in `Table.ScrollContainer`, with TanStack Table 9.3.1 (sort, filter, selection, columns) and TanStack Virtual spacer rows. State shows Enabled, Partial or Disabled. `filterMods`/`compareMods` are pure and tested. Names sort with a numeric `Intl.Collator`.
+- [both] Table interaction: Shift range select, keyboard grid via `aria-activedescendant`, one `modActions()` list for menu/ActionBar/palette. Keys Space, Enter, F2, Delete, Ctrl+F, Ctrl+K, F5, Esc; no Alt (KDE). Conflicts and ambiguous rows get a badge with text.
+- [both] Input guards: `contextmenu` is prevented outside inputs on both OSes (WebKitGTK's stock menu offers Reload). [Windows] Release builds also block WebView2 browser keys (F5, Ctrl+R/P/F, F3, F7) in a capture-phase `keydown` handler (UNVERIFIED that it catches all); fallback `SetAreBrowserAcceleratorKeysEnabled(false)` via `with_webview` plus one hidden reload, since Tauri 2.12.5 doesn't expose wry's switch (verified).
+- **i18n**: i18next 26 + react-i18next 17, with EN + DE as TS resources. DE is typed against EN (a missing key fails tsc). Selector API, `_one/_other` plurals, a key/placeholder parity test; `Intl` follows the UI language.
+- [both] Style: Biome with your RemKitForge settings (2 spaces, 100 cols, single quotes, no semicolons, trailing commas, LF) plus the Mantine CSS exceptions (`@mixin`, `alpha()`).
+
+## 7. Interop with the original app (exact on-disk rules)
+
+- [both] Roots `Paks/Mods` (Standard), `~mods` (Legacy) and `LogicMods` (Logic) are matched case-insensitively. They are created only on install, with that exact casing.
+- [Linux] Two roots that differ only in case (`Mods` + `mods`) are both listed and flagged. Wine resolves the exact case first and lists both (verified), so the game probably loads both (UNVERIFIED in-game); their mods share keys and are ambiguous.
+- [both] A mod is one immediate subfolder of a root. Its key is `{Kind}:{Name}` (e.g. `Standard:CoolSkin`), compared case-sensitively. Loose paks in a root are RemMods-only rows keyed `Loose:<Root>/<stem>`.
+- [both] A Logic mod's name is its folder name without `.disabled_`. In Mods/~mods, a `.disabled_X` folder is an ordinary pak mod named `.disabled_X`.
+- [both] Pak disable appends lowercase `-x` to every `.pak/.ucas/.utoc/.sig` at any depth (case-insensitive): `Foo.pak` → `Foo.pak-x`. The folder is never renamed, and RemMods no longer touches `.txt`.
+- [both] Pak enable strips `-x` from `.pak-x/.ucas-x/.utoc-x/.sig-x/.txt-x` (`.txt-x` because the original adds it): only the files RemMods' last disable recorded in `mod-meta.json` while that record matches disk, otherwise all of them (the original's rule).
+- [both] State: `.pak` only = Enabled; `.pak` and `.pak-x` = Partial (the original shows ACTIVE); `.pak-x` only = Disabled; neither = "no pak files". Hand-disabled variants survive an off/on toggle in RemMods; the original's enable turns them all on.
+- [both] Logic disable renames `X` → `.disabled_X` (first) and adds `-x` to the paks inside, in one batch; enable reverses both. UE4SS source shows BPModLoaderMod loads paks from every first-level subfolder, dot-folders included. Your decision: keep this double disable plus the repair below; if the P2 in-game test shows dot-folders are not loaded, switch to rename-only like the original.
+- [both] Logic anomalies are shown as such: prefixed but with live paks = "disabled by name only – still loaded" (fix offered); unprefixed with only `-x` paks = "enabled in the original app, not loaded" (repair offered). RemMods never creates `X` next to `.disabled_X`.
+- [both] Staging and set-aside folders follow the original's hidden naming, `<root>/_<label>_tmp_<32 lowercase hex>` (≤255 bytes). They are inert and journaled; only journaled folders of dead owners are ever removed.
+- [both] `modinfo.json` reading matches the original's `File.ReadAllText`: UTF-8/16/32 BOMs are sniffed (serde_json rejects them), else lossy UTF-8; case-sensitive PascalCase keys; missing, null or blank → `1.0`, `Misc`, empty, `Unknown` (so a blank saves as the default). An unparsable file is ignored, flagged and copied to `modinfo.json.backup.<yyyyMMdd_HHmmss>` before RemMods' first write.
+- [both] `modinfo.json` is written only on user edit: exactly `Version, Category, Description, Author`, 2-space indent, UTF-8 without BOM, LF on both OSes (STJ writes CRLF on Windows; both apps read either), non-ASCII and HTML-sensitive characters as uppercase `\uXXXX` like STJ (exact set from the interop harness). RemMods-only data goes to `mod-meta.json`.
+- [both] Sizes, conflicts and loose copies match the original: logical size including `-x` and sidecar files; enabled `.pak` basenames compared case-insensitively across roots; loose `.pak/.ucas/.utoc` in Paks checked. RemMods adds per-pair details.
+- [Windows] The original's `profiles.json` is imported read-only and idempotently (matched by its `Id`) as `exclusive` profiles, because the original's apply disables every mod not in `EnabledMods` (its empty "Default" disables all). A null `EnabledMods` is tolerated and keys without `:` become `Standard:<key>`. That file and `user.config` are never written.
+- [Windows] Coexistence: RemMods rescans before every change, and never-overwrite renames make races fail cleanly. While `ModManager.exe` runs, a banner shows and delete/rename/overwrite need confirmation. Renames in RemMods update keys only in RemMods' profiles.
+
+## 8. Fixes versus the original
+
+All fixes apply on both OSes.
+
+- `X` and `.disabled_X` can coexist, and actions hit whichever row has the key → opaque ModRefs; any shared key is ambiguous, blocked and sent to Repair.
+- A failed toggle doesn't refresh, and a Logic toggle silently no-ops → every action ends with a fresh snapshot; conflicts give `AlreadyExists`.
+- `.disabled_` LogicMods are probably still loaded → disable sets both the prefix and `-x`, and a "still loaded" check runs.
+- Every `.txt` gets `-x` → readmes are left alone (`-x` is still stripped on enable).
+- Enable switches every variant back on → RemMods re-enables only what it disabled and shows Partial.
+- The current profile is rewritten on every toggle → no implicit profile: "unsaved changes since last apply" plus an explicit Save.
+- Profile apply has no confirm or rollback and disables new mods → a diff modal, an auto snapshot and one all-or-none batch; saved profiles are additive, imported ones keep the original's exclusive meaning.
+- The default profile is never applied, and bad files crash the app → nothing auto-applies; tolerant parsing; store errors shown while the app keeps running.
+- Delete is permanent and can stop halfway → Trash (always a rename); permanent delete only after a second confirm and through an atomic set-aside, so a failure never leaves half a live mod.
+- Rename accepts reserved names, trailing dots, `.disabled_Y` and temp names → `validate_name`. Case-only renames are journaled two-step.
+- Blank metadata is rejected, save errors are swallowed, the Added date is never saved → blank means default in both apps, BOM'd and corrupt files are read like the original and backed up before the first write, errors toast, and the Added date and source go to `mod-meta.json`.
+- Install double-nests folders, keeps the root segment, checks one root and handles duplicates per format → wrappers and the root segment are stripped, all roots, prefixes and fold keys are checked, one duplicate policy covers every format, and archive-shipped `-x` options stay off.
+- Crash leftovers are hidden forever → Repair lists them: RemMods' own can be resumed or trashed, foreign ones revealed or trashed.
+- Extraction is visible to the watcher and the game → staging is ignored by the watcher and inert for the game.
+- Concurrent installs are possible, and an unreadable archive silently goes to Mods → one job at a time under one cross-process lock; typed error, nothing installed.
+- Any `.lua/.dll` means LogicMods → `config.lua` beside paks means LogicMods; other scripts show "UE4SS script mod, not supported in v1".
+- Launch bypasses Steam and looks for the exe in the wrong path → `steam://rungameid/1778820`.
+- Any `Paks` folder is accepted, and the location is lost on updates → the folder must contain the TEKKEN 8 exe and Paks; the location is stored in `settings.json`.
+- Loose files and archives inside Paks are invisible → loose rows, an "Archives inside Paks" group (Install/Reveal/Trash) and an "Unmanaged (still loaded)" list.
+- Three walks per refresh, no single-flight, one bad folder fails everything → one pass, single-flight, per-mod errors. Success modals become toasts.
+
+## 9. Testing
+
+- [both] `cargo test --workspace --locked` runs on ubuntu-24.04 and windows-2025 (core and ipc; src-tauri has none). OS-only cases live in `tests/platform_{linux,windows}.rs`.
+- [both] All 13 original test files are ported: Resolve{Mods,Game}Directory (→ `resolve_pick`), ModInfo size, ModProfile, DetectRootKind, ExtractArchive (+ RAR/7z), InstallTempFolder, ConflictDetector (+ loose copies), ModFileWatcher (fake clock, no suppression), ModMetadataService, ModServiceRollback, ModService, ProfileService.
+- [both] New coverage: profile apply/diff/rollback and modes (an imported empty Default must disable everything), key migration, ambiguous keys, Partial and the disable record, BOM and corrupt files, journal recovery (dead vs live owner), lock contention, set-aside and `TrashUnavailable` paths, temp cleanup, Windows-invalid names.
+- [both] Fixtures are generated in a `TempDir` behind a guard: fake Paks trees, a stand-in exe, a fake `/proc` from the P1 captures, fake Steam roots (old, new, broken VDF, Flatpak, Snap); case-only pairs, `Mods` + `mods` and non-UTF-8 names are made at runtime. [Windows] TempDirs are canonicalised (runners use the 8.3 alias `RUNNER~1`), and one test feeds Scope an 8.3 path.
+- [both] proptest covers `validate_name`, `fold_key`, the VDF parser, root detection, name decoding and `classify`. Failure injection: the `test-hooks` feature injects any `io::Error` (including raw Win32 codes) before or after op k and simulates crashes between steps; tests assert rollback, `stuck` and journal repair.
+- [Windows] Real-lock tests: a `share_mode(0)` handle → `InUse`, nothing renamed; a `READ|WRITE|DELETE` handle passes the probe but makes the folder rename `FolderBusy` until it closes; trash on `\\localhost\C$` and with `NukeOnDelete=1` (registry layout UNVERIFIED) → `TrashUnavailable`, nothing deleted; long paths, trailing-dot names, case-only renames.
+- [Linux] `fs-matrix` job: one test binary on loop-mounted filesystems. The P2 gate is tmpfs, ext4 and btrfs (incl. a nested subvolume → `TrashUnavailable`), plus vfat/exfat if their modules load; ext4-casefold, xfs, ntfs3 and ntfs-3g run weekly, non-blocking. Also: root-owned mount root, read-only remount, ENOSPC, a 16-event inotify queue.
+- [both] Archives: a script generates crafted fixtures (traversal incl. `..\evil.pak`, `Cool\x.pak` → `Cool/x.pak`, UNC, duplicates, case clashes, links, legacy names, encrypted, corrupt, multi-volume → unsupported). [Linux] A weekly `archive-diff` job compares output with unrar/7z/bsdtar. Your 19 real archives are a local-only smoke test.
+- [Windows] `interop-diff` job (.NET 8 SDK per the original's global.json): a console harness builds the original's v1.1.1 services and models (ModService, ConflictDetector, ModMetadataService, ProfileService) plus copies of `DetectRootKind`/`ResolveModsDirectory`. Shared JSON scenarios run there and through core; trees, keys, states, conflicts, loose copies and parsed modinfo/profiles must match, round trips between the apps included.
+- [both] Frontend: Vitest `unit` (node) and `dom` (jsdom + Testing Library + `mockIPC`) projects. Playwright 1.64 runs against `vite --mode e2e` with a stateful mock backend, Chromium only (Playwright's WebKit isn't WebKitGTK and doesn't support Arch).
+- [both] `smoke` job, required on every PR, on ubuntu-24.04 (xvfb) and windows-2025: `tauri build --debug --no-bundle` (production asset protocol and CSP), then `remmods --smoke --paks <generated fixture>`. It catches the manifest crash, CSP/Mantine styling, the navigation filter, ACLs and IPC wiring.
+- [both] `artifacts` workflow (release tags, blocking; weekly) installs each package and runs `--smoke`: [Linux] deb + AppImage (also `--appimage-extract-and-run`) on ubuntu-24.04, rpm in fedora:latest, PKGBUILD + namcap in archlinux:latest, all under xvfb, plus a weekly non-blocking Wayland run (weston headless) and a libfuse2 check (UNVERIFIED); [Windows] a silent NSIS install (`/S`).
+- [Linux] In-game smoke test, every phase, done together: Claude backs up `Paks/Mods`, prepares the test mods, switches files and gives step-by-step instructions; you start TEKKEN from RemMods, play in offline Practice mode and report what you see. Checks: "running" shows within 4 s, enabled mods are visible and disabled ones absent, and after quitting `paks-snapshot.sh` shows only intended changes.
+- [Windows, later] Release checklist, once a Windows PC, VM or tester exists: NSIS + SmartScreen, Steam found via the registry, toggling while running (`InUse`, nothing changed), F5/Ctrl+R/context menu suppressed, Explorer drop, coexistence UI check with original v1.1.1, passive update, uninstall keeps app data.
+
+## 10. Packaging, CI, releases, updates, signing
+
+- [both] `ci.yml` runs on push, PR, weekly and dispatch, with actions pinned by SHA. The `linux` and `windows` jobs run npm ci, `biome ci`, tsc, vitest, vite build, `cargo fmt --check`, clippy `-D warnings`, cargo test and the bindings export + diff; `smoke`, `fs-matrix` and `interop-diff` run as in §9.
+- [both] The `policy` job runs cargo-deny (bans, feature bans, licences, advisories), the cfg-placement guard and the native guard: [Linux] no `rustc-link-lib=static` in any `target/*/build/*/output`; `cargo tree --target` for both OSes (no openssl-sys on Windows); [Linux] the release binary's highest `GLIBC_` symbol (`objdump -T`) ≤ 2.39.
+- [both] Allowed licences: MIT, Apache-2.0, BSD-2/3, Zlib, ISC, CC0, MIT-0, Unlicense, Unicode-3.0, bzip2-1.0.6, and MPL-2.0 (Tauri pulls in `option-ext` and `cssparser`; verified). GPL, LGPL and UnRAR licences are denied.
+- [both] Banned crates, named one by one (cargo-deny takes no globs): ring, aws-lc-rs, aws-lc-sys, aws-lc-fips-sys, openssl-src, libz-sys, libz-ng-sys, zstd-sys, bzip2-sys, lzma-sys, libsqlite3-sys, blake3, psm, unrar_sys, retoc, repak, oodle_loader. `[[bans.features]]` denies zip {zstd, bzip2-rs, deflate-flate2-zlib, deflate-flate2-zlib-ng, deflate-flate2-zlib-ng-compat}, sevenz-rust2 {zstd}, bzip2 {bzip2-sys, static}, tauri {rustls-tls, native-tls-vendored, linux-libxdo}, tauri-plugin-updater {rustls-tls, native-tls-vendored}, libdbus-sys {vendored}, openssl {vendored}.
+- [both] Runners are pinned to ubuntu-24.04 (glibc 2.39, WebKitGTK 2.52.6) and windows-2025 (fallback windows-2022). `.gitattributes` enforces LF except for golden and interop fixtures (`-text`).
+- [Linux] AppImage, deb and rpm are built only in CI (deb depends on libc6 ≥ 2.39, webkit2gtk-4.1, gtk3). The shared `remmods.desktop` sets `StartupWMClass` and the safe-graphics action. Locally use `tauri build --no-bundle` or `--bundles deb`.
+- [Linux] AUR `remmods-bin` (repackaged .deb; name free), pushed by CI on every release from 1.0 (your choice): `release.yml` renders `PKGBUILD` + `.SRCINFO` from `PKGBUILD.in`, runs namcap in archlinux:latest and pushes over SSH with a key stored in the `release` environment. At P5 you create the AUR account and add the key yourself, with Claude's instructions. PKGBUILD: depends=(webkit2gtk-4.1 gtk3 libsoup3 openssl glib2 cairo gdk-pixbuf2 dbus wayland hicolor-icon-theme xdg-utils), provides/conflicts=(remmods), options=(!strip !debug), an `install-source=aur` marker, no `.install` file. Not Tauri's AUR template (libsoup2, no openssl; verified).
+- [Linux] No Flatpak/Snap: their sandbox hides the game process, host tools and Steam paths. Steam Deck: the AppImage runs in Desktop Mode (SteamOS 3.8, Plasma 6.4 Wayland); the README covers Gear Lever and `--appimage-extract-and-run`.
+- [Windows] NSIS only: `currentUser` (no UAC), English + German, silent WebView2 `downloadBootstrapper`, x64, Windows 10 22H2 and 11. No MSI and no standalone exe (it would lack WebView2 bootstrapping and an update path).
+- [both] `release.yml` runs on `v*` tags in a protected `release` environment: version check → tauri-action v1 draft with `tauri.release.conf.json` and `uploadUpdaterJson` → `latest.json` key check → SHA256SUMS → artifacts workflow → publish → AUR push.
+- [both] Updates go through tauri-plugin-updater, from Rust only. `update_install` is a hard allowlist: AppImage and NSIS self-update after the user confirms; deb, rpm and the AUR package (its binary reports `Deb`; the marker words the notice) get a notice, never the plugin's `pkexec dpkg -i` path (verified). [Windows] `installMode passive`.
+- [both] `update_install` holds the OpGate, refuses during an install job or open journal entry, downloads first and flushes in `on_before_exit`; the UI says "RemMods will close to install the update" ([Windows] the plugin exits right after starting NSIS; verified).
+- [both] Updater keys: `tauri signer generate` with a password. Secrets live in the `release` environment, with an offline backup. Only `tauri.release.conf.json` sets `createUpdaterArtifacts`, so local builds need no key.
+- [Windows] Signing runs only inside `tauri build` via `bundle.windows.signCommand`: the bundler patches the exe per package, signs it, packs NSIS, signs the installer, then computes the updater `.sig` (verified). Signing outside that order breaks the `.sig` or the exe signature.
+- [Windows] 1.0 may ship unsigned. Apply to SignPath Foundation after the first public release (it requires a released project; solo eligibility and the `signCommand` fit UNVERIFIED); fallback a Certum open-source certificate (cost, EU eligibility UNVERIFIED). Each release goes to Microsoft's file-submission portal.
+- [Linux] Integrity: SHA256SUMS; minisign is dropped (the updater signature already covers AppImage and NSIS). Rebuild monthly or on Ubuntu WebKitGTK security updates, because the AppImage freezes its WebKitGTK.
+- [both] Notices: cargo-about `THIRD-PARTY-NOTICES`, the font OFL licences and the original's MIT notice are embedded with `include_str!` (About works in every package) and shipped as files.
+
+## 11. Verify early (in-game now, on a Windows PC later)
+
+- [Linux] Day 1: build the real workspace (dev + LTO release) on CachyOS with the pinned toolchain and re-run one ring and one blake3 probe. If both link, record that the linker bug is gone and drop RemGallery's relink note; if not, swap the crate rather than add relink hacks.
+- [both] P0: the smoke job is green on both OSes (the Windows window renders, which proves the manifest and the navigation origin; Mantine is styled under the CSP).
+- [Linux, in-game] P1: record the live `/proc` values of the running game (argv[0] form, comm, reaper line), which are still UNVERIFIED, and build the fixtures from them.
+- [Linux, in-game] P2: does the engine load paks loose in `Paks/Mods`, at depth 3, inside `Mods/.disabled_Test/`, and from both `Mods` and `mods`? Does `-x` stop them? This decides loose rows, the Logic double-disable and the case-variant warning.
+- [Linux, in-game] P2: toggle and trash a mod during a match. A crash or missing assets would switch the running-game rule from "ask" to "block".
+- [Linux, in-game] P2: which mod wins with a shared pak basename, and which with the same asset in different paks? Does `~mods` beat `Mods`? This feeds the conflict wording and load order.
+- [Linux] P1: on KDE Wayland the custom title bar drags, resizes and maximises; the taskbar shows the right icon (via `StartupWMClass`); the Plasma portal dialog and the safe-graphics action work.
+- [Windows PC, later] the HKCU `SteamPath` (casing, separators) and HKLM `InstallPath` values, the Toolhelp32 names, and the `MoveFileExW` error code on an existing target (183 or 80).
+- [Windows PC, later] TEKKEN 8 holds paks without `FILE_SHARE_DELETE`, so the probe gives `InUse`; enabling a disabled mod while the game runs works; which holder Restart Manager names while Defender scans a fresh install.
+- [Windows PC, later] coexistence UI check with original v1.1.1 (the file-level rules are covered by `interop-diff`).
+- [Windows PC, later] key and context-menu suppression, Explorer drop, NSIS + SmartScreen (+ Smart App Control if available), passive update.
+- [Linux] P5: a Steam started by the AppImage build gets a clean environment and cwd, and your gamescope launch options still work.
+
+## 12. Future features and where they plug in
+
+- Variant picker + per-file toggles: `core/mods/variants.rs` (option groups from `(Option)…` prefixes and folders) on top of the Partial state, the disable record and the profile `mods` map; no format migration.
+- Archive library outside Paks (move your 19 archives out): `core/library/`, a path setting, and install-from-library.
+- One-click "online safe": an exclusive empty profile after an auto snapshot; it reports "safe" only when the Unmanaged list is empty. The update notice offers it too.
+- Load order: `core/order/`, once the P2 priority results are in. A dnd-kit sortable list; renames change basenames, so it goes through `rekey()` and an interop review.
+- Extra roots (e.g. `Content/Movies/usm/StageSelect`): a Deploy `RootStrategy` (library as source of truth, backups of replaced files, re-deploy after a buildid change), after the §1 safety amendment.
+- Content-level conflicts: `remmods-pak` reads `.utoc` headers and directory indexes without decompression or Oodle; encrypted indexes are reported as unsupported (TEKKEN 8 mod containers UNVERIFIED). Recolour/repack runs a user-installed `retoc`.
+- `remmods-cli` (list, toggle, apply profile): reuses core and the lock; can run from Steam launch options.
+- UE4SS: read-only status (dwmapi = 3.x, xinput1_3 = 2.x, BPModLoaderMod, subfolder support; researched for v2) and the Proton `WINEDLLOVERRIDES` copy hint, then install/update and Lua mods in `ue4ss/Mods`.
+- After 1.0, cut from v1 by the review: multi-volume archives, chardetng encoding detection, update-pending detection, accent/radius/density settings, custom accent hex (@mantine/colors-generator), a signed standalone exe. Also: more languages; Flatpak or Game Mode once their sandbox issues are solved.
+- Archive password prompt, external extraction tools and nested packages (`.tkmod`, archives in archives; v1 only flags them): new `archive/` backends, `install/plan.rs` and the install dialog.
+
+## 13. Phases with exit criteria
+
+- [both] Every phase exits only with green `linux`, `windows`, `smoke` and `policy` CI (+ `fs-matrix` from P2, `interop-diff` from P3) plus a passed Linux in-game smoke test. The smoke checks grow with each phase.
+- **P0 Scaffold**: repo settings (owner-only, §1), toolchain switch (§2), workspace (core, ipc, src-tauri), toolchain pin, all CI jobs and guards, `--smoke`, lock file, Quiet Canvas shell with the custom title bar, settings, logging. Exit: `tauri dev` and an LTO release build work on CachyOS; smoke is green on both OSes; in-game baseline recorded.
+- **P1 Read-only**: detection on both OSes, picker, scan (ModRefs, ambiguous keys, Partial, loose rows, Unmanaged, archives, issues), conflicts, modinfo, update notice, running monitor, read-only table, EN/DE. Exit: scan matches disk; running state flips in-game; snapshot unchanged.
+- **P2 Toggle**: full `safe_fs` (classify, retries, journal, lock), pak/Logic/loose toggles with the disable record, watcher, running-game prompt, Windows lock probe + Restart Manager, fs-matrix gate. Exit: fs-matrix gate green; in-game verify-early items done; disabled mods vanish in-game and return when re-enabled.
+- **P3 Manage**: rename, Trash movers, set-aside + permanent delete, metadata edit, Repair/Leftovers, profiles (modes, diff, apply, snapshot, import, export), interop-diff, Playwright flows. Exit: two profiles applied back and forth in-game; interop-diff green (the Windows coexistence UI check waits for a Windows PC).
+- **P4 Install**: archive reader, preview, inert journaled staging, set-aside commit, drag and drop, folder install, cancel. Exit: your 19 archives install correctly into a fixture Paks; one zip, one rar and one 7z mod, dropped in, load in-game.
+- **P5 Release 1.0**: bundles, updater allowlist, PKGBUILD + AUR push from CI, release + artifacts workflows, README (glibc floor, Smart App Control, Windows "beta, CI-tested only"), notices. Exit: v1.0.0 installed on CachyOS from the AppImage and from the AUR (`paru -S remmods-bin`); Windows installed and smoke-tested by the artifacts workflow (real-PC checklist later); artifacts workflow green; in-game smoke via AppImage-launched Steam; no release-blocking entry in `docs/windows-gaps.md`.
+- **P6+**: one feature per minor release: variant picker → archive library → online safe → UE4SS status → load order → extra roots → CLI → remmods-pak. Same exit criteria.
+
+## 14. Risks and mitigations
+
+- rars is young (≈5 months, AI-written, spec partly reverse-engineered) → exact pin, `rar-builtin` flag, checksums, weekly diff against unrar, folder install, tool fallback after 1.0.
+- Fast-moving pins (zip, rars, TanStack Table 9, Mantine 9, tauri-specta RC) → exact versions, one adapter file per crate, grouped upgrades with CI on both OSes.
+- No Windows PC (real-PC tests later; your call) → windows-2025 runs every core test, a launch smoke, a silent NSIS install and the interop diff against the original's code; Windows builds stay labelled "beta, CI-tested only" until the checklist has run on a real PC or VM.
+- Engine behaviour is UNVERIFIED (dot-folders, depth, case-variant roots, live renames) → the P2 in-game tests come before load order or any relaxed running-game rule.
+- Unsigned Windows builds: Smart App Control blocks them with no per-app exception and no longer needs a clean install (verified) → README, SHA256SUMS, Microsoft submission, SignPath via `signCommand` after the first release. No pak-signature bypass features (SignPath eligibility).
+- Removal edge cases (antivirus holding fresh paks, no Recycle Bin, other devices) → 30 s folder retries with Cancel and a named holder; movers only rename; `TrashUnavailable` is a choice; set-aside keeps failures inert.
+- WebKitGTK blank windows or crashes on NVIDIA/Wayland (tauri#9394 open) → auto env, crash marker with a FORCE_SHM → software chain, `.desktop` safe mode; needs an NVIDIA tester (your GPU is AMD). GTK3's lack of fractional scaling is offset by the in-app UI scale.
+- AppImage env leaking into Steam/the game → one `host_command` that filters path lists and resets cwd, checked in P5.
+- notify 8 loses Windows overflow events → focus rescans and post-command snapshots; notify 9 when stable.
+- Races with the original on Windows → never-overwrite renames, rescan before every change, `ModManager.exe` banner. Two RemMods processes → the cross-process lock.
+- The glibc 2.39 floor excludes Ubuntu 22.04, Debian 12 and Mint 21 → stated up front; lowering it means building on 22.04 with its frozen WebKitGTK 2.50 and re-testing the UI, so only on demand.
+- Updater key loss or leak → password, protected environment, offline backup.
+- Upstream format changes in the original → interop-diff against a pinned release, bumped per upstream release; golden tests compare parsed values.
+
+## 15. Your decisions (2026-10-31)
+
+- Repo: `Remirudev/RemMods`, public, and only you can change it (§1).
+- Windows: supported and CI-tested at all times; real-PC tests later, since there is no Windows PC yet. Linux (this machine) comes first.
+- Title bar: a custom Quiet Canvas bar for a modern look, with a "Use system title bar" fallback (§5).
+- AUR: CI pushes `remmods-bin` on every release; you set up the AUR account and key at P5 (§10).
+- In-game tests: done together. Claude prepares and switches the files and gives step-by-step instructions; you play and report (§9).
+- `.disabled_` LogicMods: double disable plus repair; rename-only if the P2 test shows dot-folders don't load (§7).
+- Toolchain: CachyOS's `rust` package goes on P0 day 1, plus `rustup update` and the KDE PATH line. RemGallery doesn't need the package (§2).
+- Left for later: a Windows PC, VM or tester for the Windows checklist, and the P0 check that "Collaborators only" doesn't block your own or Dependabot's PRs.
