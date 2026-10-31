@@ -58,3 +58,4 @@ Paths below are relative to the Paks folder,
 
 | Date | Phase | RemMods commit | Result | Notes |
 |------|-------|----------------|--------|-------|
+| 2026-11-01 | P0 | c6ef614 | pass | Baseline, game build 25221600, started from Steam. Paks: 264 files (112 in `Mods`), 19 folders. Kunimitsu's modded outfits visible in offline Practice. Before and after snapshots identical. `Mods` backed up to `~/RemMods-backups/2026-11-01/`. |
