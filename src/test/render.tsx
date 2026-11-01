@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core'
+import { ModalsProvider } from '@mantine/modals'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -31,7 +32,7 @@ export function renderWithProviders(
   render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} env="test">
-        {ui}
+        <ModalsProvider>{ui}</ModalsProvider>
       </MantineProvider>
     </QueryClientProvider>,
   )

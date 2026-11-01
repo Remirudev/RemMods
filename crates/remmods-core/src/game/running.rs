@@ -1,9 +1,11 @@
 //! Debounces process scans into a running state. Time-based, so a faster poll right after a
 //! launch does not shorten the grace period.
 
+use std::io;
 use std::time::{Duration, Instant};
 
-use super::{ProcessVerdict, RunningState};
+use super::{ProcessSource, ProcessVerdict, RunningState, classify};
+use crate::platform;
 
 pub const NOT_RUNNING_AFTER_SCANS: u8 = 2;
 pub const NOT_RUNNING_AFTER: Duration = Duration::from_secs(3);
@@ -98,4 +100,13 @@ impl RunningTracker {
         self.negatives = 0;
         self.first_negative_at = None;
     }
+}
+
+/// One process scan through `source` (tests) or the OS, classified.
+pub(crate) fn scan_verdict(source: Option<&ProcessSource>) -> io::Result<ProcessVerdict> {
+    let records = match source {
+        Some(source) => source.scan()?,
+        None => platform::processes()?,
+    };
+    Ok(classify(&records))
 }

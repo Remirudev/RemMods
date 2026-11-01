@@ -17,6 +17,10 @@ export function useRefreshMods() {
   })
 }
 
+export function useWatchStatus() {
+  return useQuery({ queryKey: queryKeys.watchStatus, queryFn: () => ipc.modsWatchStatus() })
+}
+
 export function useModDetails(modRef: string | null) {
   return useQuery({
     queryKey: queryKeys.modDetails(modRef ?? ''),

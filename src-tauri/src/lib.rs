@@ -9,6 +9,7 @@ mod os;
 mod smoke;
 pub mod specta;
 mod state;
+mod watcher;
 mod window;
 
 use std::fmt::Display;
@@ -89,7 +90,9 @@ fn on_setup(app: &mut App, args: &LaunchArgs, paths: AppPaths, smoke: Option<Smo
     let core = Arc::new(core);
     let monitor = monitor::start(app.handle().clone(), Arc::clone(&core))
         .unwrap_or_else(|error| fail_fast("Could not start the game monitor", &error, args.smoke));
-    app.manage(AppState::new(core, monitor, smoke));
+    let watcher = watcher::start(app.handle().clone(), Arc::clone(&core))
+        .unwrap_or_else(|error| fail_fast("Could not start the Paks watcher", &error, args.smoke));
+    app.manage(AppState::new(core, monitor, watcher, smoke));
     os::webview::ensure_runtime(args.smoke);
 
     let handle = app.handle();
@@ -152,7 +155,7 @@ fn smoke_fixture(args: &LaunchArgs) -> Option<SmokeFixture> {
 }
 
 /// The smoke run never reads the machine's Steam roots: no detection, and the fixture (if any)
-/// is the fixed game folder.
+/// is the fixed game folder, and mutations only run inside a marked fixture.
 fn core_options(args: &LaunchArgs) -> CoreOptions {
     if !args.smoke {
         return CoreOptions::default();
@@ -162,7 +165,9 @@ fn core_options(args: &LaunchArgs) -> CoreOptions {
             steam_detection: false,
             fixed_location: args.paks.clone(),
             steam_hints: None,
+            processes: None,
         },
+        require_marker: Some(smoke::FIXTURE_MARKER.to_owned()),
     }
 }
 
@@ -170,6 +175,7 @@ fn on_run_event(app: &AppHandle, event: RunEvent) {
     if let RunEvent::Exit = event {
         if let Some(state) = app.try_state::<AppState>() {
             state.monitor.stop();
+            state.watcher.stop();
             if let Some(smoke_state) = state.smoke.as_ref() {
                 smoke::on_exit(smoke_state);
             }

@@ -24,7 +24,8 @@ disagree, ask before changing either.
 ```
 crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/platform/        the only place for cfg and unsafe; one API, identical signatures on both OSes
-  src/safe_fs/         the only place that mutates the file system (names.rs: Windows name rules)
+  src/safe_fs/         the only place that mutates the file system: scope, rename, batch, journal, gate,
+                       watch (names.rs: Windows name rules)
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   tests/fixtures/      proc/ (fake /proc captures) and steam/ (VDF/ACF files); byte-exact, outside Biome
@@ -32,9 +33,10 @@ crates/remmods-ipc/    DTOs + AppError (serde + specta, no Tauri) and their test
 src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust tests
   src/commands/        one file per domain; async, spawn_blocking, Result<T, AppError>
   src/os/              the only other cfg place (navigation, webview checks)
+  src/watcher.rs       Paks watcher thread: debounced rescans, auto-refresh status
   src/bin/             export-bindings (feature "bindings") writes src/lib/ipc/bindings.ts
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg/native/commands.sh, paks-snapshot.sh, make-fixtures/scan-expect/proc-capture.py
+scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/scan-expect/proc-capture.py
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, checklists/
 ```
 
@@ -77,7 +79,10 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   (`clippy.toml`) bans the std mutators everywhere else: `std::fs` writes, copies, renames,
   removals and links, opening for writing (`OpenOptions::write/append/create/create_new/truncate`,
   `File::create*`), `File::set_len/set_permissions/set_times/set_modified`, `DirBuilder::create`
-  and the OS symlink functions. A new mutator API gets added there. JSON is written with
+  and the OS symlink functions, plus the rustix and windows-sys rename, link, unlink and mkdir calls.
+  A new mutator API gets added there. Mod paths change only through `OpGate::write` and
+  `WriteGuard::rename_batch`; fault injection in tests is a runtime `FaultPlan` in `BatchOptions`,
+  not a cargo feature. JSON is written with
   `write_atomic` under the `AppLock`; a corrupt file is backed up before it is replaced.
 - Writes only inside the three mod roots, RemMods' app folders and the Trash. Steam files are
   read-only. Removal is a rename; permanent delete needs a second confirmation. RemMods never writes
@@ -112,6 +117,7 @@ npm run bindings                  # regenerate src/lib/ipc/bindings.ts (commit i
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
+cargo test -p remmods-core --test fs_matrix   # no-op locally; the real run is the fs-matrix CI job (needs sudo)
 scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 npm run tauri -- build --debug --no-bundle && ./target/debug/remmods --smoke
 python3 -I scripts/make-fixtures.py smoke <empty dir>   # fixture game folder; then: remmods --smoke --paks <printed Paks path>

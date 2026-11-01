@@ -4,7 +4,7 @@
 
 use std::ffi::OsStr;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 mod entry;
 mod procfs;
 
-pub use entry::{FileId, RawName, file_id, fs_path, raw_name};
+pub use entry::{FileId, RawName, file_id, fs_path, os_str_cut, os_string, raw_name};
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
 
 #[cfg(target_os = "linux")]
@@ -43,6 +43,7 @@ pub enum OsErrorClass {
     ReadOnlyFs,
     CrossDevice,
     NameTooLong,
+    AlreadyExists,
     NotFound,
     Unsupported,
     Other,
@@ -75,6 +76,16 @@ impl RetryPolicy {
             attempts => self.total / (attempts - 1),
         }
     }
+}
+
+/// Outcome of [`rename_noreplace`] when the OS call itself did not fail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum NoReplace {
+    Done,
+    /// The file system rejects the no-replace flag (ntfs-3g, NFS, old kernels); nothing changed.
+    /// Windows never reports it.
+    #[cfg_attr(windows, allow(dead_code))]
+    FlagUnsupported,
 }
 
 /// Where Steam may live, gathered once per detection run. Tests inject their own values.
@@ -137,6 +148,36 @@ pub fn retry_policy(class: OsErrorClass) -> RetryPolicy {
 /// replace fail with ACCESS_DENIED, so there that class means "in use" as well.
 pub fn replace_retry_policy(class: OsErrorClass) -> RetryPolicy {
     imp::replace_retry_policy(class)
+}
+
+/// Policy for renaming a mod folder. Windows: a folder that Explorer, an indexer or an antivirus
+/// scanner holds fails with InUse or AccessDenied for a while, so those retry for 30 s.
+pub fn folder_retry_policy(class: OsErrorClass) -> RetryPolicy {
+    imp::folder_retry_policy(class)
+}
+
+/// Renames `from` to `to` (same parent folder) and never replaces an existing `to`. Linux:
+/// renameat2(RENAME_NOREPLACE); EINVAL or ENOSYS mean the flag is unsupported. Windows:
+/// MoveFileExW without REPLACE_EXISTING or COPY_ALLOWED on verbatim paths. Other OSes: Unsupported.
+pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> io::Result<NoReplace> {
+    if from.parent() != to.parent() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "rename_noreplace needs one parent folder",
+        ));
+    }
+    imp::rename_noreplace(from, to)
+}
+
+/// Windows: opens `path` for DELETE with full sharing and closes it again; a holder that did not
+/// grant FILE_SHARE_DELETE (the game) makes it fail with InUse. Other OSes: Ok at once.
+pub fn lock_probe(path: &Path, is_dir: bool) -> io::Result<()> {
+    imp::lock_probe(path, is_dir)
+}
+
+/// Names of the processes holding `paths`. P2: None everywhere (Restart Manager is WG-1).
+pub fn who_holds(_paths: &[PathBuf]) -> Option<Vec<String>> {
+    None
 }
 
 pub fn os_kind() -> OsKind {
@@ -231,6 +272,7 @@ fn classify_kind(kind: io::ErrorKind) -> OsErrorClass {
         io::ErrorKind::NotFound => OsErrorClass::NotFound,
         io::ErrorKind::PermissionDenied => OsErrorClass::AccessDenied,
         io::ErrorKind::Unsupported => OsErrorClass::Unsupported,
+        io::ErrorKind::AlreadyExists => OsErrorClass::AlreadyExists,
         _ => OsErrorClass::Other,
     }
 }

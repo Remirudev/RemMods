@@ -1,11 +1,12 @@
 //! Unsupported OSes (e.g. macOS): compiles, classifies by `io::ErrorKind` only.
 
 use std::io;
+use std::path::Path;
 use std::process::Command;
 
 use super::{
-    OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues, RegistryView,
-    RetryPolicy, SteamHints,
+    NoReplace, OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues,
+    RegistryView, RetryPolicy, SteamHints,
 };
 
 pub(super) const OS_KIND: OsKind = OsKind::Other;
@@ -17,6 +18,18 @@ pub(super) fn classify_raw(_error: &io::Error) -> Option<OsErrorClass> {
 
 pub(super) fn retry_policy(_class: OsErrorClass) -> RetryPolicy {
     RetryPolicy::ONCE
+}
+
+pub(super) fn folder_retry_policy(_class: OsErrorClass) -> RetryPolicy {
+    RetryPolicy::ONCE
+}
+
+pub(super) fn rename_noreplace(_from: &Path, _to: &Path) -> io::Result<NoReplace> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn lock_probe(_path: &Path, _is_dir: bool) -> io::Result<()> {
+    Ok(())
 }
 
 pub(super) fn replace_retry_policy(_class: OsErrorClass) -> RetryPolicy {

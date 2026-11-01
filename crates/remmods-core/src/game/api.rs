@@ -53,6 +53,12 @@ impl Core {
         self.game.poll_running()
     }
 
+    /// One fresh process scan for a mutation (also fed to the running tracker); a failed scan
+    /// counts as not running.
+    pub fn game_running_now(&self) -> bool {
+        self.game.running_now()
+    }
+
     /// Re-reads the build id; `Some` when the update notice changed.
     pub fn game_refresh_build(&self) -> Option<GameStatusChange> {
         self.game.refresh_build(&self.settings)

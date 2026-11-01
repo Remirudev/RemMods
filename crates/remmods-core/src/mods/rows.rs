@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use super::issues::{ModIssue, NameProblem};
 use super::listing::Entry;
 use super::metadata::{MODINFO_MAX_BYTES, parse_modinfo};
-use super::model::{ModInfo, ModInfoOrigin, ModKind, ModRow, PayloadCounts, RootKind};
+use super::model::{
+    ModInfo, ModInfoOrigin, ModKind, ModRow, ModState, PayloadCounts, RootKind, ToggleBlock,
+};
 use super::modref::{ModRef, RefKind};
 use super::path_length::path_too_long;
 use super::strategy::{LooseGroup, StateInput, logic_state, pak_state};
@@ -105,6 +107,7 @@ pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: Mod
         conflicts_with: Vec::new(),
         ambiguous: false,
         issues,
+        toggle_block: None,
     };
     RowDraft {
         row,
@@ -185,6 +188,7 @@ pub(crate) fn loose_row(
         conflicts_with: Vec::new(),
         ambiguous: false,
         issues,
+        toggle_block: None,
     };
     RowDraft {
         row,
@@ -333,4 +337,22 @@ fn read_modinfo(top_files: &[TopFile], issues: &mut Vec<ModIssue>) -> ModInfo {
         issues.push(ModIssue::ModinfoInvalid);
     }
     info
+}
+
+/// Runs after the cross-row passes, which set `ambiguous` (spec §5.1).
+pub(crate) fn toggle_block(row: &ModRow) -> Option<ToggleBlock> {
+    if row.ambiguous {
+        return Some(ToggleBlock::Ambiguous);
+    }
+    if row.issues.contains(&ModIssue::LinkedMod) {
+        return Some(ToggleBlock::Linked);
+    }
+    match row.state {
+        ModState::Unknown => Some(ToggleBlock::UnknownState),
+        ModState::NoPakFiles => Some(ToggleBlock::NoPakFiles),
+        _ if row.kind == ModKind::Logic && row.key == "Logic:" => {
+            Some(ToggleBlock::InvalidLogicName)
+        }
+        _ => None,
+    }
 }

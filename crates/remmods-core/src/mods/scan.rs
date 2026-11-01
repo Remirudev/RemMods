@@ -14,7 +14,7 @@ use super::model::{
 };
 use super::modref::{ModRef, RefKind};
 use super::payload::{classify_payload, is_archive, is_game_file};
-use super::rows::{RootRef, RowDraft, folder_row, loose_row};
+use super::rows::{RootRef, RowDraft, folder_row, loose_row, toggle_block};
 use super::strategy::{LooseFile, group_loose_files};
 use super::unmanaged::{UnmanagedDraft, mark_loose_copies};
 use super::walk::{Walk, WalkOptions, display_rel_path, walk};
@@ -287,6 +287,7 @@ impl Scan<'_> {
             .into_iter()
             .map(|mut draft| {
                 draft.row.issues.sort_by_key(super::issues::ModIssue::rank);
+                draft.row.toggle_block = toggle_block(&draft.row);
                 draft.row
             })
             .collect();

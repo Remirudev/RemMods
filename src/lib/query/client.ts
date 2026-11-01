@@ -1,14 +1,19 @@
-import { notifications } from '@mantine/notifications'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import { openBusyDialog, openStaleDialog } from '../../shared/fs-dialogs'
 import { storeModsSnapshot } from '../../shared/mods-cache'
 import { queryKeys } from '../../shared/query-keys'
-import { describeError } from '../i18n/error-messages'
+import { i18n } from '../i18n'
 import { ipc } from '../ipc'
 import { describeForLog, isIpcError } from '../ipc/ipc-error'
 import { logError } from '../log/frontend-log'
+import { showErrorToast } from './error-toast'
 
 function isStale(error: unknown): boolean {
   return isIpcError(error) && error.appError.kind === 'stale'
+}
+
+function isBusy(error: unknown): boolean {
+  return isIpcError(error) && error.appError.kind === 'busy'
 }
 
 // `stale` means the disk or the Steam candidates changed under a cached entry. The game status is
@@ -23,9 +28,9 @@ function recoverFromStale(client: QueryClient): void {
   )
 }
 
-// Every failed mutation (a user action) becomes a translated toast, so no action fails silently.
-// A mutation with its own error UI opts out with `meta: { suppressErrorToast: true }`. Queries
-// render their own error state instead.
+// Every failed mutation (a user action) is shown, so no action fails silently: `busy` and `stale`
+// open a dialog, everything else becomes a translated toast. A mutation with its own error UI
+// opts out with `meta: { suppressErrorToast: true }`. Queries render their own error state.
 export function createQueryClient(): QueryClient {
   const client: QueryClient = new QueryClient({
     queryCache: new QueryCache({
@@ -38,8 +43,9 @@ export function createQueryClient(): QueryClient {
         logError(`mutation failed: ${describeForLog(error)}`)
         if (isStale(error)) recoverFromStale(client)
         if (mutation.meta?.suppressErrorToast) return
-        const { title, message } = describeError(error)
-        notifications.show({ color: 'red', title, message, autoClose: 6000 })
+        if (isBusy(error)) openBusyDialog(i18n.getFixedT(null, 'errors'))
+        else if (isStale(error)) openStaleDialog(i18n.getFixedT(null, 'errors'))
+        else showErrorToast(error)
       },
     }),
     defaultOptions: {

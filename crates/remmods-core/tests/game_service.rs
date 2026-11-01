@@ -48,7 +48,9 @@ impl Fixture {
                 steam_detection: detection,
                 fixed_location: None,
                 steam_hints: Some(linux_hints(&self.home)),
+                processes: None,
             },
+            require_marker: None,
         };
         Core::open_with(self.paths.clone(), options).expect("open core")
     }
@@ -254,7 +256,9 @@ fn fixed_location_is_ready_and_not_stored() {
             steam_detection: true,
             fixed_location: Some(under(&game, &["Polaris", "Content", "Paks"])),
             steam_hints: Some(linux_hints(&fx.home)),
+            processes: None,
         },
+        require_marker: None,
     };
     let core = Core::open_with(fx.paths.clone(), options).expect("open");
     let status = core.game_status();

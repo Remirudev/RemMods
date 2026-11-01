@@ -10,11 +10,12 @@ use super::layout::{
     GameLayout, game_view_of_paks, plain_absolute, resolve_pick, validate_game_root,
 };
 use super::running::RunningTracker;
+use super::running::scan_verdict;
 use super::settle::{Settled, Target, settle};
 use super::{
     DetectionNote, GameCandidate, GameError, GameLocation, GameOptions, GameStatus,
     GameStatusChange, LaunchPlan, LocationChoice, LocationSource, PaksLocation, PickResult,
-    STEAM_LAUNCH_URL, UpdateNotice, classify,
+    STEAM_LAUNCH_URL, UpdateNotice,
 };
 use crate::paths::display_path;
 use crate::platform::{self, OsKind};
@@ -225,12 +226,20 @@ impl GameService {
     }
 
     pub(crate) fn poll_running(&self) -> Option<GameStatusChange> {
-        let scan = platform::processes()
-            .map(|records| classify(&records))
+        let scan = scan_verdict(self.options.processes.as_ref())
             .map_err(|error| log::debug!("process scan failed: {error}"));
         let mut state = self.lock();
         let changed = state.tracker.observe(scan, Instant::now());
         changed.then(|| change_of(&state))
+    }
+
+    /// One fresh process scan for a mutation; a failed scan counts as not running.
+    pub(crate) fn running_now(&self) -> bool {
+        let scan = scan_verdict(self.options.processes.as_ref())
+            .map_err(|error| log::warn!("process scan failed, treated as not running: {error}"));
+        let running = scan.as_ref().is_ok_and(|verdict| verdict.game.is_some());
+        self.lock().tracker.observe(scan, Instant::now());
+        running
     }
 
     /// Re-reads the build of the Ready location; `Some` when the update notice changed.

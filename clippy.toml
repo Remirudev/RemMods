@@ -4,7 +4,8 @@ allow-expect-in-tests = true
 # Every std call that creates, writes, truncates, links or removes files lives in
 # remmods_core::safe_fs (module-level allow there). Opening for writing counts too, so
 # OpenOptions' write/append/create/truncate are listed one by one. The OS-specific symlink
-# functions only resolve on their own OS, hence `allow-invalid`.
+# functions only resolve on their own OS, hence `allow-invalid`. The same holds for the rustix and
+# windows-sys mutators: only the platform files that wrap them carry the module-level allow.
 disallowed-methods = [
   { path = "std::fs::write", reason = "use remmods_core::safe_fs" },
   { path = "std::fs::copy", reason = "use remmods_core::safe_fs" },
@@ -32,4 +33,12 @@ disallowed-methods = [
   { path = "std::os::unix::fs::symlink", reason = "use remmods_core::safe_fs", allow-invalid = true },
   { path = "std::os::windows::fs::symlink_file", reason = "use remmods_core::safe_fs", allow-invalid = true },
   { path = "std::os::windows::fs::symlink_dir", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "rustix::fs::renameat", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "rustix::fs::renameat_with", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "rustix::fs::linkat", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "rustix::fs::unlinkat", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "rustix::fs::mkdirat", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows_sys::Win32::Storage::FileSystem::MoveFileExW", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows_sys::Win32::Storage::FileSystem::DeleteFileW", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows_sys::Win32::Storage::FileSystem::RemoveDirectoryW", reason = "use remmods_core::safe_fs", allow-invalid = true },
 ]

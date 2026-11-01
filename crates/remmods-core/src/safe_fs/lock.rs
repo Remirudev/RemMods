@@ -1,7 +1,11 @@
 use std::fs::{File, OpenOptions, TryLockError};
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use super::{FsError, ensure_dir};
+
+const LOCK_POLL: Duration = Duration::from_millis(50);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LockMode {
@@ -27,8 +31,28 @@ impl AppLock {
         Self::try_acquire(path, LockMode::Shared)
     }
 
+    /// Tries every 50 ms until `wait` has passed, then `Busy`.
+    pub fn exclusive_within(path: &Path, wait: Duration) -> Result<Self, FsError> {
+        Self::acquire_within(path, LockMode::Exclusive, wait)
+    }
+
+    /// Tries every 50 ms until `wait` has passed, then `Busy`.
+    pub fn shared_within(path: &Path, wait: Duration) -> Result<Self, FsError> {
+        Self::acquire_within(path, LockMode::Shared, wait)
+    }
+
     pub fn mode(&self) -> LockMode {
         self.mode
+    }
+
+    fn acquire_within(path: &Path, mode: LockMode, wait: Duration) -> Result<Self, FsError> {
+        let started = Instant::now();
+        loop {
+            match Self::try_acquire(path, mode) {
+                Err(FsError::Busy) if started.elapsed() < wait => thread::sleep(LOCK_POLL),
+                result => return result,
+            }
+        }
     }
 
     fn try_acquire(path: &Path, mode: LockMode) -> Result<Self, FsError> {

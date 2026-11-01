@@ -4,9 +4,10 @@ use std::ptr;
 use std::time::Duration;
 
 use windows_sys::Win32::Foundation::{
-    ERROR_ACCESS_DENIED, ERROR_DISK_FULL, ERROR_FILE_NOT_FOUND, ERROR_FILENAME_EXCED_RANGE,
-    ERROR_HANDLE_DISK_FULL, ERROR_LOCK_VIOLATION, ERROR_NOT_SAME_DEVICE, ERROR_NOT_SUPPORTED,
-    ERROR_PATH_NOT_FOUND, ERROR_SHARING_VIOLATION, ERROR_WRITE_PROTECT,
+    ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, ERROR_DISK_FULL, ERROR_FILE_EXISTS,
+    ERROR_FILE_NOT_FOUND, ERROR_FILENAME_EXCED_RANGE, ERROR_HANDLE_DISK_FULL, ERROR_LOCK_VIOLATION,
+    ERROR_NOT_SAME_DEVICE, ERROR_NOT_SUPPORTED, ERROR_PATH_NOT_FOUND, ERROR_SHARING_VIOLATION,
+    ERROR_WRITE_PROTECT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     MB_ICONERROR, MB_OK, MB_SETFOREGROUND, MessageBoxW,
@@ -14,9 +15,11 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 use super::{OsErrorClass, OsKind, RetryPolicy};
 
+mod fs;
 mod process;
 mod registry;
 
+pub(super) use fs::{lock_probe, rename_noreplace};
 pub(super) use process::processes;
 pub(super) use registry::{registry_string, steam_hints};
 
@@ -39,6 +42,7 @@ pub(super) fn classify_raw(error: &io::Error) -> Option<OsErrorClass> {
         ERROR_NOT_SAME_DEVICE => OsErrorClass::CrossDevice,
         ERROR_FILENAME_EXCED_RANGE => OsErrorClass::NameTooLong,
         ERROR_FILE_NOT_FOUND | ERROR_PATH_NOT_FOUND => OsErrorClass::NotFound,
+        ERROR_FILE_EXISTS | ERROR_ALREADY_EXISTS => OsErrorClass::AlreadyExists,
         ERROR_NOT_SUPPORTED => OsErrorClass::Unsupported,
         _ => return None,
     };
@@ -48,6 +52,19 @@ pub(super) fn classify_raw(error: &io::Error) -> Option<OsErrorClass> {
 pub(super) fn retry_policy(class: OsErrorClass) -> RetryPolicy {
     match class {
         OsErrorClass::InUse => IN_USE_RETRY,
+        _ => RetryPolicy::ONCE,
+    }
+}
+
+/// Explorer, the indexer and scanners hold folder handles without FILE_SHARE_DELETE for a while.
+const FOLDER_RETRY: RetryPolicy = RetryPolicy {
+    attempts: 61,
+    total: Duration::from_secs(30),
+};
+
+pub(super) fn folder_retry_policy(class: OsErrorClass) -> RetryPolicy {
+    match class {
+        OsErrorClass::InUse | OsErrorClass::AccessDenied => FOLDER_RETRY,
         _ => RetryPolicy::ONCE,
     }
 }

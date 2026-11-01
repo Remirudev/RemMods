@@ -11,6 +11,11 @@ export const errors = {
     invalidGameFolder: 'Not a TEKKEN 8 folder',
     launchFailed: 'TEKKEN 8 could not be started',
     revealFailed: 'Could not open the file manager',
+    gameRunning: 'TEKKEN 8 is running',
+    targetExists: 'Name already taken',
+    outOfScope: 'Outside the mod folders',
+    toggleBlocked: 'This mod cannot be changed',
+    batchFailed: 'Changes were not applied',
   },
   messages: {
     busy: 'Another change is still running. Try again in a moment.',
@@ -23,6 +28,41 @@ export const errors = {
     gameNotSet: 'Choose the TEKKEN 8 folder first.',
     launchFailed:
       'RemMods could not hand steam://rungameid/1778820 to Steam. Start the game from Steam; the log has the details.',
+    gameRunning: 'TEKKEN 8 is running.',
+    targetExists: 'A file with the new name already exists. Nothing was changed.',
+    outOfScope: 'RemMods only changes files inside the mod folders.',
+    batchFailed: 'A file could not be renamed ({{reason}}). All changes were undone.',
+    batchFolderInUse: 'A folder is in use by another program. Close it or TEKKEN 8 and try again.',
+    batchStuck_one: '{{count}} rename could not be undone. RemMods undoes it on the next start.',
+    batchStuck_other:
+      '{{count}} renames could not be undone. RemMods undoes them on the next start.',
+    probeInUse: 'A mod file is in use. Close TEKKEN 8 first.',
+  },
+  toggleBlocked: {
+    ambiguous: 'Several mods share this name. Rename one first.',
+    linked: 'Linked mod folders are not changed by RemMods.',
+    unknownState: 'The mod’s files could not be read.',
+    noPakFiles: 'This mod has no pak files.',
+    invalidLogicName: 'This LogicMods folder has no name.',
+  },
+  dialogs: {
+    ok: 'OK',
+    running: {
+      title: 'TEKKEN 8 is running',
+      body: 'Changes apply the next time the game starts. Mods that are already loaded stay loaded until then.',
+      confirm: 'Apply for next launch',
+      cancel: 'Cancel',
+    },
+    busy: {
+      title: 'Another RemMods is changing files',
+      body: 'Wait until it is done, then try again.',
+      retry: 'Try again',
+      cancel: 'Cancel',
+    },
+    stale: {
+      title: 'The mod list changed on disk',
+      body: 'RemMods reloaded the list. Check the mods and try again.',
+    },
   },
   ioClasses: {
     inUse: 'The file is in use by another program.',
@@ -34,6 +74,19 @@ export const errors = {
     notFound: 'The file or folder was not found.',
     unsupported: 'This is not supported on this system.',
     other: 'The operating system reported an error. The log has the details.',
+    alreadyExists: 'A file with that name already exists.',
+  },
+  ioClassNames: {
+    inUse: 'in use',
+    accessDenied: 'access denied',
+    noSpace: 'no space left',
+    readOnlyFs: 'read-only drive',
+    crossDevice: 'another drive',
+    nameTooLong: 'name too long',
+    notFound: 'not found',
+    unsupported: 'not supported',
+    other: 'other error',
+    alreadyExists: 'name exists',
   },
   folderProblems: {
     notFound: 'No TEKKEN 8 game files were found there.',

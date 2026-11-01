@@ -81,6 +81,7 @@ fn core_row() -> core::ModRow {
         }],
         ambiguous: true,
         issues: vec![core::ModIssue::AmbiguousKey, core::ModIssue::ContainsLink],
+        toggle_block: Some(core::ToggleBlock::Ambiguous),
     }
 }
 
@@ -452,6 +453,7 @@ fn mod_row_shape() {
         conflicts_with: vec![],
         ambiguous: false,
         issues: vec![ModIssue::LogicDisabledButLoaded],
+        toggle_block: None,
     };
 
     let expected = json!({
@@ -476,7 +478,8 @@ fn mod_row_shape() {
         },
         "conflictsWith": [],
         "ambiguous": false,
-        "issues": [{ "kind": "logicDisabledButLoaded" }]
+        "issues": [{ "kind": "logicDisabledButLoaded" }],
+        "toggleBlock": null
     });
     assert_eq!(to_json(&row), expected);
     assert_eq!(from_json::<ModRow>(expected), row);
@@ -586,6 +589,8 @@ fn row_converts_from_core() {
         }]
     );
     assert!(dto.ambiguous);
+    assert_eq!(dto.toggle_block, Some(remmods_ipc::ToggleBlock::Ambiguous));
+    assert_eq!(to_json(&dto)["toggleBlock"], json!("ambiguous"));
     assert_eq!(
         dto.issues,
         vec![ModIssue::AmbiguousKey, ModIssue::ContainsLink]

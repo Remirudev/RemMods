@@ -5,6 +5,10 @@ use std::process::Command;
 
 use rustix::io::Errno;
 
+mod fs;
+
+pub(super) use fs::{lock_probe, rename_noreplace};
+
 use super::{
     OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues, RegistryView,
     RetryPolicy, SteamHints, read_proc_tree,
@@ -22,6 +26,7 @@ pub(super) fn classify_raw(error: &io::Error) -> Option<OsErrorClass> {
         Errno::XDEV => OsErrorClass::CrossDevice,
         Errno::NAMETOOLONG => OsErrorClass::NameTooLong,
         Errno::NOENT => OsErrorClass::NotFound,
+        Errno::EXIST | Errno::NOTEMPTY => OsErrorClass::AlreadyExists,
         Errno::NOSYS | Errno::OPNOTSUPP => OsErrorClass::Unsupported,
         _ => return None,
     };
@@ -30,6 +35,10 @@ pub(super) fn classify_raw(error: &io::Error) -> Option<OsErrorClass> {
 
 /// Linux never retries: nothing holds files the way Windows sharing modes do.
 pub(super) fn retry_policy(_class: OsErrorClass) -> RetryPolicy {
+    RetryPolicy::ONCE
+}
+
+pub(super) fn folder_retry_policy(_class: OsErrorClass) -> RetryPolicy {
     RetryPolicy::ONCE
 }
 

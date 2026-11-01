@@ -14,8 +14,12 @@ confirmation.
 
 **Phase 1 (read-only)**: RemMods finds the game (Steam detection or a picked folder), scans `Mods`,
 `~mods` and `LogicMods`, shows every mod with its state and conflicts, shows whether the game is
-running, and launches it through Steam. It does not change your mod files yet. The full plan,
-including the phases and their exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
+running, and launches it through Steam.
+
+**Phase 2 (in progress)**: enable and disable mods (P2). A disabled mod is renamed in place, never
+overwritten, and the change is journaled so an interrupted toggle is rolled back on the next start.
+Installing, profiles and removal come in later phases. The full plan, including the phases and their
+exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
 
 ## Platforms
 
@@ -58,6 +62,11 @@ cargo test --workspace --locked
 npm run bindings      # regenerates src/lib/ipc/bindings.ts; commit it when it changes
 scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 ```
+
+A separate `fs-matrix` job runs the rename, rollback and recovery tests on real tmpfs, ext4, btrfs,
+vfat and exfat mounts (plus read-only, root-owned, full-disk and tiny-inotify-queue cases). It needs
+`sudo` for the mounts (`scripts/fs-matrix-mount.sh`), so it runs in CI only; locally
+`cargo test -p remmods-core --test fs_matrix` passes without doing anything.
 
 Build the app and run its self-test (needs a display; exits 0 when every check passes):
 

@@ -1,7 +1,7 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::commands::{game, mods, settings, shell};
-use crate::events::{GameStatusChanged, ModsChanged};
+use crate::events::{GameStatusChanged, ModsChanged, WatchStatusChanged};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
 /// from here. Keep the list in sync with `COMMANDS` in `build.rs` (ACL permissions).
@@ -29,8 +29,15 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods::mods_refresh,
             mods::mods_details,
             mods::mods_reveal,
+            mods::mods_toggle,
+            mods::mods_disable_all,
+            mods::mods_watch_status,
         ])
-        .events(collect_events![ModsChanged, GameStatusChanged])
+        .events(collect_events![
+            ModsChanged,
+            GameStatusChanged,
+            WatchStatusChanged
+        ])
         .error_handling(ErrorHandlingMode::Result)
         .disable_serde_phases()
 }

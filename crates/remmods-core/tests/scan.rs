@@ -9,7 +9,7 @@ use std::thread;
 use mods_support::{DATA, fixture, input, keys, paks_tree, row, scan, smoke_tree};
 use remmods_core::mods::{
     ModInfoOrigin, ModIssue, ModKind, ModState, ModsService, NameProblem, ScanContent,
-    ScanSnapshot, UnmanagedKind, paks_identity,
+    ScanSnapshot, ToggleBlock, UnmanagedKind, paks_identity,
 };
 
 fn content_of(entries: &[(&str, &[u8])]) -> ScanContent {
@@ -140,6 +140,35 @@ fn bare_disabled_prefix_has_an_empty_name() {
     let empty = row(&content, "Logic:");
     assert_eq!(empty.name, "");
     assert!(empty.issues.contains(&ModIssue::EmptyName));
+}
+
+#[test]
+fn toggle_block_first_match_wins() {
+    let content = content_of(&[
+        ("LogicMods/X/a.pak", DATA),
+        ("LogicMods/.disabled_X/a.pak-x", DATA),
+        ("LogicMods/.disabled_/a.pak-x", DATA),
+        ("LogicMods/Ok/a.pak", DATA),
+        ("Mods/Empty/readme.txt", DATA),
+        ("Mods/On/a.pak", DATA),
+        ("Mods/Off/a.pak-x", DATA),
+        ("Mods/Half/a.pak", DATA),
+        ("Mods/Half/b.pak-x", DATA),
+    ]);
+    for ambiguous in content.rows.iter().filter(|row| row.key == "Logic:X") {
+        assert_eq!(ambiguous.toggle_block, Some(ToggleBlock::Ambiguous));
+    }
+    let expected = [
+        ("Logic:", Some(ToggleBlock::InvalidLogicName)),
+        ("Logic:Ok", None),
+        ("Standard:Empty", Some(ToggleBlock::NoPakFiles)),
+        ("Standard:On", None),
+        ("Standard:Off", None),
+        ("Standard:Half", None),
+    ];
+    for (key, block) in expected {
+        assert_eq!(row(&content, key).toggle_block, block, "{key}");
+    }
 }
 
 #[test]
@@ -287,7 +316,7 @@ fn long_nested_paths_warn() {
 #[test]
 fn scanned_at_is_rfc3339_with_milliseconds() {
     let (_dir, paks) = fixture();
-    let service = ModsService::new();
+    let service = ModsService::new(paks.with_file_name("mod-meta.json"));
     let snapshot: Arc<ScanSnapshot> = service.list(&input(&paks)).expect("list");
     let text = snapshot.scanned_at_rfc3339();
     assert!(text.ends_with('Z'), "{text}");
@@ -299,7 +328,7 @@ fn scanned_at_is_rfc3339_with_milliseconds() {
 fn service_publishes_revisions() {
     let (_dir, paks) = fixture();
     paks_tree(&paks, &[("Mods/A/a.pak", DATA)]);
-    let service = ModsService::new();
+    let service = ModsService::new(paks.with_file_name("mod-meta.json"));
     let scan_input = input(&paks);
     let first = service.refresh(&scan_input).expect("first");
     assert!(first.changed);
@@ -328,7 +357,7 @@ fn service_publishes_revisions() {
 fn concurrent_refreshes_share_one_result() {
     let (_dir, paks) = fixture();
     paks_tree(&paks, &[("Mods/A/a.pak", DATA)]);
-    let service = Arc::new(ModsService::new());
+    let service = Arc::new(ModsService::new(paks.with_file_name("mod-meta.json")));
     let scan_input = input(&paks);
     let handles: Vec<_> = (0..2)
         .map(|_| {

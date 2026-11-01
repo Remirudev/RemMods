@@ -23,10 +23,12 @@ pub async fn game_status(state: State<'_, AppState>) -> Result<GameStatus, AppEr
 #[tauri::command]
 #[specta::specta]
 pub async fn game_detect(state: State<'_, AppState>) -> Result<GameStatus, AppError> {
-    run_blocking(state.core.clone(), |core| {
+    let status = run_blocking(state.core.clone(), |core| {
         Ok(GameStatus::from(&core.game_detect()))
     })
-    .await
+    .await?;
+    state.watcher.rearm();
+    Ok(status)
 }
 
 #[tauri::command]
@@ -36,11 +38,13 @@ pub async fn game_set_location(
     choice: LocationChoice,
 ) -> Result<GameStatus, AppError> {
     let choice = choice.into();
-    run_blocking(state.core.clone(), move |core| {
+    let status = run_blocking(state.core.clone(), move |core| {
         core.game_set_location(choice)
             .map(|status| GameStatus::from(&status))
     })
-    .await
+    .await?;
+    state.watcher.rearm();
+    Ok(status)
 }
 
 /// Opens the system folder picker attached to the window and validates the pick. `cancelled`
@@ -63,11 +67,15 @@ pub async fn game_pick_location(
     let path = picked
         .into_path()
         .map_err(|error| internal("reading the picked folder", error))?;
-    run_blocking(state.core.clone(), move |core| {
+    let outcome = run_blocking(state.core.clone(), move |core| {
         core.game_choose_path(&path)
             .map(|result| PickOutcome::from(&result))
     })
-    .await
+    .await?;
+    if matches!(outcome, PickOutcome::Selected { .. }) {
+        state.watcher.rearm();
+    }
+    Ok(outcome)
 }
 
 #[tauri::command]

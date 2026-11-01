@@ -98,6 +98,7 @@ export function makeModRow(name: string, overrides: Partial<ModRow> = {}): ModRo
     info: TEST_INFO,
     conflictsWith: [],
     ambiguous: false,
+    toggleBlock: null,
     issues: [],
     ...overrides,
   }

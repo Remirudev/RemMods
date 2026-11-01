@@ -3,8 +3,8 @@
 use std::io;
 
 use remmods_core::platform::{
-    OsErrorClass, OsKind, RetryPolicy, app_origin, classify, os_kind, replace_retry_policy,
-    retry_policy,
+    OsErrorClass, OsKind, RetryPolicy, app_origin, classify, folder_retry_policy, os_kind,
+    replace_retry_policy, retry_policy,
 };
 use rustix::io::Errno;
 
@@ -27,8 +27,9 @@ fn classify_maps_the_errno_table() {
         (Errno::NOENT, OsErrorClass::NotFound),
         (Errno::NOSYS, OsErrorClass::Unsupported),
         (Errno::OPNOTSUPP, OsErrorClass::Unsupported),
+        (Errno::EXIST, OsErrorClass::AlreadyExists),
+        (Errno::NOTEMPTY, OsErrorClass::AlreadyExists),
         (Errno::IO, OsErrorClass::Other),
-        (Errno::EXIST, OsErrorClass::Other),
     ];
     for (errno, expected) in table {
         assert_eq!(classify(&raw(errno.raw_os_error())), expected, "{errno:?}");
@@ -61,6 +62,10 @@ fn errors_without_an_os_code_fall_back_to_their_kind() {
         classify(&io::Error::from(io::ErrorKind::PermissionDenied)),
         OsErrorClass::AccessDenied
     );
+    assert_eq!(
+        classify(&io::Error::from(io::ErrorKind::AlreadyExists)),
+        OsErrorClass::AlreadyExists
+    );
     assert_eq!(classify(&io::Error::other("custom")), OsErrorClass::Other);
 }
 
@@ -75,6 +80,7 @@ fn linux_tries_every_operation_once() {
     for class in classes {
         assert_eq!(retry_policy(class), RetryPolicy::ONCE, "{class:?}");
         assert_eq!(replace_retry_policy(class), RetryPolicy::ONCE, "{class:?}");
+        assert_eq!(folder_retry_policy(class), RetryPolicy::ONCE, "{class:?}");
     }
 }
 

@@ -4,8 +4,8 @@ use std::io;
 use std::time::Duration;
 
 use remmods_core::platform::{
-    OsErrorClass, OsKind, RetryPolicy, app_origin, classify, os_kind, replace_retry_policy,
-    retry_policy,
+    OsErrorClass, OsKind, RetryPolicy, app_origin, classify, folder_retry_policy, os_kind,
+    replace_retry_policy, retry_policy,
 };
 
 fn raw(code: i32) -> io::Error {
@@ -26,8 +26,9 @@ fn classify_maps_the_win32_code_table() {
         (2, OsErrorClass::NotFound),
         (3, OsErrorClass::NotFound),
         (50, OsErrorClass::Unsupported),
+        (80, OsErrorClass::AlreadyExists),
+        (183, OsErrorClass::AlreadyExists),
         (87, OsErrorClass::Other),
-        (183, OsErrorClass::Other),
     ];
     for (code, expected) in table {
         assert_eq!(classify(&raw(code)), expected, "code {code}");
@@ -43,6 +44,10 @@ fn errors_without_an_os_code_fall_back_to_their_kind() {
     assert_eq!(
         classify(&io::Error::from(io::ErrorKind::PermissionDenied)),
         OsErrorClass::AccessDenied
+    );
+    assert_eq!(
+        classify(&io::Error::from(io::ErrorKind::AlreadyExists)),
+        OsErrorClass::AlreadyExists
     );
     assert_eq!(classify(&io::Error::other("custom")), OsErrorClass::Other);
 }
@@ -89,4 +94,18 @@ fn replacing_a_file_also_retries_access_denied() {
 fn reports_windows_and_the_http_origin() {
     assert_eq!(os_kind(), OsKind::Windows);
     assert_eq!(app_origin(), "http://tauri.localhost");
+}
+
+#[test]
+fn folder_renames_retry_in_use_and_access_denied_for_30_seconds() {
+    for class in [OsErrorClass::InUse, OsErrorClass::AccessDenied] {
+        let policy = folder_retry_policy(class);
+        assert_eq!(policy.attempts, 61, "{class:?}");
+        assert_eq!(policy.total, Duration::from_secs(30), "{class:?}");
+        assert_eq!(policy.pause(), Duration::from_millis(500), "{class:?}");
+    }
+    assert_eq!(
+        folder_retry_policy(OsErrorClass::NotFound),
+        RetryPolicy::ONCE
+    );
 }

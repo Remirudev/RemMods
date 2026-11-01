@@ -92,3 +92,40 @@ may change in this phase. Captures are reviewed and redacted by hand before any 
 |------|-------|----------------|--------|-------|
 | 2026-11-01 | P0 | c6ef614 | pass | Baseline, game build 25221600, started from Steam. Paks: 264 files (112 in `Mods`), 19 folders. Kunimitsu's modded outfits visible in offline Practice. Before and after snapshots identical. `Mods` backed up to `~/RemMods-backups/2026-11-01/`. |
 | 2026-11-01 | P1 | c5592bf | pass | Game build 25221600, launched from RemMods (`steam://rungameid/1778820` via xdg-open, gamescope launch options). In-app state showed RUNNING while playing and NOT RUNNING after quitting (owner; no stopwatch). Kunimitsu's modded outfits visible in offline Practice. Scan = disk: `scan-expect` vs the logged snapshot identical (27 lines: 17 rows incl. loose `SamuraiHair_P`/`SamuraiOutfit_P`, 10 archives, 0 unmanaged, 0 leftovers). Paks snapshot identical to P0. LIVE capture (09:55): argv[0] drive `S:`, shipping exe comm `GameThread`, reaper parent `gamescopereaper`. Launch/quit capture loops not run: `steam-install-live`/`steam-shutdown-live` fixtures still pending. Taskbar icon and safe-graphics action deferred to P5. |
+
+## P2 steps (toggle phase)
+
+The first phase that renames mod files. Done with the owner: Claude prepares and switches the files,
+you play offline Practice mode and report. Every command works in fish. Each step ends with a
+"Result:" line to fill in. Test mods are copies of an installed visible mod (a costume, for example),
+renamed.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p2-before.tsv`. Back up
+   `Mods`, `~mods` and `LogicMods` with `tar` into `local/backup-p2-<date>.tar` (read-only source).
+   Result:
+2. Prepare the test mods:
+   - loose `Mods/P2Loose.pak`, `.ucas`, `.utoc`
+   - depth 3: `Mods/P2Deep/a/b/P2Deep.pak` with its `.ucas` and `.utoc`
+   - dot folder: `Mods/.disabled_P2Dot/…`
+   - case variant: `mods/P2Case/…` beside `Mods`
+   - a LogicMods mod renamed to `.disabled_X` whose paks are live
+
+   Result:
+3. Launch from RemMods and note which test mods are visible in-game (PLAN §11: loose, depth 3,
+   dot folder in `Mods`, both `Mods` and `mods`, Logic dot folder). Quit the game.
+   Result:
+4. In RemMods, disable each test mod that was visible (its files become `-x`), then launch: each one
+   must be gone. Enable them again: each must be back.
+   Result:
+5. During a match, toggle a mod off and on ("Apply for next launch?" appears). Note crashes or
+   missing assets; this decides "ask" or "block" while the game runs (PLAN §4).
+   Result:
+6. Two mods with the same pak basename, and two mods with the same asset in different paks: which
+   one wins? One in `~mods` and one in `Mods`: which wins? (load order, PLAN §11 and §12)
+   Result:
+7. Quit the game, restore from the backup, then
+   `scripts/paks-snapshot.sh > local/paks-p2-after.tsv` and
+   `diff -u local/paks-p2-before.tsv local/paks-p2-after.tsv`: no output after the restore.
+   Result:
+8. Claude records the answers in PLAN §11 and §7 after you agree.
+   Result:

@@ -1,3 +1,4 @@
+use super::model::ToggleBlock;
 use crate::safe_fs::FsError;
 
 #[derive(Debug, thiserror::Error)]
@@ -11,6 +12,12 @@ pub enum ModsError {
     BadRef,
     #[error("the name cannot be handed to the Windows shell")]
     NotShellSafe,
+    #[error("{key} cannot be toggled ({reason:?})")]
+    Blocked { key: String, reason: ToggleBlock },
+    #[error("the game is running")]
+    GameRunning,
+    #[error("the Paks folder has no smoke-fixture marker")]
+    NotAFixture,
 }
 
 impl ModsError {
@@ -20,6 +27,9 @@ impl ModsError {
             Self::Stale => "stale",
             Self::BadRef => "bad_ref",
             Self::NotShellSafe => "not_shell_safe",
+            Self::Blocked { .. } => "blocked",
+            Self::GameRunning => "game_running",
+            Self::NotAFixture => "not_a_fixture",
         }
     }
 }

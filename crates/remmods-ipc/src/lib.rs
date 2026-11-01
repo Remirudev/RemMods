@@ -8,6 +8,7 @@ mod mods;
 mod platform;
 mod settings;
 mod smoke;
+mod toggle;
 
 pub use error::{AppError, OsErrorClass};
 pub use game::{
@@ -26,3 +27,6 @@ pub use settings::{
     Appearance, AppearanceUpdate, ColorScheme, Settings, SettingsUpdate, TitleBarMode,
 };
 pub use smoke::{SmokeCheck, SmokeReport};
+pub use toggle::{
+    SkippedRow, ToggleBlock, ToggleOutcome, ToggleRequest, ToggleTarget, WatchState, WatchStatus,
+};

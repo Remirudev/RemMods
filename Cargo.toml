@@ -35,8 +35,10 @@ dunce = { version = "=1.0.5" }
 same-file = { version = "=1.0.6" }
 unicase = { version = "=2.10.0" }
 unicode-normalization = { version = "=0.1.26" }
+notify = { version = "=8.2.1", default-features = false }
+uuid = { version = "=1.29.0", default-features = false, features = ["std", "v4"] }
 
-rustix = { version = "=1.1.6", features = ["std", "process"] }
+rustix = { version = "=1.1.6", features = ["std", "process", "fs"] }
 windows-sys = { version = "=0.61.2", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",

@@ -1,6 +1,8 @@
-//! Fixture builders for the mods tests (spec §8.1). Every entry is created through
+//! Fixture builders for the mods tests (P1 spec §8.1, P2 spec §8.2). Every entry is created through
 //! `platform::fs_path`, so names Win32 would normalise (`Foo.`, `Foo `) work on Windows too.
 #![allow(dead_code, clippy::disallowed_methods, clippy::expect_used)]
+
+pub mod toggle;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -215,7 +217,9 @@ pub fn exercise_read_only(home: &Path, app_root: &Path) {
             steam_detection: true,
             fixed_location: None,
             steam_hints: Some(hints),
+            processes: None,
         },
+        require_marker: None,
     };
     let core = Core::open_with(AppPaths::under(app_root), options).expect("Core::open_with");
     let _ = core.game_status();

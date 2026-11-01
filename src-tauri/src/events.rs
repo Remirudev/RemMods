@@ -1,7 +1,7 @@
 //! Backend-initiated events. They are not buffered: the UI subscribes first, then fetches.
 
 use remmods_core::game::GameStatusChange;
-use remmods_ipc::{RunningState, UpdateNotice};
+use remmods_ipc::{RunningState, UpdateNotice, WatchState};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri_specta::Event;
@@ -32,6 +32,14 @@ impl From<GameStatusChange> for GameStatusChanged {
             update: change.update.as_ref().map(UpdateNotice::from),
         }
     }
+}
+
+/// `watch-status-changed`: the Paks watcher became active, hit the watch limit, has no folder or
+/// failed to start.
+#[derive(Serialize, Deserialize, Clone, Debug, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchStatusChanged {
+    pub state: WatchState,
 }
 
 /// Emits to every window; a failure only means nobody listens, so it is logged, not returned.

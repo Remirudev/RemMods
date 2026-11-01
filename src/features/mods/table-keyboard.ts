@@ -1,4 +1,4 @@
-import type { NavigationKey } from './types'
+import type { NavigationKey, TableKeyIntent } from './types'
 
 const NAVIGATION_KEYS: ReadonlySet<string> = new Set<NavigationKey>([
   'ArrowUp',
@@ -41,4 +41,13 @@ export function nextActiveIndex(
     case 'PageUp':
       return Math.max(from - page, 0)
   }
+}
+
+// Shift+Arrow/Home/End/Page extends the selection; the same keys alone only move the active row.
+export function tableKeyIntent(key: string, shift: boolean): TableKeyIntent | null {
+  if (key === ' ') return { kind: 'space' }
+  if (key === 'Escape') return { kind: 'escape' }
+  if (key === 'Enter') return { kind: 'open' }
+  if (!isNavigationKey(key)) return null
+  return shift ? { kind: 'extend', key } : { kind: 'move', key }
 }

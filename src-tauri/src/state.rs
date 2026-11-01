@@ -7,6 +7,7 @@ use remmods_core::Core;
 
 use crate::monitor::MonitorHandle;
 use crate::smoke::SmokeFixture;
+use crate::watcher::WatcherHandle;
 
 pub struct AppState {
     pub core: Arc<Core>,
@@ -14,6 +15,7 @@ pub struct AppState {
     /// Set once the main window has been shown (by `app_ready` or the 3 s fallback).
     pub shown: AtomicBool,
     pub monitor: MonitorHandle,
+    pub watcher: WatcherHandle,
     pub last_focus_rescan: Mutex<Option<Instant>>,
 }
 
@@ -31,12 +33,18 @@ const PASSED: u8 = 1;
 const FAILED: u8 = 2;
 
 impl AppState {
-    pub fn new(core: Arc<Core>, monitor: MonitorHandle, smoke: Option<SmokeState>) -> Self {
+    pub fn new(
+        core: Arc<Core>,
+        monitor: MonitorHandle,
+        watcher: WatcherHandle,
+        smoke: Option<SmokeState>,
+    ) -> Self {
         Self {
             core,
             smoke,
             shown: AtomicBool::new(false),
             monitor,
+            watcher,
             last_focus_rescan: Mutex::new(None),
         }
     }

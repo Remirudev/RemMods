@@ -2,6 +2,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -13,6 +14,8 @@ pub const UI_SCALE_MIN: f64 = 0.8;
 pub const UI_SCALE_MAX: f64 = 1.5;
 pub const UI_SCALE_DEFAULT: f64 = 1.0;
 const UI_SCALE_STEPS_PER_UNIT: f64 = 20.0;
+/// Scans hold the shared app lock since P2, so a write waits for a running scan (A11).
+const LOCK_WAIT: Duration = Duration::from_secs(2);
 
 #[derive(Debug, thiserror::Error)]
 pub enum SettingsError {
@@ -293,7 +296,7 @@ impl SettingsStore {
             return Err(SettingsError::ReadOnly);
         }
         update.validate()?;
-        let _app_lock = AppLock::try_exclusive(&self.lock_file)?;
+        let _app_lock = AppLock::exclusive_within(&self.lock_file, LOCK_WAIT)?;
         let base = self.read_base(&mut state)?;
         self.write(&mut state, base.with_update(update))
     }
@@ -308,7 +311,7 @@ impl SettingsStore {
         if state.snapshot.read_only {
             return Err(SettingsError::ReadOnly);
         }
-        let _app_lock = AppLock::try_exclusive(&self.lock_file)?;
+        let _app_lock = AppLock::exclusive_within(&self.lock_file, LOCK_WAIT)?;
         let mut next = self.read_base(&mut state)?;
         change(&mut next.game);
         self.write(&mut state, next.normalized())
@@ -380,7 +383,7 @@ fn write_defaults_if_unchanged(
     lock_file: &Path,
     fingerprint: u64,
 ) -> Result<bool, SettingsError> {
-    let _app_lock = AppLock::try_exclusive(lock_file)?;
+    let _app_lock = AppLock::exclusive_within(lock_file, LOCK_WAIT)?;
     match read_disk(file)? {
         DiskSettings::Corrupt {
             fingerprint: current,
