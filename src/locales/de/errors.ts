@@ -19,6 +19,14 @@ export const errors: LocaleShape<typeof en> = {
     outOfScope: 'Außerhalb der Mod-Ordner',
     toggleBlocked: 'Diese Mod kann nicht geändert werden',
     batchFailed: 'Änderungen nicht angewendet',
+    invalidName: 'Name nicht erlaubt',
+    manageBlocked: 'Das geht nicht',
+    trashUnavailable: 'Papierkorb nicht nutzbar',
+    deleteTokenInvalid: 'Bestätigung abgelaufen',
+    modinfoAmbiguous: 'modinfo.json ist nicht eindeutig',
+    profileNotFound: 'Profil nicht gefunden',
+    profileNameTaken: 'Profilname schon vergeben',
+    importFailed: 'Import fehlgeschlagen',
   },
   messages: {
     busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
@@ -44,6 +52,45 @@ export const errors: LocaleShape<typeof en> = {
     batchStuck_other:
       '{{count}} Umbenennungen konnten nicht rückgängig gemacht werden. RemMods holt das beim nächsten Start nach.',
     probeInUse: 'Eine Mod-Datei wird verwendet. Schließe zuerst TEKKEN 8.',
+    trashUnavailable:
+      'Das Verschieben in den Papierkorb ist hier nicht möglich. Nichts wurde geändert.',
+    deleteTokenInvalid:
+      'Die Löschbestätigung ist abgelaufen. Nichts wurde gelöscht; starte noch einmal.',
+    modinfoAmbiguous:
+      'Mehrere modinfo.json-Dateien unterscheiden sich nur in der Schreibweise. Entferne zuerst die überzähligen.',
+    profileNotFound: 'Dieses Profil gibt es nicht mehr. Die Liste wurde aktualisiert.',
+    profileNameTaken: 'Ein Profil mit diesem Namen gibt es schon.',
+  },
+  manageBlocked: {
+    action: {
+      rename: 'RemMods benennt diesen Eintrag nicht um.',
+      trash: 'RemMods verschiebt diesen Eintrag nicht in den Papierkorb.',
+      delete: 'RemMods löscht diesen Eintrag nicht.',
+      metadata: 'RemMods bearbeitet die Infos dieses Eintrags nicht.',
+    },
+    reason: {
+      loose: 'Lose Dateien haben keinen Ordner, der bearbeitet werden könnte.',
+      linked: 'Verknüpfte Mod-Ordner ändert RemMods nicht.',
+      archive: 'Archive bleiben unberührt.',
+      leftover: 'Übrig gebliebene Ordner lassen sich nicht umbenennen oder bearbeiten.',
+      unmanaged: 'Dieser Eintrag wird nicht von RemMods verwaltet.',
+      outsideRoots:
+        'Der Paks-Ordner selbst ist schreibgeschützt; nur die Mod-Ordner werden geändert.',
+      journalPending:
+        'Eine unfertige Änderung bezieht sich noch auf diesen Ordner. Starte RemMods zuerst neu.',
+    },
+  },
+  trashUnavailable: {
+    otherDevice: 'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb.',
+    noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
+    notSupported: 'Das Verschieben in den Papierkorb ist auf diesem System noch nicht möglich.',
+  },
+  importFailed: {
+    tooLarge: 'Die Datei ist zu groß für eine Profilliste.',
+    notJson: 'Die Datei ist kein gültiges JSON.',
+    wrongShape: 'Die Datei enthält keine Profilliste.',
+    wrongFormat: 'Die Datei ist kein RemMods-Profilexport.',
+    newerVersion: 'Die Datei stammt von einem neueren RemMods. Aktualisiere zuerst RemMods.',
   },
   toggleBlocked: {
     ambiguous: 'Mehrere Mods haben diesen Namen. Benenne zuerst eine um.',

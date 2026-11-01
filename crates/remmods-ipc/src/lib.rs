@@ -4,9 +4,12 @@
 mod content;
 mod error;
 mod game;
+mod manage;
 mod mod_issues;
 mod mods;
 mod platform;
+mod profiles;
+mod repair;
 mod settings;
 mod smoke;
 mod toggle;
@@ -21,6 +24,11 @@ pub use game::{
     LocationChoice, LocationSource, NoteCode, PickOutcome, RevealProblem, RunningState, SteamKind,
     UpdateNotice, UpdateTracking,
 };
+pub use manage::{
+    DeleteOutcome, DeletePrepared, DeleteRequest, ManageAction, ManageBlock, MetadataRequest,
+    ModInfoEdit, ModTarget, RekeyReport, RenameOutcome, RenameRequest, TrashKind, TrashOutcome,
+    TrashRequest, TrashUnavailableReason,
+};
 pub use mod_issues::{ModIssue, NameProblem};
 pub use mods::{
     ArchiveEntry, ConflictLink, LeftoverEntry, ModDetails, ModInfo, ModInfoDefaulted,
@@ -28,6 +36,13 @@ pub use mods::{
     PayloadKind, RootInfo, RootKind, ScanProblem, ScanStats, UnmanagedEntry, UnmanagedKind,
 };
 pub use platform::{AppPathsDto, OsKind, PlatformInfo};
+pub use profiles::{
+    ApplyOutcome, ApplyRequest, ChangeReason, DiffChange, DiffSkip, EntryState, ExportReport,
+    ImportProblem, ImportReport, LastApplied, Profile, ProfileDiff, ProfileEntryDto, ProfileMode,
+    ProfileSave, ProfileSource, ProfileSummary, ProfilesView, SkipReason, StoreProblem,
+    TransferOutcome, TransferRequest,
+};
+pub use repair::{RepairAction, RepairItem, RepairKind, RepairList};
 pub use settings::{
     Appearance, AppearanceUpdate, ColorScheme, Settings, SettingsUpdate, TitleBarMode,
 };

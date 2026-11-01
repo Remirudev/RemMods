@@ -16,6 +16,14 @@ export const errors = {
     outOfScope: 'Outside the mod folders',
     toggleBlocked: 'This mod cannot be changed',
     batchFailed: 'Changes were not applied',
+    invalidName: 'Name not allowed',
+    manageBlocked: 'This cannot be done',
+    trashUnavailable: 'The Trash cannot be used',
+    deleteTokenInvalid: 'Confirmation expired',
+    modinfoAmbiguous: 'modinfo.json is ambiguous',
+    profileNotFound: 'Profile not found',
+    profileNameTaken: 'Profile name already taken',
+    importFailed: 'Import failed',
   },
   messages: {
     busy: 'Another change is still running. Try again in a moment.',
@@ -37,6 +45,41 @@ export const errors = {
     batchStuck_other:
       '{{count}} renames could not be undone. RemMods undoes them on the next start.',
     probeInUse: 'A mod file is in use. Close TEKKEN 8 first.',
+    trashUnavailable: 'Moving to the Trash is not possible here, and nothing was changed.',
+    deleteTokenInvalid: 'The delete confirmation expired. Nothing was deleted; start again.',
+    modinfoAmbiguous:
+      'Several modinfo.json files differ only in case. Remove the extra ones first.',
+    profileNotFound: 'This profile no longer exists. The list was refreshed.',
+    profileNameTaken: 'A profile with this name already exists.',
+  },
+  manageBlocked: {
+    action: {
+      rename: 'RemMods does not rename this entry.',
+      trash: 'RemMods does not move this entry to the Trash.',
+      delete: 'RemMods does not delete this entry.',
+      metadata: 'RemMods does not edit the info of this entry.',
+    },
+    reason: {
+      loose: 'Loose files have no folder to work on.',
+      linked: 'Linked mod folders are not changed by RemMods.',
+      archive: 'Archives are left alone.',
+      leftover: 'Leftover folders cannot be renamed or edited.',
+      unmanaged: 'This entry is not managed by RemMods.',
+      outsideRoots: 'The Paks folder itself is read-only; only the mod folders change.',
+      journalPending: 'An unfinished change still refers to this folder. Restart RemMods first.',
+    },
+  },
+  trashUnavailable: {
+    otherDevice: 'This folder is on another drive than your Trash.',
+    noUsableTrash: 'No usable Trash folder was found for this drive.',
+    notSupported: 'Moving to the Trash is not available on this system yet.',
+  },
+  importFailed: {
+    tooLarge: 'The file is too large to be a profile list.',
+    notJson: 'The file is not valid JSON.',
+    wrongShape: 'The file does not contain a profile list.',
+    wrongFormat: 'The file is not a RemMods profile export.',
+    newerVersion: 'The file comes from a newer RemMods. Update RemMods first.',
   },
   toggleBlocked: {
     ambiguous: 'Several mods share this name. Rename one first.',

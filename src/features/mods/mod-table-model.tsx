@@ -14,9 +14,10 @@ import { displayState } from './display-state'
 import { IssueBadge } from './IssueBadge'
 import { modInfoText } from './mod-info-text'
 import { NameCell } from './NameCell'
+import { RowMenu } from './RowMenu'
 import { StateBadge } from './StateBadge'
 import { ToggleCell } from './ToggleCell'
-import type { ModColumnId, ModColumnMeta, ModTableMeta, ToggleRows } from './types'
+import type { ManageRows, ModColumnId, ModColumnMeta, ModTableMeta, ToggleRows } from './types'
 
 export const modTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -42,10 +43,17 @@ const COLUMN_WIDTHS: Record<ModColumnId, number | undefined> = {
 }
 
 export const TOGGLE_COLUMN_WIDTH = 56
+export const MENU_COLUMN_WIDTH = 52
 
 // Cell functions are component types for the table, so the columns are rebuilt per language.
-// `onToggle` must be stable, or the columns (and every switch) are rebuilt on each render.
-export function buildModColumns(t: TFunction<'mods'>, locale: string, onToggle: ToggleRows) {
+// `onToggle` and `onManage` must be stable, or the columns (and every switch) are rebuilt on each
+// render.
+export function buildModColumns(
+  t: TFunction<'mods'>,
+  locale: string,
+  onToggle: ToggleRows,
+  onManage: ManageRows,
+) {
   const collator = modCollator(locale)
   const sort = (column: ModColumnId) => (a: { original: ModRow }, b: { original: ModRow }) =>
     compareMods(a.original, b.original, column, collator)
@@ -97,6 +105,13 @@ export function buildModColumns(t: TFunction<'mods'>, locale: string, onToggle: 
     columnHelper.accessor((row) => row.issues.length, {
       ...base('issues'),
       cell: ({ row }) => <IssueBadge row={row.original} />,
+    }),
+    columnHelper.display({
+      id: 'menu',
+      header: '',
+      enableSorting: false,
+      meta: { width: MENU_COLUMN_WIDTH },
+      cell: ({ row }) => <RowMenu row={row.original} onManage={onManage} />,
     }),
   ])
 }

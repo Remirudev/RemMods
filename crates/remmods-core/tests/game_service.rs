@@ -51,6 +51,7 @@ impl Fixture {
                 processes: None,
             },
             require_marker: None,
+            ..CoreOptions::default()
         };
         Core::open_with(self.paths.clone(), options).expect("open core")
     }
@@ -259,6 +260,7 @@ fn fixed_location_is_ready_and_not_stored() {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(fx.paths.clone(), options).expect("open");
     let status = core.game_status();

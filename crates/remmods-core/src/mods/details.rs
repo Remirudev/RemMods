@@ -41,6 +41,8 @@ pub fn read_details(input: &ScanInput, mod_ref: &ModRef) -> Result<ModDetails, M
         files,
         truncated,
         other_files,
+        added: None,
+        source: None,
     })
 }
 

@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use remmods_core::AppPaths;
-use remmods_core::platform;
+use remmods_core::platform::{self, TopdirPolicy, TrashEnv};
 use remmods_core::safe_fs::{BatchOptions, FaultPlan, OpGate, RenameOp, RetryMode, Scope};
 use tempfile::TempDir;
 
@@ -178,4 +178,40 @@ pub fn journal_entries(path: &Path) -> usize {
     journal_json(path)
         .and_then(|json| json["entries"].as_array().map(Vec::len))
         .unwrap_or(0)
+}
+
+/// A trash env that only ever uses `<dir>/xdg-data/Trash` (the folder above it is created here,
+/// as a real `$XDG_DATA_HOME` exists), never a real trash or mount topdir.
+pub fn trash_env(dir: &Path) -> TrashEnv {
+    let data = dir.join("xdg-data");
+    fs::create_dir_all(platform::fs_path(&data).expect("fs path")).expect("xdg-data dir");
+    TrashEnv {
+        home_trash: Some(data.join("Trash")),
+        uid: platform::current_uid(),
+        topdirs: TopdirPolicy::Deny,
+    }
+}
+
+/// Every entry below `root`, sorted: `d <rel>`, `f <rel> <size> <fnv-1a of the bytes>`,
+/// `l <rel> -> <target>`. Equal listings mean equal names, kinds, sizes and bytes.
+pub fn tree_listing(root: &Path) -> Vec<String> {
+    snapshot(root)
+        .into_iter()
+        .map(|(rel, content)| {
+            let rel = rel.to_string_lossy().replace('\\', "/");
+            match content {
+                None => format!("d {rel}"),
+                Some(bytes) if bytes.starts_with(b"link:") => {
+                    format!("l {rel} -> {}", String::from_utf8_lossy(&bytes[5..]))
+                }
+                Some(bytes) => format!("f {rel} {} {:016x}", bytes.len(), fnv1a(&bytes)),
+            }
+        })
+        .collect()
+}
+
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, &byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+    })
 }

@@ -151,7 +151,14 @@ fn a_dropped_watcher_sends_nothing() {
     })
     .expect("start");
     drop(watcher);
-    while receiver.try_recv().is_ok() {}
+    // notify stops its event thread asynchronously; wait until it has dropped the handler.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline
+        && !matches!(
+            receiver.recv_timeout(Duration::from_millis(100)),
+            Err(mpsc::RecvTimeoutError::Disconnected)
+        )
+    {}
 
     fs::write(fixture.path("Mods/late.pak"), b"pak").expect("write");
 

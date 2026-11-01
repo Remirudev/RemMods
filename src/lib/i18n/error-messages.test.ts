@@ -27,6 +27,23 @@ const ERRORS: AppError[] = [
   { kind: 'batchFailed', class: 'accessDenied', stuck: 0, folder: false },
   { kind: 'batchFailed', class: 'inUse', stuck: 0, folder: true },
   { kind: 'batchFailed', class: 'other', stuck: 2, folder: false },
+  { kind: 'invalidName', issue: 'reserved_device_name' },
+  { kind: 'invalidName', issue: 'something_new' },
+  { kind: 'manageBlocked', action: 'rename', reason: 'loose' },
+  { kind: 'manageBlocked', action: 'trash', reason: 'outsideRoots' },
+  { kind: 'manageBlocked', action: 'delete', reason: 'journalPending' },
+  { kind: 'trashUnavailable', reason: 'otherDevice', size: 10 },
+  { kind: 'trashUnavailable', reason: 'noUsableTrash', size: null },
+  { kind: 'trashUnavailable', reason: 'notSupported', size: null },
+  { kind: 'deleteTokenInvalid' },
+  { kind: 'modinfoAmbiguous' },
+  { kind: 'profileNotFound' },
+  { kind: 'profileNameTaken' },
+  { kind: 'importFailed', problem: 'tooLarge' },
+  { kind: 'importFailed', problem: 'notJson' },
+  { kind: 'importFailed', problem: 'wrongShape' },
+  { kind: 'importFailed', problem: 'wrongFormat' },
+  { kind: 'importFailed', problem: 'newerVersion' },
 ]
 
 describe('describeAppError', () => {

@@ -3,6 +3,23 @@ import type { AppError } from '../ipc/types'
 import { i18n } from './index'
 import type { ErrorDescription } from './types'
 
+const NAME_ISSUES = [
+  'empty',
+  'dot_name',
+  'too_long',
+  'forbidden_char',
+  'control_char',
+  'bidi_control',
+  'trailing_dot_or_space',
+  'reserved_device_name',
+  'disabled_prefix',
+  'temp_name',
+] as const
+
+function isNameIssue(value: string): value is (typeof NAME_ISSUES)[number] {
+  return (NAME_ISSUES as readonly string[]).includes(value)
+}
+
 type BatchFailure = Extract<AppError, { kind: 'batchFailed' }>
 
 function describeBatchFailure(error: BatchFailure): string {
@@ -64,6 +81,56 @@ export function describeAppError(error: AppError): ErrorDescription {
     }
     case 'batchFailed':
       return { title: t(($) => $.titles.batchFailed), message: describeBatchFailure(error) }
+    case 'invalidName': {
+      const tMods = i18n.getFixedT(null, 'mods')
+      const issue = isNameIssue(error.issue) ? error.issue : 'invalid'
+      return {
+        title: t(($) => $.titles.invalidName),
+        message: tMods(($) => $.nameIssue[issue]),
+      }
+    }
+    case 'manageBlocked': {
+      const reason = error.reason
+      const action = error.action
+      return {
+        title: t(($) => $.titles.manageBlocked),
+        message: `${t(($) => $.manageBlocked.action[action])} ${t(($) => $.manageBlocked.reason[reason])}`,
+      }
+    }
+    case 'trashUnavailable': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.trashUnavailable),
+        message: t(($) => $.trashUnavailable[reason]),
+      }
+    }
+    case 'deleteTokenInvalid':
+      return {
+        title: t(($) => $.titles.deleteTokenInvalid),
+        message: t(($) => $.messages.deleteTokenInvalid),
+      }
+    case 'modinfoAmbiguous':
+      return {
+        title: t(($) => $.titles.modinfoAmbiguous),
+        message: t(($) => $.messages.modinfoAmbiguous),
+      }
+    case 'profileNotFound':
+      return {
+        title: t(($) => $.titles.profileNotFound),
+        message: t(($) => $.messages.profileNotFound),
+      }
+    case 'profileNameTaken':
+      return {
+        title: t(($) => $.titles.profileNameTaken),
+        message: t(($) => $.messages.profileNameTaken),
+      }
+    case 'importFailed': {
+      const problem = error.problem
+      return {
+        title: t(($) => $.titles.importFailed),
+        message: t(($) => $.importFailed[problem]),
+      }
+    }
     case 'revealFailed': {
       const reason = error.reason
       return {

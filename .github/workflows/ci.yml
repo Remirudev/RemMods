@@ -235,7 +235,9 @@ jobs:
 
   # Real file systems (docs/PLAN.md §9, SPEC-P2 §9.2): the batch, rollback and recovery checks run on
   # tmpfs, ext4, btrfs, vfat and exfat mounts, plus read-only, root-owned, full-disk and tiny-inotify-
-  # queue cases. Needs sudo for the mounts, so it builds only remmods-core (no Tauri, no Node).
+  # queue cases. P3 adds the Trash cases F1-F3 (SPEC-P3 §8.1): a topdir trash on every mount, the
+  # nested btrfs subvolume, and a file system without RENAME_NOREPLACE (skipped, none exists). Needs
+  # sudo for the mounts, so it builds only remmods-core (no Tauri, no Node).
   fs-matrix:
     name: fs-matrix
     runs-on: ubuntu-24.04

@@ -20,7 +20,7 @@ export const shell = {
       title: 'Profiles',
       description: 'Saved sets of enabled mods.',
       emptyTitle: 'No profiles yet',
-      emptyDescription: 'Saved sets of mods show up here once profiles arrive.',
+      emptyDescription: 'Save the current mods as a profile to switch between sets quickly.',
     },
     settings: {
       title: 'Settings',

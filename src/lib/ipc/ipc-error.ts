@@ -16,6 +16,14 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   outOfScope: true,
   toggleBlocked: true,
   batchFailed: true,
+  invalidName: true,
+  manageBlocked: true,
+  trashUnavailable: true,
+  deleteTokenInvalid: true,
+  modinfoAmbiguous: true,
+  profileNotFound: true,
+  profileNameTaken: true,
+  importFailed: true,
 }
 
 export class IpcError extends Error {

@@ -1,6 +1,6 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
-use crate::commands::{game, mods, settings, shell};
+use crate::commands::{game, mods, mods_manage, profiles, repair, settings, shell};
 use crate::events::{GameStatusChanged, ModsChanged, WatchStatusChanged};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
@@ -33,6 +33,18 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods::mods_toggle,
             mods::mods_disable_all,
             mods::mods_watch_status,
+            mods_manage::mods_rename,
+            mods_manage::mods_trash,
+            mods_manage::mods_delete_prepare,
+            mods_manage::mods_delete_permanently,
+            mods_manage::mods_set_metadata,
+            repair::repair_list,
+            profiles::profiles_list,
+            profiles::profiles_save,
+            profiles::profiles_delete,
+            profiles::profiles_diff,
+            profiles::profiles_apply,
+            profiles::profiles_transfer,
         ])
         .events(collect_events![
             ModsChanged,

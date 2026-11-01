@@ -1,11 +1,10 @@
 use remmods_core::mods as core_mods;
-use remmods_core::{Core, CoreError};
 use remmods_ipc::{
     AppError, ModContents, ModDetails, ModsSnapshot, ToggleOutcome, ToggleRequest, WatchStatus,
 };
 use tauri::{AppHandle, State};
 
-use super::{reveal_in_file_manager, run_blocking};
+use super::{reveal_in_file_manager, run_blocking, run_mutation};
 use crate::base_index;
 use crate::events::{self, ModsChanged};
 use crate::state::AppState;
@@ -97,7 +96,11 @@ pub async fn mods_toggle(
     request: ToggleRequest,
 ) -> Result<ToggleOutcome, AppError> {
     let request = core_mods::ToggleRequest::from(&request);
-    run_mutation(&app, &state, move |core| core.mods_toggle(&request)).await
+    run_mutation(&app, &state.core, move |core| {
+        core.mods_toggle(&request)
+            .map(|outcome| ToggleOutcome::from(&outcome))
+    })
+    .await
 }
 
 /// Disables every enabled, toggleable row; blocked rows come back as `skipped`.
@@ -108,8 +111,9 @@ pub async fn mods_disable_all(
     state: State<'_, AppState>,
     apply_while_running: bool,
 ) -> Result<ToggleOutcome, AppError> {
-    run_mutation(&app, &state, move |core| {
+    run_mutation(&app, &state.core, move |core| {
         core.mods_disable_all(apply_while_running)
+            .map(|outcome| ToggleOutcome::from(&outcome))
     })
     .await
 }
@@ -120,32 +124,4 @@ pub async fn mods_watch_status(state: State<'_, AppState>) -> Result<WatchStatus
     Ok(WatchStatus {
         state: state.watcher.status(),
     })
-}
-
-/// Core publishes the final snapshot also when a batch fails, so `mods-changed` goes out on
-/// success and on error whenever the revision moved.
-async fn run_mutation<F>(
-    app: &AppHandle,
-    state: &AppState,
-    work: F,
-) -> Result<ToggleOutcome, AppError>
-where
-    F: FnOnce(&Core) -> Result<core_mods::ToggleOutcome, CoreError> + Send + 'static,
-{
-    let before = last_revision(&state.core);
-    let result = run_blocking(state.core.clone(), move |core| {
-        work(core).map(|outcome| ToggleOutcome::from(&outcome))
-    })
-    .await;
-    let after = last_revision(&state.core);
-    if let Some(revision) = after
-        && after != before
-    {
-        events::emit(app, &ModsChanged { revision });
-    }
-    result
-}
-
-fn last_revision(core: &Core) -> Option<u32> {
-    core.mods_last().map(|snapshot| snapshot.revision)
 }

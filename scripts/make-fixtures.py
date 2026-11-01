@@ -2,6 +2,7 @@
 """Builds test fixtures for RemMods (docs/PLAN.md §9). Standard library only.
 
 Usage: python3 -I scripts/make-fixtures.py smoke <out>
+       python3 -I scripts/make-fixtures.py --profiles <out>
 
 smoke  A fake Steam library below <out> with TEKKEN 8 installed (appmanifest, both game exes) and a
        Paks folder holding every scan case of the P1 smoke test, plus the marker file
@@ -12,6 +13,12 @@ Alpha, Loose and Beta also carry small crafted IoStore tables of contents (`.uto
 content view has something to list: Alpha and the loose mod ship the same asset, Beta's is disabled.
 The base `pakchunk0-Windows.utoc` lists that asset too, so the two enabled ones replace a game file
 and conflict (content conflicts count only game files).
+
+--profiles  Writes sample files of the original app's profiles.json into <out> (for manual import
+       checks, never into a real app folder): `profiles.json` (a Default profile with
+       `EnabledMods: null`, an Exclusive-style list with `Standard:`-prefixed keys, one with
+       `LogicMods:` keys and one with legacy keys without a colon) and `profiles-bom.json` (the same
+       list with a UTF-8 byte order mark). Prints the folder.
 
 Refuses when <out> exists and is not empty. Writes only below <out> and never replaces a file.
 """
@@ -289,7 +296,47 @@ def make_smoke(out):
     return paks
 
 
-COMMANDS = {"smoke": make_smoke}
+TMM_PROFILES = [
+    {
+        "Id": "00000000-0000-4000-8000-000000000001",
+        "Name": "Default",
+        "Description": "Default profile",
+        "EnabledMods": None,
+        "Created": "2026-01-01T10:00:00.0000000+00:00",
+        "LastUsed": "2026-01-01T10:00:00.0000000+00:00",
+        "IsDefault": True,
+    },
+    {
+        "Id": "00000000-0000-4000-8000-000000000002",
+        "Name": "Costumes",
+        "Description": "Keys with a folder prefix",
+        "EnabledMods": ["Standard:Alpha", "Standard:Beta", "LogicMods:Gamma"],
+        "Created": "2026-02-01T18:30:00.0000000+01:00",
+        "LastUsed": "2026-03-01T20:15:00.0000000+01:00",
+        "IsDefault": False,
+    },
+    {
+        "Id": "00000000-0000-4000-8000-000000000003",
+        "Name": "Legacy keys",
+        "Description": "",
+        "EnabledMods": ["Alpha", "Loose.pak"],
+        "Created": "2026-02-10T09:00:00.0000000+00:00",
+        "LastUsed": "2026-02-10T09:00:00.0000000+00:00",
+        "IsDefault": False,
+    },
+]
+
+
+def make_profiles(out):
+    base = prepare_out_dir(out)
+    # JsonSerializer with WriteIndented: two-space indent, LF here so the files are the same on every OS.
+    text = json.dumps(TMM_PROFILES, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"
+    write_new_file(below(base, "profiles.json"), text)
+    write_new_file(below(base, "profiles-bom.json"), b"\xef\xbb\xbf" + text)
+    return base
+
+
+COMMANDS = {"smoke": make_smoke, "profiles": make_profiles}
 
 
 def usage(stream):
@@ -297,6 +344,8 @@ def usage(stream):
 
 
 def main(argv):
+    if len(argv) == 3 and argv[1] == "--profiles":
+        argv = [argv[0], "profiles", argv[2]]
     if len(argv) == 2 and argv[1] in ("-h", "--help"):
         usage(sys.stdout)
         return 0

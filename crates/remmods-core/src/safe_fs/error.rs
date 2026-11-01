@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use super::batch::BatchError;
 use super::journal::JournalProblem;
 use super::scope::ScopeViolation;
-use crate::platform::{self, OsErrorClass};
+use crate::platform::{self, OsErrorClass, TrashUnavailableReason};
 
 #[derive(Debug, thiserror::Error)]
 pub enum FsError {
@@ -38,6 +38,14 @@ pub enum FsError {
     Batch(Box<BatchError>),
     #[error("the operation journal is not usable ({reason:?})")]
     Journal { reason: JournalProblem },
+    #[error("no usable trash ({reason:?})")]
+    TrashUnavailable { reason: TrashUnavailableReason },
+    #[error("{path} is not a set-aside folder", path = path.display())]
+    NotAnAside { path: PathBuf },
+    #[error("{path} still has live pak files", path = path.display())]
+    AsideNotInert { path: PathBuf },
+    #[error("{path} is named by a journal record", path = path.display())]
+    AsideJournaled { path: PathBuf },
 }
 
 impl FsError {
@@ -60,7 +68,11 @@ impl FsError {
             | Self::OutOfScope { .. }
             | Self::SourceMissing { .. }
             | Self::InvalidBatch { .. }
-            | Self::Journal { .. } => None,
+            | Self::Journal { .. }
+            | Self::TrashUnavailable { .. }
+            | Self::NotAnAside { .. }
+            | Self::AsideNotInert { .. }
+            | Self::AsideJournaled { .. } => None,
         }
     }
 }

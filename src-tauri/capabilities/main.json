@@ -37,6 +37,18 @@
     "allow-mods-reveal",
     "allow-mods-toggle",
     "allow-mods-disable-all",
-    "allow-mods-watch-status"
+    "allow-mods-watch-status",
+    "allow-mods-rename",
+    "allow-mods-trash",
+    "allow-mods-delete-prepare",
+    "allow-mods-delete-permanently",
+    "allow-mods-set-metadata",
+    "allow-repair-list",
+    "allow-profiles-list",
+    "allow-profiles-save",
+    "allow-profiles-delete",
+    "allow-profiles-diff",
+    "allow-profiles-apply",
+    "allow-profiles-transfer"
   ]
 }

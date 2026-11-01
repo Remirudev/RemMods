@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { makeGameStatus, makeModRow, makeSnapshot, TEST_INSTALL } from '../../test/fixtures'
 import {
   checkCommand,
+  checkEmptyProfiles,
   checkGameStatus,
   checkMantineCss,
   checkModsListWithoutGame,
@@ -54,6 +55,19 @@ describe('checkCommand', () => {
       ok: false,
       detail: 'not allowed',
     })
+  })
+})
+
+describe('checkEmptyProfiles', () => {
+  const view = { profiles: [], lastApplied: null, readOnly: false, problem: null }
+
+  it('passes an empty, writable view', () => {
+    expect(checkEmptyProfiles({ ok: true, value: view }).ok).toBe(true)
+  })
+
+  it('fails a read-only view and a rejected command', () => {
+    expect(checkEmptyProfiles({ ok: true, value: { ...view, readOnly: true } }).ok).toBe(false)
+    expect(checkEmptyProfiles({ ok: false, error: 'denied' }).detail).toBe('denied')
   })
 })
 

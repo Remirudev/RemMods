@@ -8,5 +8,7 @@ export function storeModsSnapshot(client: QueryClient, snapshot: ModsSnapshot): 
   client.setQueryData(queryKeys.mods, snapshot)
   if (previous && previous.revision !== snapshot.revision) {
     void client.invalidateQueries({ queryKey: queryKeys.modDetailsAll })
+    void client.invalidateQueries({ queryKey: queryKeys.repair })
+    void client.invalidateQueries({ queryKey: queryKeys.profiles })
   }
 }

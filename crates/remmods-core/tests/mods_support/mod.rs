@@ -2,6 +2,7 @@
 //! `platform::fs_path`, so names Win32 would normalise (`Foo.`, `Foo `) work on Windows too.
 #![allow(dead_code, clippy::disallowed_methods, clippy::expect_used)]
 
+pub mod manage;
 pub mod toggle;
 
 use std::fs;
@@ -260,6 +261,7 @@ pub fn exercise_read_only(home: &Path, app_root: &Path) {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(AppPaths::under(app_root), options).expect("Core::open_with");
     let _ = core.game_status();

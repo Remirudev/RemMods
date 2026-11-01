@@ -4,6 +4,7 @@ import type { GameStatus, Settings, SmokeCheck } from '../../lib/ipc/types'
 import {
   checkCollectedErrors,
   checkCommand,
+  checkEmptyProfiles,
   checkGameStatus,
   checkMantineCss,
   checkModsListWithoutGame,
@@ -88,6 +89,8 @@ async function checkFixtureGame(): Promise<SmokeCheck[]> {
   const details = first
     ? await load(() => ipc.modsDetails(first.modRef))
     : ({ ok: false, error: 'no first row to read details of' } as const)
+  const profiles = await load(() => ipc.profilesList())
+  const repair = await load(() => ipc.repairList())
   const detect = await load(() => ipc.gameDetect())
   const ack = await load(() => ipc.gameAckUpdate())
   const roundTrip = snapshot.ok
@@ -97,6 +100,8 @@ async function checkFixtureGame(): Promise<SmokeCheck[]> {
     checkModsTable(document),
     checkCommand('modsRefresh', snapshot),
     checkCommand('modsDetails', details),
+    checkEmptyProfiles(profiles),
+    checkCommand('repairList', repair),
     checkCommand('gameDetect', detect),
     checkCommand('gameAckUpdate', ack),
     roundTrip.ok

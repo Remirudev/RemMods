@@ -4,6 +4,7 @@ import type {
   ModState,
   ModsSnapshot,
   PlatformInfo,
+  ProfilesView,
   Settings,
   SmokeCheck,
 } from '../../lib/ipc/types'
@@ -61,6 +62,16 @@ export function checkSettings(settings: Loaded<Settings>): SmokeCheck {
 
 export function checkCommand(name: string, result: Loaded<unknown>): SmokeCheck {
   return result.ok ? passedCheck(name) : failedCheck(name, result.error)
+}
+
+// The smoke data folder is fresh, so the profile list must come back empty and writable.
+export function checkEmptyProfiles(view: Loaded<ProfilesView>): SmokeCheck {
+  if (!view.ok) return failedCheck('profilesList', view.error)
+  const { profiles, readOnly } = view.value
+  if (profiles.length > 0 || readOnly) {
+    return failedCheck('profilesList', `${profiles.length} profiles, readOnly ${readOnly}`)
+  }
+  return passedCheck('profilesList')
 }
 
 export function checkCollectedErrors(errors: readonly string[]): SmokeCheck {

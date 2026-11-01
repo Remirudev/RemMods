@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use remmods_core::game::{GameOptions, ProcessSource};
 use remmods_core::mods::{ModRow, ScanSnapshot, ToggleOutcome, ToggleRequest, ToggleTarget};
-use remmods_core::platform::ProcessRecord;
+use remmods_core::platform::{ProcessRecord, TrashEnv};
 use remmods_core::{AppPaths, Core, CoreError, CoreOptions};
 use tempfile::TempDir;
 
@@ -23,20 +23,35 @@ pub struct ToggleFixture {
     /// Flip to make the injected process list show the game.
     pub running: Arc<AtomicBool>,
     pub core: Core,
+    /// Options every `Core` of this fixture gets (trash env, original app dir).
+    pub extras: Extras,
+}
+
+/// The P3 options of the fixture's cores; `Default` = `CoreOptions::default()`'s.
+#[derive(Clone, Debug, Default)]
+pub struct Extras {
+    pub marker: Option<String>,
+    pub trash: Option<TrashEnv>,
+    pub tmm_dir: Option<PathBuf>,
 }
 
 impl ToggleFixture {
     pub fn new(entries: &[(&str, &[u8])]) -> Self {
-        Self::build(entries, None)
+        Self::build(entries, |_| Extras::default())
     }
 
     /// Mutations need `<Paks>/remmods-smoke-fixture` (A9).
     pub fn requiring_marker(entries: &[(&str, &[u8])]) -> Self {
-        Self::build(entries, Some(MARKER))
+        Self::build(entries, |_| Extras {
+            marker: Some(MARKER.to_owned()),
+            ..Extras::default()
+        })
     }
 
-    fn build(entries: &[(&str, &[u8])], marker: Option<&str>) -> Self {
+    /// `extras` gets the fixture's root (a canonical TempDir) to place a trash or folders in.
+    pub fn build(entries: &[(&str, &[u8])], extras: impl FnOnce(&Path) -> Extras) -> Self {
         let (dir, root) = crate::support::temp_root();
+        let extras = extras(&root);
         let out = root.join("game");
         paks_tree(
             &out,
@@ -54,7 +69,7 @@ impl ToggleFixture {
         let game_root = out.join("steamapps").join("common").join("TEKKEN 8");
         let paths = AppPaths::under(&root.join("app"));
         let running = Arc::new(AtomicBool::new(false));
-        let core = open_core(&paths, &game_root, &running, marker);
+        let core = open_core(&paths, &game_root, &running, &extras);
         Self {
             _dir: dir,
             root,
@@ -63,12 +78,17 @@ impl ToggleFixture {
             paths,
             running,
             core,
+            extras,
         }
     }
 
     /// A second `Core` on the same app folders and game (another process in the real app).
     pub fn second_core(&self) -> Core {
-        open_core(&self.paths, &self.game_root, &self.running, None)
+        let extras = Extras {
+            marker: None,
+            ..self.extras.clone()
+        };
+        open_core(&self.paths, &self.game_root, &self.running, &extras)
     }
 
     pub fn snapshot(&self) -> Arc<ScanSnapshot> {
@@ -129,7 +149,7 @@ fn open_core(
     paths: &AppPaths,
     game_root: &Path,
     running: &Arc<AtomicBool>,
-    marker: Option<&str>,
+    extras: &Extras,
 ) -> Core {
     let flag = Arc::clone(running);
     let processes = ProcessSource(Arc::new(move || {
@@ -150,7 +170,12 @@ fn open_core(
             steam_hints: None,
             processes: Some(processes),
         },
-        require_marker: marker.map(str::to_owned),
+        require_marker: extras.marker.clone(),
+        trash: extras
+            .trash
+            .clone()
+            .unwrap_or_else(|| CoreOptions::default().trash),
+        tmm_dir: extras.tmm_dir.clone(),
     };
     Core::open_with(paths.clone(), options).expect("open core")
 }

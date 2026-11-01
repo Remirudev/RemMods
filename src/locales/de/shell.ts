@@ -24,7 +24,7 @@ export const shell: LocaleShape<typeof en> = {
       description: 'Gespeicherte Zusammenstellungen aktivierter Mods.',
       emptyTitle: 'Noch keine Profile',
       emptyDescription:
-        'Gespeicherte Mod-Zusammenstellungen erscheinen hier, sobald es Profile gibt.',
+        'Speichere die aktuellen Mods als Profil, um schnell zwischen Zusammenstellungen zu wechseln.',
     },
     settings: {
       title: 'Einstellungen',

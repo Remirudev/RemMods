@@ -44,6 +44,33 @@ export const commands = {
 	/**  Disables every enabled, toggleable row; blocked rows come back as `skipped`. */
 	modsDisableAll: (applyWhileRunning: boolean) => typedError<ToggleOutcome, AppError>(__TAURI_INVOKE("mods_disable_all", { applyWhileRunning })),
 	modsWatchStatus: () => typedError<WatchStatus, AppError>(__TAURI_INVOKE("mods_watch_status")),
+	/**  Renames a mod folder (or loose group) and rekeys profiles and `mod-meta.json`. */
+	modsRename: (request: RenameRequest) => typedError<RenameOutcome, AppError>(__TAURI_INVOKE("mods_rename", { request })),
+	/**  Moves a mod to the Trash; `TrashUnavailable` lets the UI offer the permanent delete instead. */
+	modsTrash: (request: TrashRequest) => typedError<TrashOutcome, AppError>(__TAURI_INVOKE("mods_trash", { request })),
+	/**
+	 *  First step of a permanent delete: checks the target and issues a single-use token. Writes
+	 *  nothing.
+	 */
+	modsDeletePrepare: (target: ModTarget) => typedError<DeletePrepared, AppError>(__TAURI_INVOKE("mods_delete_prepare", { target })),
+	/**  Second step, after the second confirmation: consumes the token and deletes. */
+	modsDeletePermanently: (request: DeleteRequest) => typedError<DeleteOutcome, AppError>(__TAURI_INVOKE("mods_delete_permanently", { request })),
+	/**  Writes the row's `modinfo.json` (the previous one is backed up first). */
+	modsSetMetadata: (request: MetadataRequest) => typedError<ModsSnapshot, AppError>(__TAURI_INVOKE("mods_set_metadata", { request })),
+	/**  Leftovers and rows that need attention, each with the actions the UI offers. Read-only. */
+	repairList: () => typedError<RepairList, AppError>(__TAURI_INVOKE("repair_list")),
+	profilesList: () => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_list")),
+	profilesSave: (save: ProfileSave) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_save", { save })),
+	profilesDelete: (id: string) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_delete", { id })),
+	/**  What applying the profile would change; its `fingerprint` goes back in `profiles_apply`. */
+	profilesDiff: (id: string) => typedError<ProfileDiff, AppError>(__TAURI_INVOKE("profiles_diff", { id })),
+	/**  Applies the shown diff as one rename batch after an automatic snapshot profile. */
+	profilesApply: (request: ApplyRequest) => typedError<ApplyOutcome, AppError>(__TAURI_INVOKE("profiles_apply", { request })),
+	/**
+	 *  Imports or exports through a native file dialog; `None` when the dialog was cancelled. The
+	 *  picked path stays in Rust (only the export's file name comes back, for display).
+	 */
+	profilesTransfer: (request: TransferRequest) => typedError<TransferOutcome | null, AppError>(__TAURI_INVOKE("profiles_transfer", { request })),
 };
 
 /** Events */
@@ -63,7 +90,11 @@ export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErr
  *  A rename batch failed and was rolled back; `stuck` ops could not be undone (recovered on
  *  the next start), `folder` says a folder rename was refused because something held it.
  */
-{ kind: "batchFailed"; class: OsErrorClass; stuck: number; folder: boolean };
+{ kind: "batchFailed"; class: OsErrorClass; stuck: number; folder: boolean } | 
+/**  A name core refused; `issue` is the name-rule code, e.g. `reserved_device_name`. */
+{ kind: "invalidName"; issue: string } | { kind: "manageBlocked"; action: ManageAction; reason: ManageBlock } | 
+/**  `size` (bytes) lets the UI offer a permanent delete instead; null when unknown. */
+{ kind: "trashUnavailable"; reason: TrashUnavailableReason; size: number | null } | { kind: "deleteTokenInvalid" } | { kind: "modinfoAmbiguous" } | { kind: "profileNotFound" } | { kind: "profileNameTaken" } | { kind: "importFailed"; problem: ImportProblem };
 
 export type AppPathsDto = {
 	config: string,
@@ -83,6 +114,19 @@ export type AppearanceUpdate = {
 	scheme?: ColorScheme | null,
 	uiScale?: number | null,
 	titleBar?: TitleBarMode | null,
+};
+
+export type ApplyOutcome = {
+	snapshot: ModsSnapshot,
+	changed: number,
+	snapshotId: string | null,
+	skipped: DiffSkip[],
+};
+
+export type ApplyRequest = {
+	profileId: string,
+	fingerprint: string,
+	applyWhileRunning: boolean,
 };
 
 export type ArchiveEntry = {
@@ -105,6 +149,8 @@ export type AssetEntry = {
 export type AssetOrigin = "adds" | "replaces" | "unknown";
 
 export type BaseIndexState = "complete" | "partial" | "unavailable" | "loading";
+
+export type ChangeReason = "listed" | "unlisted";
 
 /**  A raw character code; `name` only for mappings with local evidence. */
 export type CharacterHint = {
@@ -155,12 +201,55 @@ export type ContentSummary = {
 	sharedOtherVersions: number,
 };
 
+export type DeleteOutcome = {
+	snapshot: ModsSnapshot,
+	key: string,
+	leftover: string | null,
+};
+
+export type DeletePrepared = {
+	token: string,
+	key: string,
+	name: string,
+	size: number | null,
+	expiresInSecs: number,
+};
+
+export type DeleteRequest = {
+	target: ModTarget,
+	token: string,
+	applyWhileRunning: boolean,
+};
+
 export type DetectionNote = {
 	code: NoteCode,
 	path: string,
 	line: number | null,
 	/**  A code the UI translates (Steam kind, VDF or manifest error), never English. */
 	detail: string | null,
+};
+
+export type DiffChange = {
+	modRef: string,
+	key: string,
+	name: string,
+	enable: boolean,
+	reason: ChangeReason,
+};
+
+export type DiffSkip = {
+	key: string,
+	name: string | null,
+	wanted: EntryState,
+	reason: SkipReason,
+};
+
+export type EntryState = "enabled" | "disabled";
+
+/**  `fileName` is for display only; the picked path never crosses IPC. */
+export type ExportReport = {
+	count: number,
+	fileName: string,
 };
 
 export type FolderProblem = "notFound" | "ambiguous" | "notUnicode" | "unreadable";
@@ -197,6 +286,16 @@ export type GameStatusChanged = {
 	update: UpdateNotice | null,
 };
 
+export type ImportProblem = "tooLarge" | "notJson" | "wrongShape" | "wrongFormat" | "newerVersion";
+
+export type ImportReport = {
+	added: number,
+	updated: number,
+	unchanged: number,
+	skipped: number,
+	view: ProfilesView,
+};
+
 export type InstallInfo = {
 	root: string,
 	paks: string,
@@ -204,6 +303,11 @@ export type InstallInfo = {
 	steamKind: SteamKind | null,
 	buildId: string | null,
 	updateTracking: UpdateTracking,
+};
+
+export type LastApplied = {
+	profileId: string,
+	at: string,
 };
 
 export type LeftoverEntry = {
@@ -215,6 +319,15 @@ export type LeftoverEntry = {
 export type LocationChoice = { kind: "candidate"; id: string } | { kind: "path"; path: string };
 
 export type LocationSource = "steam" | "manual" | "fixture";
+
+export type ManageAction = "rename" | "trash" | "delete" | "metadata";
+
+export type ManageBlock = "loose" | "linked" | "archive" | "leftover" | "unmanaged" | "outsideRoots" | "journalPending";
+
+export type MetadataRequest = {
+	target: ModTarget,
+	info: ModInfoEdit,
+};
 
 export type ModContents = {
 	modRef: string,
@@ -230,6 +343,9 @@ export type ModDetails = {
 	files: PayloadFile[],
 	truncated: boolean,
 	otherFiles: number,
+	/**  From `mod-meta.json` (P4 installs), shown read-only. */
+	added: string | null,
+	source: string | null,
 };
 
 export type ModInfo = {
@@ -247,6 +363,13 @@ export type ModInfoDefaulted = {
 	category: boolean,
 	description: boolean,
 	author: boolean,
+};
+
+export type ModInfoEdit = {
+	version: string,
+	category: string,
+	description: string,
+	author: string,
 };
 
 export type ModInfoOrigin = "file" | "missing" | "invalid";
@@ -284,6 +407,15 @@ export type ModRow = {
 };
 
 export type ModState = "enabled" | "partial" | "disabled" | "noPakFiles" | "unknown";
+
+/**
+ *  A row as the UI saw it (the `ToggleTarget` shape); core refuses it as stale when `modRef` and
+ *  `key` no longer name the same row.
+ */
+export type ModTarget = {
+	modRef: string,
+	key: string,
+};
 
 /**  `mods-changed`: a rescan published a new snapshot revision. */
 export type ModsChanged = {
@@ -340,6 +472,107 @@ export type PlatformInfo = {
 	paths: AppPathsDto,
 };
 
+/**  `mods` is sorted by key bytes. */
+export type Profile = {
+	id: string,
+	name: string,
+	description: string,
+	mode: ProfileMode,
+	mods: ProfileEntryDto[],
+	created: string,
+	updated: string,
+	lastApplied: string | null,
+	source: ProfileSource,
+};
+
+/**
+ *  `fingerprint` goes back unchanged in `ApplyRequest`; core refuses the apply as stale when the
+ *  changes differ by then.
+ */
+export type ProfileDiff = {
+	profileId: string,
+	mode: ProfileMode,
+	changes: DiffChange[],
+	missing: string[],
+	skipped: DiffSkip[],
+	unchanged: number,
+	fingerprint: string,
+};
+
+export type ProfileEntryDto = {
+	key: string,
+	state: EntryState,
+};
+
+export type ProfileMode = "additive" | "exclusive";
+
+/**
+ *  `new` captures the current states, `overwrite` replaces a profile's mods with them, `edit`
+ *  changes name, description and mode only.
+ */
+export type ProfileSave = { kind: "new"; name: string; description: string; mode: ProfileMode } | { kind: "overwrite"; id: string } | { kind: "edit"; id: string; name: string; description: string; mode: ProfileMode };
+
+/**  Snapshot profiles have an empty name; the UI renders their label from `of`. */
+export type ProfileSource = { kind: "user" } | { kind: "snapshot"; of: string } | { kind: "tmm"; id: string; isDefault: boolean } | { kind: "import" };
+
+export type ProfileSummary = {
+	profile: Profile,
+	enabled: number,
+	disabled: number,
+	missing: number,
+	matchesCurrent: boolean,
+};
+
+export type ProfilesView = {
+	profiles: ProfileSummary[],
+	lastApplied: LastApplied | null,
+	readOnly: boolean,
+	problem: StoreProblem | null,
+};
+
+export type RekeyReport = {
+	profiles: number,
+	meta: boolean,
+	skippedAmbiguous: boolean,
+	failed: boolean,
+};
+
+export type RenameOutcome = {
+	snapshot: ModsSnapshot,
+	oldKey: string,
+	newKey: string,
+	newRef: string | null,
+	rekey: RekeyReport,
+};
+
+export type RenameRequest = {
+	target: ModTarget,
+	newName: string,
+	applyWhileRunning: boolean,
+};
+
+export type RepairAction = "rename" | "trash" | "deletePermanently" | "reveal" | "finishDisable" | "finishEnable" | "openLogs";
+
+/**
+ *  `id` is stable within one snapshot; `suggestedName` (invalid or non-Unicode names) already
+ *  passes the name rules and collides with nothing.
+ */
+export type RepairItem = {
+	id: string,
+	kind: RepairKind,
+	target: ModTarget | null,
+	label: string,
+	actions: RepairAction[],
+	suggestedName: string | null,
+};
+
+export type RepairKind = "leftover" | "ambiguousKey" | "invalidName" | "nonUnicodeName" | "logicDisabledButLoaded" | "logicEnabledNotLoaded" | "tempFolderLive" | "stuckJournal";
+
+export type RepairList = {
+	revision: number,
+	items: RepairItem[],
+};
+
 export type RevealProblem = 
 /**  A name the Windows shell would normalise or map to a device. */
 "unsupportedName" | "failed";
@@ -382,6 +615,8 @@ export type SettingsUpdate = {
 	appearance?: AppearanceUpdate | null,
 };
 
+export type SkipReason = "ambiguous" | "linked" | "unknownState" | "noPakFiles" | "invalidLogicName";
+
 export type SkippedRow = {
 	key: string,
 	name: string,
@@ -407,6 +642,8 @@ export type SmokeReport = {
 };
 
 export type SteamKind = "native" | "flatpak" | "snap" | "windows";
+
+export type StoreProblem = "corrupt" | "newerVersion" | "unreadable";
 
 export type TitleBarMode = "custom" | "system";
 
@@ -434,6 +671,27 @@ export type ToggleTarget = {
 	modRef: string,
 	key: string,
 };
+
+export type TransferOutcome = { kind: "imported"; report: ImportReport } | { kind: "exported"; report: ExportReport };
+
+/**  The one file-dialog command; the dialog title comes from the UI. */
+export type TransferRequest = { kind: "importTmm"; title: string } | { kind: "import"; title: string } | { kind: "export"; title: string; defaultFileName: string };
+
+export type TrashKind = "home" | "topdirShared" | "topdirUser";
+
+export type TrashOutcome = {
+	snapshot: ModsSnapshot,
+	key: string,
+	items: number,
+	kind: TrashKind,
+};
+
+export type TrashRequest = {
+	target: ModTarget,
+	applyWhileRunning: boolean,
+};
+
+export type TrashUnavailableReason = "otherDevice" | "noUsableTrash" | "notSupported";
 
 export type UnmanagedEntry = {
 	modRef: string,

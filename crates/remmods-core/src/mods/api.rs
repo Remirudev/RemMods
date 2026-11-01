@@ -29,7 +29,19 @@ impl Core {
 
     pub fn mods_details(&self, mod_ref: &str) -> Result<ModDetails, CoreError> {
         let input = self.mods_scan_input()?;
-        Ok(read_details(&input, &ModRef::from_token(mod_ref))?)
+        let mut details = read_details(&input, &ModRef::from_token(mod_ref))?;
+        let snapshot = self.mods_list()?;
+        let key = snapshot
+            .content
+            .rows
+            .iter()
+            .find(|row| row.mod_ref == details.mod_ref)
+            .map(|row| row.key.as_str());
+        if let Some(entry) = key.and_then(|key| self.mods.meta().load().meta.mods.remove(key)) {
+            details.added = entry.added;
+            details.source = entry.source;
+        }
+        Ok(details)
     }
 
     /// The path to hand to the file manager (shell form, spec §4.8).

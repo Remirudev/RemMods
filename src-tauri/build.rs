@@ -22,6 +22,18 @@ const COMMANDS: &[&str] = &[
     "mods_toggle",
     "mods_disable_all",
     "mods_watch_status",
+    "mods_rename",
+    "mods_trash",
+    "mods_delete_prepare",
+    "mods_delete_permanently",
+    "mods_set_metadata",
+    "repair_list",
+    "profiles_list",
+    "profiles_save",
+    "profiles_delete",
+    "profiles_diff",
+    "profiles_apply",
+    "profiles_transfer",
 ];
 
 fn main() {

@@ -160,6 +160,8 @@ export const TEST_DETAILS: ModDetails = {
   files: [{ relPath: 'alpha.pak', kind: 'pak', live: true, sizeBytes: 2048 }],
   truncated: false,
   otherFiles: 0,
+  added: null,
+  source: null,
 }
 
 export const TEST_CONTENTS: ModContents = {

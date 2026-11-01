@@ -48,6 +48,8 @@ export function tableKeyIntent(key: string, shift: boolean): TableKeyIntent | nu
   if (key === ' ') return { kind: 'space' }
   if (key === 'Escape') return { kind: 'escape' }
   if (key === 'Enter') return { kind: 'open' }
+  if (key === 'F2') return { kind: 'manage', action: 'rename' }
+  if (key === 'Delete') return { kind: 'manage', action: shift ? 'delete' : 'trash' }
   if (!isNavigationKey(key)) return null
   return shift ? { kind: 'extend', key } : { kind: 'move', key }
 }

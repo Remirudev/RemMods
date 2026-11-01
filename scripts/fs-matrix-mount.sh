@@ -70,6 +70,23 @@ add_mount exfat 64 optional "uid=$owner_uid,gid=$owner_gid" mkfs.exfat
 
 echo "REMMODS_FS_MATRIX=${mounts%;}"
 
+# P3 trash cases (SPEC-P3 §8.1, §9.2). F1 trashes into <mount root>/.Trash-<uid>, so the roots of the
+# mounts that honour modes get 1777 (the sticky bit also covers the shared .Trash form). vfat and
+# exfat have no modes: uid= already makes the CI user the owner there.
+for label in tmpfs ext4 btrfs; do
+  chmod 1777 "$dir/$label"
+done
+
+# F2: a nested btrfs subvolume has its own st_dev, so a trash in the outer subvolume must be refused.
+if btrfs subvolume create "$dir/btrfs/nested" >&2; then
+  own "$dir/btrfs/nested"
+  echo "REMMODS_FS_MATRIX_BTRFS_SUBVOL=$dir/btrfs/nested"
+else
+  notice "btrfs subvolume create failed: the nested-subvolume trash case (F2) is skipped"
+fi
+# F3 (REMMODS_FS_MATRIX_NOREPLACE_UNSUPPORTED) stays unset: none of these file systems rejects
+# RENAME_NOREPLACE, so the case only logs a skip.
+
 # A read-only ext4: the mod exists before the remount.
 make_image ro 8 mkfs.ext4 -q -F
 mount_label ro ""

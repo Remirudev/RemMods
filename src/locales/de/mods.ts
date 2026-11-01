@@ -9,7 +9,13 @@ export const mods: LocaleShape<typeof en> = {
     conflicts_one: '{{count}} Mod im Konflikt',
     conflicts_other: '{{count}} Mods im Konflikt',
   },
-  tabs: { mods: 'Mods', archives: 'Archive', unmanaged: 'Noch geladen', issues: 'Probleme' },
+  tabs: {
+    mods: 'Mods',
+    archives: 'Archive',
+    unmanaged: 'Noch geladen',
+    issues: 'Probleme',
+    repair: 'Reparieren',
+  },
   filters: {
     search: 'Mods durchsuchen',
     searchPlaceholder: 'Name, Kategorie, Autor oder Typ',
@@ -123,6 +129,9 @@ export const mods: LocaleShape<typeof en> = {
     payloadCompanions_one: '{{count}} Begleitdatei',
     payloadCompanions_other: '{{count}} Begleitdateien',
     info: 'modinfo.json',
+    edit: 'Bearbeiten',
+    added: 'Hinzugefügt',
+    source: 'Quelle',
     infoFile: 'Aus modinfo.json gelesen.',
     infoMissing: 'Keine modinfo.json; es werden Standardwerte angezeigt.',
     infoInvalid: 'modinfo.json konnte nicht gelesen werden; es werden Standardwerte angezeigt.',
@@ -301,6 +310,125 @@ export const mods: LocaleShape<typeof en> = {
     reservedDeviceName: 'er ist ein reservierter Gerätename wie CON, NUL oder COM1',
     disabledPrefix: 'er beginnt mit .disabled_',
     tempName: 'er sieht wie der Ordner einer unvollständigen Installation aus',
+  },
+  rowMenu: {
+    label: 'Aktionen für {{name}}',
+    rename: 'Umbenennen…',
+    trash: 'In den Papierkorb',
+    delete: 'Endgültig löschen…',
+  },
+  confirm: {
+    originalAppRunning:
+      'TekkenModManager läuft und bemerkt diese Änderung womöglich erst nach einem Neustart.',
+  },
+  rename: {
+    title: 'Mod umbenennen',
+    label: 'Neuer Name',
+    submit: 'Umbenennen',
+    cancel: 'Abbrechen',
+    done: '„{{from}}“ wurde in „{{to}}“ umbenannt.',
+    rekeyFailed:
+      'Die Mod wurde umbenannt, aber Profile oder gespeicherte Daten konnten nicht angepasst werden. Details stehen im Log.',
+  },
+  nameIssue: {
+    empty: 'Der Name darf nicht leer sein.',
+    dot_name: 'Ein oder zwei Punkte sind kein Name.',
+    too_long: 'Der Name ist zu lang (höchstens 255 Bytes).',
+    forbidden_char: 'Der Name darf kein < > : " / \\ | ? * enthalten.',
+    control_char: 'Der Name darf keine Steuerzeichen enthalten.',
+    bidi_control: 'Der Name darf keine Steuerzeichen für die Schreibrichtung enthalten.',
+    trailing_dot_or_space: 'Der Name darf nicht mit Punkt oder Leerzeichen enden.',
+    reserved_device_name: 'Windows reserviert diesen Namen (CON, NUL, COM1 und ähnliche).',
+    disabled_prefix: 'Der Name darf nicht mit „.disabled_“ beginnen.',
+    temp_name: 'Der Name sieht nach einem unfertigen Installationsordner aus.',
+    unchanged: 'Der Name ist derselbe wie vorher.',
+    exists: 'Eine andere Mod oder ein anderer Ordner heißt schon so.',
+    invalid: 'Dieser Name kann nicht verwendet werden.',
+  },
+  trash: {
+    confirm: {
+      title: 'In den Papierkorb verschieben?',
+      body: '„{{name}}“ ({{size}}) in den System-Papierkorb verschieben? Du kannst es dort wiederherstellen.',
+      confirm: 'In den Papierkorb',
+    },
+    done: '„{{name}}“ wurde in den Papierkorb verschoben.',
+    unavailable: {
+      title: 'Der Papierkorb ist nicht nutzbar',
+      otherDevice:
+        'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb, deshalb kann er ihn nicht aufnehmen.',
+      noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
+      notSupported: 'Das Verschieben in den Papierkorb ist auf diesem System noch nicht möglich.',
+      warning: '„{{name}}“ ({{size}}) würde stattdessen endgültig gelöscht.',
+      confirm: 'Endgültig löschen',
+    },
+  },
+  delete: {
+    cancel: 'Abbrechen',
+    confirm: {
+      title: 'Endgültig löschen?',
+      body: 'Das löscht „{{name}}“ für immer, statt es in den Papierkorb zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      confirm: 'Weiter',
+    },
+    final: {
+      title: '{{name}} für immer löschen?',
+      body: '„{{name}}“ ({{size}}) wird endgültig gelöscht.',
+      irreversible: 'Das lässt sich nicht rückgängig machen.',
+      confirm: 'Endgültig löschen',
+    },
+    done: '„{{name}}“ wurde gelöscht.',
+    expired:
+      'Die Bestätigung ist abgelaufen. Nichts wurde gelöscht; starte noch einmal, wenn du es weiter willst.',
+    leftover:
+      'Ein Teil der Mod konnte nicht entfernt werden und bleibt versteckt: {{path}}. Der Reiter Reparieren listet ihn.',
+  },
+  metadata: {
+    save: 'Speichern',
+    cancel: 'Abbrechen',
+    confirmTitle: 'modinfo.json speichern?',
+    ambiguous:
+      'Mehrere Dateien unterscheiden sich nur in der Groß- und Kleinschreibung (modinfo.json). Entferne zuerst die überzähligen.',
+    tooLong: 'Ein Feld ist länger als {{max}} Zeichen.',
+  },
+  repair: {
+    description:
+      'Dinge, die RemMods gefunden hat und die deine Aufmerksamkeit brauchen. Jede Aktion fragt nach, bevor sie etwas ändert.',
+    empty: 'Nichts zu reparieren.',
+    kinds: {
+      leftover: 'Übrig gebliebener Ordner',
+      ambiguousKey: 'Gleicher Name doppelt',
+      invalidName: 'Ungültiger Name',
+      nonUnicodeName: 'Nicht lesbarer Name',
+      logicDisabledButLoaded: 'Per Name aus, aber geladen',
+      logicEnabledNotLoaded: 'Per Name an, aber nicht geladen',
+      tempFolderLive: 'Unfertiger Installationsordner',
+      stuckJournal: 'Unfertige Änderung',
+    },
+    hints: {
+      leftover:
+        'Ein versteckter Ordner von einem unterbrochenen Löschen oder Installieren. Daraus wird nichts geladen.',
+      ambiguousKey:
+        'Mehrere Mods teilen sich einen Namen, deshalb kann RemMods sie nicht unterscheiden. Benenne eine um.',
+      invalidName:
+        'Der Ordnername verletzt eine Namensregel. Ein gültiger Name wird vorgeschlagen.',
+      nonUnicodeName:
+        'Der Ordnername lässt sich nicht als Text lesen. Ein gültiger Name wird vorgeschlagen.',
+      logicDisabledButLoaded: 'Der Ordner ist als aus markiert, das Spiel lädt aber seine Dateien.',
+      logicEnabledNotLoaded:
+        'Der Ordner ist als an markiert, seine Dateien sind aber ausgeschaltet.',
+      tempFolderLive:
+        'Dieser Ordner enthält noch aktive Spieldateien und sieht nach einer nicht beendeten Installation aus.',
+      stuckJournal:
+        'Eine Umbenennung ließ sich nicht rückgängig machen. RemMods versucht es beim nächsten Start erneut; Details stehen im Log.',
+    },
+    actions: {
+      rename: 'Umbenennen…',
+      trash: 'In den Papierkorb',
+      deletePermanently: 'Endgültig löschen…',
+      reveal: 'Im Dateimanager zeigen',
+      finishDisable: 'Ausschalten abschließen',
+      finishEnable: 'Einschalten abschließen',
+      openLogs: 'Log öffnen',
+    },
   },
   severity: { error: 'Fehler', warning: 'Warnung', info: 'Hinweis' },
 }

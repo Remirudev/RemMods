@@ -1,5 +1,6 @@
 use crate::game::GameError;
 use crate::mods::ModsError;
+use crate::profiles::ProfileError;
 use crate::safe_fs::FsError;
 use crate::settings::SettingsError;
 
@@ -15,4 +16,6 @@ pub enum CoreError {
     Game(#[from] GameError),
     #[error(transparent)]
     Mods(#[from] ModsError),
+    #[error(transparent)]
+    Profiles(#[from] ProfileError),
 }

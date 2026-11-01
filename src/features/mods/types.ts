@@ -6,6 +6,9 @@ import type {
   ContainerSummary,
   ContentConflictLink,
   ContentSummary,
+  DeleteOutcome,
+  DeletePrepared,
+  DeleteRequest,
   GameStatus,
   InstallInfo,
   LeftoverEntry,
@@ -15,8 +18,14 @@ import type {
   ModRow,
   ModState,
   ModsSnapshot,
+  ModTarget,
+  RepairItem,
+  RepairList,
   RootInfo,
   RunningState,
+  TrashOutcome,
+  TrashRequest,
+  TrashUnavailableReason,
   UnmanagedEntry,
   UpdateNotice,
   UpdateTracking,
@@ -41,7 +50,7 @@ export type IssueSeverity = 'error' | 'warning' | 'info'
 
 export type IssueKind = ModIssue['kind']
 
-export type ModsTab = 'mods' | 'archives' | 'unmanaged' | 'issues'
+export type ModsTab = 'mods' | 'archives' | 'unmanaged' | 'issues' | 'repair'
 
 export type StateFilter = 'all' | ModDisplayState
 
@@ -56,12 +65,27 @@ export interface ModFilter {
 
 export type KindLabel = (kind: ModKind) => string
 
+export type NameIssueCode =
+  | 'empty'
+  | 'dot_name'
+  | 'too_long'
+  | 'forbidden_char'
+  | 'control_char'
+  | 'bidi_control'
+  | 'trailing_dot_or_space'
+  | 'reserved_device_name'
+  | 'disabled_prefix'
+  | 'temp_name'
+  | 'unchanged'
+  | 'exists'
+
 export type NavigationKey = 'ArrowUp' | 'ArrowDown' | 'Home' | 'End' | 'PageUp' | 'PageDown'
 
 export type TableKeyIntent =
   | { kind: 'space' }
   | { kind: 'escape' }
   | { kind: 'open' }
+  | { kind: 'manage'; action: 'rename' | 'trash' | 'delete' }
   | { kind: 'move'; key: NavigationKey }
   | { kind: 'extend'; key: NavigationKey }
 
@@ -171,11 +195,17 @@ export interface ModTableProps {
   rows: readonly ModRow[]
   onOpen: (modRef: string) => void
   onToggle: ToggleRows
+  onManage: ManageRows
 }
 
 export interface ToggleCellProps {
   row: ModRow
   onToggle: ToggleRows
+}
+
+export interface RowMenuProps {
+  row: ModRow
+  onManage: ManageRows
 }
 
 export interface ActionBarProps {
@@ -264,4 +294,124 @@ export interface UnsupportedContainersProps {
 
 export interface ContentConflictListProps {
   conflicts: readonly ContentConflictLink[]
+}
+
+export type ManagedKind =
+  | 'folder'
+  | 'loose'
+  | 'linked'
+  | 'archiveInRoot'
+  | 'archiveInPaks'
+  | 'leftover'
+  | 'unmanaged'
+
+// What the trash and delete flows need to know about one entry, whatever list it comes from.
+export interface ManageSubject {
+  target: ModTarget
+  name: string
+  sizeBytes: number | null
+  kind: ManagedKind
+}
+
+export type ManageRows = (action: 'rename' | 'trash' | 'delete', row: ModRow) => void
+
+export interface FlowDeps {
+  api: {
+    trash: (request: TrashRequest) => Promise<TrashOutcome>
+    prepare: (target: ModTarget) => Promise<DeletePrepared>
+    remove: (request: DeleteRequest) => Promise<DeleteOutcome>
+  }
+  ask: (dialog: FlowDialog) => Promise<boolean>
+  askRunning: () => Promise<boolean>
+  store: (snapshot: ModsSnapshot) => void
+  notice: (notice: FlowNotice) => void
+  fail: (error: unknown) => void
+}
+
+export type FlowDialog =
+  | { kind: 'trash'; subject: ManageSubject }
+  | {
+      kind: 'trashUnavailable'
+      subject: ManageSubject
+      reason: TrashUnavailableReason
+      size: number | null
+    }
+  | { kind: 'deleteFirst'; subject: ManageSubject }
+  | { kind: 'deleteFinal'; subject: ManageSubject; name: string; size: number | null }
+
+export type FlowNotice =
+  | { kind: 'trashDone'; name: string }
+  | { kind: 'deleteDone'; name: string }
+  | { kind: 'deleteExpired' }
+  | { kind: 'deleteLeftover'; path: string }
+
+export type RepairOperation =
+  | { kind: 'rename'; suggestedName: string | null }
+  | { kind: 'trash' }
+  | { kind: 'delete' }
+  | { kind: 'reveal' }
+  | { kind: 'toggle'; enable: boolean }
+  | { kind: 'logs' }
+
+export interface ConfirmButtonsProps {
+  cancelLabel: string
+  confirmLabel: string
+  danger?: boolean
+  // The confirm button stays disabled this long, so a double Enter cannot pass two confirms.
+  delayMs?: number
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface DeleteConfirmBodyProps {
+  name: string
+  size: number | null
+  originalApp: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface TrashUnavailableBodyProps {
+  name: string
+  size: number | null
+  reason: TrashUnavailableReason
+  originalApp: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface RenameDialogProps {
+  target: ModTarget
+  currentName: string
+  initialName: string
+  siblings: ReadonlySet<string>
+  originalApp: boolean
+  onClose: () => void
+}
+
+export interface ManageActions {
+  rename: (subject: ManageSubject, suggestedName?: string | null) => void
+  trash: (subject: ManageSubject) => void
+  remove: (subject: ManageSubject) => void
+}
+
+export interface MetadataEditorProps {
+  row: ModRow
+  onDone: () => void
+}
+
+export interface MetadataInfoProps {
+  row: ModRow
+}
+
+export interface DrawerActionsProps {
+  row: ModRow
+}
+
+export interface RepairTabProps {
+  list: RepairList | undefined
+}
+
+export interface RepairItemRowProps {
+  item: RepairItem
 }

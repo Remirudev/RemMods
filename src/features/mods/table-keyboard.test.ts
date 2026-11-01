@@ -48,6 +48,12 @@ describe('tableKeyIntent', () => {
     expect(tableKeyIntent('Enter', false)).toEqual({ kind: 'open' })
   })
 
+  it('maps F2 to rename, Delete to trash and Shift+Delete to permanent delete', () => {
+    expect(tableKeyIntent('F2', false)).toEqual({ kind: 'manage', action: 'rename' })
+    expect(tableKeyIntent('Delete', false)).toEqual({ kind: 'manage', action: 'trash' })
+    expect(tableKeyIntent('Delete', true)).toEqual({ kind: 'manage', action: 'delete' })
+  })
+
   it('moves with a navigation key and extends with Shift', () => {
     expect(tableKeyIntent('ArrowDown', false)).toEqual({ kind: 'move', key: 'ArrowDown' })
     expect(tableKeyIntent('ArrowDown', true)).toEqual({ kind: 'extend', key: 'ArrowDown' })

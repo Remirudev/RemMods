@@ -30,6 +30,11 @@ impl AppPaths {
         Self::from_dirs(root.join("config"), root.join("data"))
     }
 
+    /// `data_dir/profiles.json`.
+    pub fn profiles_file(&self) -> PathBuf {
+        self.data_dir.join(crate::profiles::PROFILES_FILE)
+    }
+
     fn from_dirs(config_dir: PathBuf, data_dir: PathBuf) -> Self {
         Self {
             log_dir: data_dir.join("logs"),
@@ -44,4 +49,13 @@ impl AppPaths {
 /// Path for display in the UI; strips Windows' `\\?\` prefix where that is lossless.
 pub fn display_path(path: &Path) -> String {
     dunce::simplified(path).display().to_string()
+}
+
+/// Windows: `%LOCALAPPDATA%\TekkenModManager` if it is a folder; else None. Read-only.
+pub fn tmm_profiles_dir() -> Option<PathBuf> {
+    if crate::platform::os_kind() != crate::platform::OsKind::Windows {
+        return None;
+    }
+    let dir = dirs::data_local_dir()?.join("TekkenModManager");
+    dir.is_dir().then_some(dir)
 }

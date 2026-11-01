@@ -18,11 +18,19 @@ running, and launches it through Steam.
 
 **Phase 2 (in progress)**: enable and disable mods (P2). A disabled mod is renamed in place, never
 overwritten, and the change is journaled so an interrupted toggle is rolled back on the next start.
-Installing, profiles and removal come in later phases. The full plan, including the phases and their
+Installing comes in a later phase. The full plan, including the phases and their
 exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
 
 **Phase 2b (in progress)**: shows what each mod contains (from its `.utoc` index) and flags mods that
 ship the same assets. It only reads mod files.
+
+**Phase 3 (in progress)**: manage mods. Rename a mod (the folder, its files and the profiles that name
+it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it
+permanently after a second confirmation, edit its metadata (`modinfo.json`), and fix leftovers of
+interrupted operations in the Repair tab. Profiles remember which mods are on: save, apply (additive or
+exclusive, with an automatic snapshot first), import the original app's `profiles.json` (only read,
+never written), and export or import RemMods profiles. **Windows: the Trash is not supported yet**
+(docs/windows-gaps.md WG-5); "Remove" there means "Delete permanently", which asks twice.
 
 ## Platforms
 

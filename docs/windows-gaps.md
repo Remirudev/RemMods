@@ -15,3 +15,5 @@ Linux-first still builds and passes its tests on Windows, and on Windows it eith
 | WG-2 | Folder-busy wait | The wait (up to 30 s) shows only the pending toggle; no toast with Cancel (PLAN §4 Retry) | yes | open |
 | WG-3 | Watcher overflow rescan | notify 8.2.1 emits no rescan on a ReadDirectoryChangesW overflow; focus and post-command rescans cover it until notify 9 (PLAN §4 Watcher) | no | open |
 | WG-4 | Toggle while TEKKEN 8 runs | The DELETE-access probe (InUse without a prompt) is verified in CI only, not on a real PC (PLAN §11) | no | open |
+| WG-5 | Recycle Bin mover | Trash always reports `TrashUnavailable(NotSupported)`, so removal on Windows is "Delete permanently" (second confirmation) or Cancel; PLAN §4's `IFileOperation` mover arrives in P3b | yes (for 1.0) | open |
+| WG-6 | Profile export path | The Windows save dialog's overwrite prompt is assumed; it is verified on Linux/portal only | no | open |

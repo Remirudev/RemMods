@@ -88,7 +88,12 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   `write_atomic` under the `AppLock`; a corrupt file is backed up before it is replaced.
 - Writes only inside the three mod roots, RemMods' app folders and the Trash. Steam files are
   read-only. Removal is a rename; permanent delete needs a second confirmation. RemMods never writes
-  the original's `profiles.json`.
+  the original's `profiles.json`. One exception: a profile export writes the single `.json` file the
+  user picked in the native save dialog (`WriteGuard::write_export`; pending owner approval, SPEC-P3 A3).
+- The Trash is reached only through `platform::trash_location` + `safe_fs` `WriteGuard::trash`; tests
+  pass a `TrashEnv` inside their TempDir and never use `TrashEnv::from_env()` (only the shell does).
+  Permanent delete needs a token from `mods_delete_prepare` (the second confirmation);
+  `remove_aside` is the only recursive delete under a mod root.
 - Pure-Rust crates preferred. `deny.toml` bans C/asm crates and features; `scripts/check-native.sh`
   checks both targets' dependency trees and Linux build-script outputs.
 

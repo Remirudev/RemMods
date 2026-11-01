@@ -691,6 +691,8 @@ fn details_convert_from_core() {
         ],
         truncated: true,
         other_files: 7,
+        added: Some("2026-10-30T12:00:00Z".into()),
+        source: None,
     };
 
     let dto = ModDetails::from(&details);
@@ -716,6 +718,8 @@ fn details_convert_from_core() {
             ],
             truncated: true,
             other_files: 7,
+            added: Some("2026-10-30T12:00:00Z".into()),
+            source: None,
         }
     );
     assert_eq!(
@@ -723,6 +727,8 @@ fn details_convert_from_core() {
         json!({ "relPath": "Content/X.pak", "kind": "pak", "live": true, "sizeBytes": 2048.0 })
     );
     assert_eq!(to_json(&dto)["otherFiles"], json!(7));
+    assert_eq!(to_json(&dto)["added"], json!("2026-10-30T12:00:00Z"));
+    assert_eq!(to_json(&dto)["source"], Value::Null);
 }
 
 #[test]

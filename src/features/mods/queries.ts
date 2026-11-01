@@ -40,3 +40,7 @@ export function useModContents(modRef: string | null) {
 export function useRevealEntry() {
   return useMutation({ mutationFn: (modRef: string) => ipc.modsReveal(modRef) })
 }
+
+export function useRepairList() {
+  return useQuery({ queryKey: queryKeys.repair, queryFn: () => ipc.repairList() })
+}

@@ -5,6 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModRow } from '../../lib/ipc/types'
+import { canManage, rowSubject } from './manage-model'
 import { spaceAction } from './mod-actions'
 import { buildModColumns, modTableFeatures } from './mod-table-model'
 import classes from './mods.module.css'
@@ -30,10 +31,13 @@ function getRowId(row: ModRow): string {
   return row.modRef
 }
 
-export function ModTable({ rows, onOpen, onToggle }: ModTableProps) {
+export function ModTable({ rows, onOpen, onToggle, onManage }: ModTableProps) {
   const { t, i18n } = useTranslation('mods')
   const locale = i18n.language
-  const columns = useMemo(() => buildModColumns(t, locale, onToggle), [t, locale, onToggle])
+  const columns = useMemo(
+    () => buildModColumns(t, locale, onToggle, onManage),
+    [t, locale, onToggle, onManage],
+  )
   const [sorting, setSorting] = useState<SortingState>(INITIAL_SORTING)
   const viewportRef = useRef<HTMLDivElement>(null)
   const activeIndex = useModsUiStore((state) => state.activeIndex)
@@ -119,6 +123,12 @@ export function ModTable({ rows, onOpen, onToggle }: ModTableProps) {
     if (action) onToggle(action.rows, action.enable)
   }
 
+  const manageActive = (action: 'rename' | 'trash' | 'delete') => {
+    const id = activeRowId()
+    const row = sortedRows.find((candidate) => candidate.id === id)?.original
+    if (row && canManage(rowSubject(row), action)) onManage(action, row)
+  }
+
   const moveActive = (key: string, extend: boolean) => {
     const pageSize = Math.floor((viewportRef.current?.clientHeight ?? 0) / ROW_HEIGHT) - 1
     const next = nextActiveIndex(activeIndex, key, sortedRows.length, pageSize)
@@ -146,6 +156,10 @@ export function ModTable({ rows, onOpen, onToggle }: ModTableProps) {
       case 'space':
         event.preventDefault()
         toggleActive()
+        return
+      case 'manage':
+        event.preventDefault()
+        manageActive(intent.action)
         return
       case 'escape':
         if (selection.length === 0) return

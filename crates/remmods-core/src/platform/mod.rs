@@ -11,9 +11,15 @@ use std::time::{Duration, Instant};
 
 mod entry;
 mod procfs;
+mod trash;
 
+pub(crate) use entry::os_str_prefix;
 pub use entry::{FileId, RawName, file_id, fs_path, os_str_cut, os_string, raw_name};
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
+pub(crate) use trash::DirTraits;
+pub use trash::{
+    MountId, TopdirPolicy, TrashEnv, TrashKind, TrashLocation, TrashUnavailableReason,
+};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -167,6 +173,49 @@ pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> io::Result<NoReplace> 
         ));
     }
     imp::rename_noreplace(from, to)
+}
+
+/// Rename to a different folder on the same mount, never replacing `to`. Linux: renameat2
+/// NOREPLACE; EINVAL/ENOSYS → `NoReplace::FlagUnsupported` and nothing changed. Windows:
+/// MoveFileExW(verbatim, 0). EXDEV is classified CrossDevice.
+pub(crate) fn rename_noreplace_across(from: &Path, to: &Path) -> io::Result<NoReplace> {
+    imp::rename_noreplace_across(from, to)
+}
+
+/// mkdir with mode 0700 on Unix (plain create_dir on Windows); AlreadyExists is an error.
+pub(crate) fn create_private_dir(path: &Path) -> io::Result<()> {
+    imp::create_private_dir(path)
+}
+
+/// open(O_CREAT|O_EXCL|O_WRONLY, 0600) on Unix, CREATE_NEW on Windows.
+pub(crate) fn create_new_file(path: &Path) -> io::Result<std::fs::File> {
+    imp::create_new_file(path)
+}
+
+/// Owner, kind and sticky bit of `path` without following it (owner None and sticky false on
+/// Windows).
+pub(crate) fn dir_traits(path: &Path) -> io::Result<DirTraits> {
+    imp::dir_traits(path)
+}
+
+/// Linux: the real uid; Windows and other OSes: None. Read-only.
+pub fn current_uid() -> Option<u32> {
+    imp::current_uid()
+}
+
+/// Read-only probe for the trash that `item` (an existing absolute path, not followed if it is a
+/// link) would move into. Linux: the freedesktop.org rules; Windows/other: `Ok(Err(NotSupported))`.
+pub fn trash_location(
+    env: &TrashEnv,
+    item: &Path,
+) -> io::Result<Result<TrashLocation, TrashUnavailableReason>> {
+    imp::trash_location(env, item)
+}
+
+/// Linux: statx(AT_SYMLINK_NOFOLLOW, STATX_MNT_ID) → (st_dev, mount id when the kernel reports
+/// it). Windows/other: Unsupported.
+pub fn mount_identity(path: &Path) -> io::Result<MountId> {
+    imp::mount_identity(path)
 }
 
 /// Windows: opens `path` for DELETE with full sharing and closes it again; a holder that did not

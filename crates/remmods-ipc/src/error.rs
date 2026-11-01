@@ -1,17 +1,23 @@
 use remmods_core::CoreError;
 use remmods_core::game::GameError;
-use remmods_core::mods::ModsError;
+use remmods_core::mods::{
+    ManageAction as CoreManageAction, ManageBlock as CoreManageBlock, ModsError,
+};
 use remmods_core::platform;
+use remmods_core::profiles::ProfileError;
 use remmods_core::safe_fs::{BatchError, FsError};
 use remmods_core::settings::SettingsError;
 use serde::{Deserialize, Serialize};
 
 use crate::game::{FolderProblem, RevealProblem};
+use crate::manage::{ManageAction, ManageBlock, TrashUnavailableReason};
+use crate::mods::bytes;
+use crate::profiles::ImportProblem;
 use crate::toggle::ToggleBlock;
 
 /// Error returned by every command. Carries no English: the UI translates by `kind`, and the raw
 /// OS error only goes to the log.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AppError {
     Busy,
@@ -45,6 +51,27 @@ pub enum AppError {
         class: OsErrorClass,
         stuck: u32,
         folder: bool,
+    },
+    /// A name core refused; `issue` is the name-rule code, e.g. `reserved_device_name`.
+    InvalidName {
+        issue: String,
+    },
+    ManageBlocked {
+        action: ManageAction,
+        reason: ManageBlock,
+    },
+    /// `size` (bytes) lets the UI offer a permanent delete instead; null when unknown.
+    TrashUnavailable {
+        reason: TrashUnavailableReason,
+        #[specta(type = Option<specta_typescript::Number>)]
+        size: Option<f64>,
+    },
+    DeleteTokenInvalid,
+    ModinfoAmbiguous,
+    ProfileNotFound,
+    ProfileNameTaken,
+    ImportFailed {
+        problem: ImportProblem,
     },
 }
 
@@ -80,6 +107,7 @@ impl From<CoreError> for AppError {
             CoreError::MissingHomeDir => Self::Internal,
             CoreError::Game(error) => game_error(error),
             CoreError::Mods(error) => mods_error(error),
+            CoreError::Profiles(error) => profile_error(error),
         }
     }
 }
@@ -95,6 +123,15 @@ fn fs_error(error: FsError) -> AppError {
         FsError::TargetExists { .. } => AppError::TargetExists,
         FsError::SourceMissing { .. } => AppError::Stale,
         FsError::Batch(batch) => batch_failed(&batch),
+        FsError::TrashUnavailable { reason } => AppError::TrashUnavailable {
+            reason: reason.into(),
+            size: None,
+        },
+        FsError::NotAnAside { .. } | FsError::AsideNotInert { .. } => AppError::Stale,
+        FsError::AsideJournaled { .. } => AppError::ManageBlocked {
+            action: CoreManageAction::Delete.into(),
+            reason: CoreManageBlock::JournalPending.into(),
+        },
         FsError::FolderBusy { .. } | FsError::InvalidBatch { .. } | FsError::Journal { .. } => {
             log::error!("unexpected file-system error: {error}");
             AppError::Internal
@@ -146,6 +183,36 @@ fn mods_error(error: ModsError) -> AppError {
         },
         ModsError::GameRunning => AppError::GameRunning,
         ModsError::NotAFixture => AppError::invalid_input("fixture"),
+        ModsError::RenameUnchanged => AppError::invalid_input("name"),
+        ModsError::InvalidName { code } => AppError::InvalidName {
+            issue: code.to_owned(),
+        },
+        ModsError::TargetExists => AppError::TargetExists,
+        ModsError::ManageBlocked { action, reason, .. } => AppError::ManageBlocked {
+            action: action.into(),
+            reason: reason.into(),
+        },
+        ModsError::TrashUnavailable { reason, size } => AppError::TrashUnavailable {
+            reason: reason.into(),
+            size: size.map(bytes),
+        },
+        ModsError::DeleteToken => AppError::DeleteTokenInvalid,
+        ModsError::ModinfoAmbiguous => AppError::ModinfoAmbiguous,
+        ModsError::FieldTooLong { field } => AppError::invalid_input(field),
+    }
+}
+
+fn profile_error(error: ProfileError) -> AppError {
+    match error {
+        ProfileError::Fs(error) => fs_error(error),
+        ProfileError::NotFound => AppError::ProfileNotFound,
+        ProfileError::InvalidName => AppError::invalid_input("profileName"),
+        ProfileError::NameTaken => AppError::ProfileNameTaken,
+        ProfileError::ReadOnly => AppError::ReadOnly,
+        ProfileError::Unparsable(problem) => AppError::ImportFailed {
+            problem: problem.into(),
+        },
+        ProfileError::DiffChanged => AppError::Stale,
     }
 }
 

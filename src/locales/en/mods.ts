@@ -6,7 +6,13 @@ export const mods = {
     conflicts_one: '{{count}} mod in conflict',
     conflicts_other: '{{count}} mods in conflict',
   },
-  tabs: { mods: 'Mods', archives: 'Archives', unmanaged: 'Still loaded', issues: 'Issues' },
+  tabs: {
+    mods: 'Mods',
+    archives: 'Archives',
+    unmanaged: 'Still loaded',
+    issues: 'Issues',
+    repair: 'Repair',
+  },
   filters: {
     search: 'Search mods',
     searchPlaceholder: 'Name, category, author or type',
@@ -118,6 +124,9 @@ export const mods = {
     payloadCompanions_one: '{{count}} companion file',
     payloadCompanions_other: '{{count}} companion files',
     info: 'modinfo.json',
+    edit: 'Edit',
+    added: 'Added',
+    source: 'Source',
     infoFile: 'Read from modinfo.json.',
     infoMissing: 'No modinfo.json; defaults are shown.',
     infoInvalid: 'modinfo.json could not be read; defaults are shown.',
@@ -285,6 +294,118 @@ export const mods = {
     reservedDeviceName: 'it is a reserved device name such as CON, NUL or COM1',
     disabledPrefix: 'it starts with .disabled_',
     tempName: 'it looks like an unfinished install folder',
+  },
+  rowMenu: {
+    label: 'Actions for {{name}}',
+    rename: 'Rename…',
+    trash: 'Move to Trash',
+    delete: 'Delete permanently…',
+  },
+  confirm: {
+    originalAppRunning:
+      'TekkenModManager is running and may not notice this change until you restart it.',
+  },
+  rename: {
+    title: 'Rename mod',
+    label: 'New name',
+    submit: 'Rename',
+    cancel: 'Cancel',
+    done: 'Renamed “{{from}}” to “{{to}}”.',
+    rekeyFailed:
+      'The mod was renamed, but profiles or saved data could not be updated. The log has the details.',
+  },
+  nameIssue: {
+    empty: 'The name cannot be empty.',
+    dot_name: 'A single or double dot is not a name.',
+    too_long: 'The name is too long (at most 255 bytes).',
+    forbidden_char: 'The name cannot contain < > : " / \\ | ? *',
+    control_char: 'The name cannot contain control characters.',
+    bidi_control: 'The name cannot contain text-direction control characters.',
+    trailing_dot_or_space: 'The name cannot end with a dot or a space.',
+    reserved_device_name: 'Windows reserves this name (CON, NUL, COM1 and similar).',
+    disabled_prefix: 'The name cannot start with “.disabled_”.',
+    temp_name: 'This name looks like an unfinished install folder.',
+    unchanged: 'The name is the same as before.',
+    exists: 'Another mod or folder already has this name.',
+    invalid: 'This name cannot be used.',
+  },
+  trash: {
+    confirm: {
+      title: 'Move to Trash?',
+      body: 'Move “{{name}}” ({{size}}) to the system Trash? You can restore it from there.',
+      confirm: 'Move to Trash',
+    },
+    done: 'Moved “{{name}}” to the Trash.',
+    unavailable: {
+      title: 'The Trash cannot be used',
+      otherDevice: 'This folder is on another drive than your Trash, so the Trash cannot take it.',
+      noUsableTrash: 'No usable Trash folder was found for this drive.',
+      notSupported: 'Moving to the Trash is not available on this system yet.',
+      warning: '“{{name}}” ({{size}}) would be deleted permanently instead.',
+      confirm: 'Delete permanently',
+    },
+  },
+  delete: {
+    cancel: 'Cancel',
+    confirm: {
+      title: 'Delete permanently?',
+      body: 'This deletes “{{name}}” for good instead of moving it to the Trash. You are asked once more before anything is deleted.',
+      confirm: 'Continue',
+    },
+    final: {
+      title: 'Delete {{name}} forever?',
+      body: '“{{name}}” ({{size}}) will be deleted permanently.',
+      irreversible: 'This cannot be undone.',
+      confirm: 'Delete permanently',
+    },
+    done: 'Deleted “{{name}}”.',
+    expired: 'The confirmation ran out. Nothing was deleted; start again if you still want to.',
+    leftover:
+      'Part of the mod could not be removed and stays hidden: {{path}}. The Repair tab lists it.',
+  },
+  metadata: {
+    save: 'Save',
+    cancel: 'Cancel',
+    confirmTitle: 'Save modinfo.json?',
+    ambiguous:
+      'Several files differ only in the case of their name (modinfo.json). Remove the extra ones first.',
+    tooLong: 'A field is longer than {{max}} characters.',
+  },
+  repair: {
+    description:
+      'Things RemMods found that need your attention. Each action asks before it changes anything.',
+    empty: 'Nothing to repair.',
+    kinds: {
+      leftover: 'Leftover folder',
+      ambiguousKey: 'Same name twice',
+      invalidName: 'Invalid name',
+      nonUnicodeName: 'Unreadable name',
+      logicDisabledButLoaded: 'Disabled by name, still loaded',
+      logicEnabledNotLoaded: 'Enabled by name, not loaded',
+      tempFolderLive: 'Unfinished install folder',
+      stuckJournal: 'Unfinished change',
+    },
+    hints: {
+      leftover: 'A hidden folder from an interrupted delete or install. Nothing loads from it.',
+      ambiguousKey: 'Several mods share one name, so RemMods cannot tell them apart. Rename one.',
+      invalidName: 'The folder name breaks a naming rule. A valid name is suggested.',
+      nonUnicodeName: 'The folder name cannot be read as text. A valid name is suggested.',
+      logicDisabledButLoaded: 'The folder is marked off, but the game still loads its files.',
+      logicEnabledNotLoaded: 'The folder is marked on, but its files are switched off.',
+      tempFolderLive:
+        'This folder still has live game files and looks like an install that did not finish.',
+      stuckJournal:
+        'A rename could not be undone. RemMods retries it on the next start; the log has the details.',
+    },
+    actions: {
+      rename: 'Rename…',
+      trash: 'Move to Trash',
+      deletePermanently: 'Delete permanently…',
+      reveal: 'Show in file manager',
+      finishDisable: 'Finish disabling',
+      finishEnable: 'Finish enabling',
+      openLogs: 'Open logs',
+    },
   },
   severity: { error: 'Error', warning: 'Warning', info: 'Note' },
 } as const

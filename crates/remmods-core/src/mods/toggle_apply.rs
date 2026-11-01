@@ -117,7 +117,7 @@ pub(crate) fn select_disable_all(content: &ScanContent) -> Selection<'_> {
     }
 }
 
-fn wants_disable(row: &ModRow) -> bool {
+pub(crate) fn wants_disable(row: &ModRow) -> bool {
     matches!(row.state, ModState::Enabled | ModState::Partial)
         || row.issues.contains(&ModIssue::LogicDisabledButLoaded)
 }

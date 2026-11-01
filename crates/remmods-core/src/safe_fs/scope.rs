@@ -79,6 +79,32 @@ impl Scope {
         ScopeChecker::new(self).check_app(path)
     }
 
+    /// True when `path` names one of the mod roots (lexically, or as the same real folder when
+    /// `path` itself is no link).
+    pub(crate) fn is_mod_root(&self, path: &Path) -> bool {
+        self.mod_roots
+            .iter()
+            .any(|root| same_lexical(path, &root.lexical))
+            || (!is_link(path)
+                && canonicalize(path).is_some_and(|canonical| {
+                    self.mod_roots
+                        .iter()
+                        .any(|root| root.canonical == canonical)
+                }))
+    }
+
+    /// True when `path` (existing or not) is a mod root or an app dir or lies below one, judged
+    /// on the lexical path and on the path with its existing part resolved.
+    pub(crate) fn contains(&self, path: &Path) -> bool {
+        let resolved = resolve_existing(path);
+        self.mod_roots.iter().chain(&self.app_dirs).any(|root| {
+            is_within(path, &root.lexical)
+                || resolved
+                    .as_deref()
+                    .is_some_and(|resolved| is_within(resolved, &root.canonical))
+        })
+    }
+
     fn build<'a>(mod_roots: &[PathBuf], app_dirs: impl Iterator<Item = &'a Path>) -> Scope {
         Scope {
             mod_roots: mod_roots
@@ -189,6 +215,34 @@ fn canonical(path: &Path, cache: &mut HashMap<PathBuf, Option<PathBuf>>) -> Opti
 
 fn canonicalize(path: &Path) -> Option<PathBuf> {
     platform::fs_path(path).and_then(fs::canonicalize).ok()
+}
+
+/// `path` with its longest existing ancestor canonicalised and the rest appended; None when no
+/// ancestor resolves.
+pub(crate) fn resolve_existing(path: &Path) -> Option<PathBuf> {
+    let mut rest = Vec::new();
+    for ancestor in path.ancestors() {
+        if let Some(canonical) = canonicalize(ancestor) {
+            return Some(
+                rest.iter()
+                    .rev()
+                    .fold(canonical, |base, part| base.join(part)),
+            );
+        }
+        rest.push(ancestor.file_name()?.to_os_string());
+    }
+    None
+}
+
+/// `path` equals `base` or lies below it, component-wise (ASCII case folded on Windows).
+pub(crate) fn is_within(path: &Path, base: &Path) -> bool {
+    let fold = platform::os_kind() == OsKind::Windows;
+    let mut parts = path.components();
+    base.components().all(|wanted| {
+        parts
+            .next()
+            .is_some_and(|part| same_component(part, wanted, fold))
+    })
 }
 
 /// Symlinks, and on Windows junctions (std reports name-surrogate reparse points as links).

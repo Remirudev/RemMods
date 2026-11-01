@@ -7,10 +7,12 @@ import { ActionBar } from './ActionBar'
 import { filterMods } from './filter-mods'
 import { ModFilters } from './ModFilters'
 import { ModTable } from './ModTable'
+import { rowSubject } from './manage-model'
 import { useModsUiStore } from './mods-ui-store'
 import { pruneSelection } from './selection'
 import { rowsToChange, toggleTargets } from './toggle-model'
-import type { ModsListTabProps, ToggleRows } from './types'
+import type { ManageRows, ModsListTabProps, ToggleRows } from './types'
+import { useManageActions } from './use-manage-actions'
 import { useToggleMods } from './use-toggle-mods'
 
 export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
@@ -20,6 +22,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   const openDetails = useModsUiStore((state) => state.openDetails)
   const toggle = useToggleMods()
   const { mutate } = toggle
+  const manage = useManageActions()
   const locale = i18n.language
   const visible = useMemo(
     () => filterMods(rows, filter, (kind) => t(($) => $.kinds[kind]), locale),
@@ -48,6 +51,16 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
     [mutate],
   )
 
+  const manageRow = useCallback<ManageRows>(
+    (action, row) => {
+      const subject = rowSubject(row)
+      if (action === 'rename') manage.rename(subject)
+      else if (action === 'trash') manage.trash(subject)
+      else manage.remove(subject)
+    },
+    [manage],
+  )
+
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -70,7 +83,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
           </Button>
         </Stack>
       ) : (
-        <ModTable rows={visible} onOpen={openDetails} onToggle={toggleRows} />
+        <ModTable rows={visible} onOpen={openDetails} onToggle={toggleRows} onManage={manageRow} />
       )}
     </Stack>
   )

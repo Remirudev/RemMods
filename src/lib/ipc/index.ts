@@ -1,6 +1,19 @@
 import { commands } from './bindings'
 import { unwrapResult } from './ipc-error'
-import type { LocationChoice, SettingsUpdate, SmokeReport, ToggleRequest } from './types'
+import type {
+  ApplyRequest,
+  DeleteRequest,
+  LocationChoice,
+  MetadataRequest,
+  ModTarget,
+  ProfileSave,
+  RenameRequest,
+  SettingsUpdate,
+  SmokeReport,
+  ToggleRequest,
+  TransferRequest,
+  TrashRequest,
+} from './types'
 
 export const ipc = {
   platformInfo: () => unwrapResult('platform_info', () => commands.platformInfo()),
@@ -31,5 +44,26 @@ export const ipc = {
     unwrapResult('mods_toggle', () => commands.modsToggle(request)),
   modsDisableAll: (applyWhileRunning: boolean) =>
     unwrapResult('mods_disable_all', () => commands.modsDisableAll(applyWhileRunning)),
+  modsRename: (request: RenameRequest) =>
+    unwrapResult('mods_rename', () => commands.modsRename(request)),
+  modsTrash: (request: TrashRequest) =>
+    unwrapResult('mods_trash', () => commands.modsTrash(request)),
+  modsDeletePrepare: (target: ModTarget) =>
+    unwrapResult('mods_delete_prepare', () => commands.modsDeletePrepare(target)),
+  modsDeletePermanently: (request: DeleteRequest) =>
+    unwrapResult('mods_delete_permanently', () => commands.modsDeletePermanently(request)),
+  modsSetMetadata: (request: MetadataRequest) =>
+    unwrapResult('mods_set_metadata', () => commands.modsSetMetadata(request)),
+  repairList: () => unwrapResult('repair_list', () => commands.repairList()),
+  profilesList: () => unwrapResult('profiles_list', () => commands.profilesList()),
+  profilesSave: (save: ProfileSave) =>
+    unwrapResult('profiles_save', () => commands.profilesSave(save)),
+  profilesDelete: (id: string) =>
+    unwrapResult('profiles_delete', () => commands.profilesDelete(id)),
+  profilesDiff: (id: string) => unwrapResult('profiles_diff', () => commands.profilesDiff(id)),
+  profilesApply: (request: ApplyRequest) =>
+    unwrapResult('profiles_apply', () => commands.profilesApply(request)),
+  profilesTransfer: (request: TransferRequest) =>
+    unwrapResult('profiles_transfer', () => commands.profilesTransfer(request)),
   modsWatchStatus: () => unwrapResult('mods_watch_status', () => commands.modsWatchStatus()),
 }

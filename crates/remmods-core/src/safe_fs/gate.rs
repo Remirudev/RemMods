@@ -97,6 +97,10 @@ impl WriteGuard<'_> {
         &self.scope
     }
 
+    pub(super) fn journal(&self) -> &Journal {
+        &self.gate.journal
+    }
+
     pub fn recovery(&self) -> &RecoveryReport {
         &self.recovery
     }

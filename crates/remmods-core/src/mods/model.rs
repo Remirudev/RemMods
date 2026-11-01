@@ -271,4 +271,7 @@ pub struct ModDetails {
     pub files: Vec<PayloadFile>,
     pub truncated: bool,
     pub other_files: u32,
+    /// From `mod-meta.json` (P4 installs), shown read-only.
+    pub added: Option<String>,
+    pub source: Option<String>,
 }

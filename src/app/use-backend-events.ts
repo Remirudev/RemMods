@@ -19,6 +19,9 @@ export function useBackendEvents(): void {
         const cached = queryClient.getQueryData<ModsSnapshot>(queryKeys.mods)
         if (cached?.revision !== revision) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.mods })
+          // Counts, missing mods and the repair list follow the disk.
+          void queryClient.invalidateQueries({ queryKey: queryKeys.repair })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.profiles })
         }
       }),
       onGameStatusChanged((event) => {

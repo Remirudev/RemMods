@@ -202,3 +202,53 @@ fn renaming_a_symlinked_pak_renames_the_link_only() {
     assert_eq!(fs::read_link(&renamed).expect("read link"), target);
     assert_eq!(fs::read(&target).expect("read"), b"a");
 }
+
+#[test]
+fn write_mod_file_refuses_symlinked_mod_folder() {
+    let fixture = support::fs_fixture();
+    support::write_tree(&fixture.root, &[("elsewhere/", b"")]);
+    symlink(fixture.root.join("elsewhere"), fixture.path("Mods/Link")).expect("link");
+    let gate = fixture.gate();
+    let guard = gate.write(fixture.scope()).expect("write guard");
+    let before = support::tree_listing(&fixture.paks);
+
+    let result = guard.write_mod_file(&fixture.path("Mods/Link/modinfo.json"), b"{}");
+
+    assert_eq!(violation(result), Some(ScopeViolation::LinkComponent));
+    assert!(support::names_in(&fixture.root.join("elsewhere")).is_empty());
+    assert_eq!(support::tree_listing(&fixture.paks), before);
+}
+
+#[test]
+fn remove_aside_refuses_a_symlinked_aside_and_never_follows_inner_links() {
+    let fixture = support::fs_fixture();
+    let hex = "0123456789abcdef0123456789abcdef";
+    support::write_tree(
+        &fixture.root,
+        &[
+            ("store/Live/Live.pak", b"pak"),
+            (&format!("Paks/Mods/_In_tmp_{hex}/notes.txt"), b"n"),
+        ],
+    );
+    let linked = fixture.path(&format!("Mods/_Link_tmp_{hex}"));
+    symlink(fixture.root.join("store"), &linked).expect("aside link");
+    let aside = fixture.path(&format!("Mods/_In_tmp_{hex}"));
+    symlink(fixture.root.join("store"), aside.join("inner")).expect("inner link");
+    let gate = fixture.gate();
+    let guard = gate.write(fixture.scope()).expect("write guard");
+
+    let refused = guard.remove_aside(&linked);
+    assert!(
+        matches!(refused, Err(FsError::NotAnAside { .. })),
+        "{refused:?}"
+    );
+
+    guard.remove_aside(&aside).expect("removed");
+
+    assert!(!aside.exists());
+    assert_eq!(
+        fs::read(fixture.root.join("store/Live/Live.pak")).expect("store kept"),
+        b"pak"
+    );
+    assert!(fs::symlink_metadata(&linked).is_ok());
+}

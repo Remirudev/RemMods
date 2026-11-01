@@ -218,6 +218,9 @@ pub struct ModDetails {
     pub files: Vec<PayloadFile>,
     pub truncated: bool,
     pub other_files: u32,
+    /// From `mod-meta.json` (P4 installs), shown read-only.
+    pub added: Option<String>,
+    pub source: Option<String>,
 }
 
 impl From<core::ModKind> for ModKind {
@@ -460,6 +463,8 @@ impl From<&core::ModDetails> for ModDetails {
             files: details.files.iter().map(PayloadFile::from).collect(),
             truncated: details.truncated,
             other_files: details.other_files,
+            added: details.added.clone(),
+            source: details.source.clone(),
         }
     }
 }
@@ -467,6 +472,6 @@ impl From<&core::ModDetails> for ModDetails {
 const NANOS_PER_MILLI: f64 = 1_000_000.0;
 
 /// Sizes cross IPC as JavaScript numbers; exact up to 2^53 bytes (8 PiB).
-fn bytes(size: u64) -> f64 {
+pub(crate) fn bytes(size: u64) -> f64 {
     size as f64
 }

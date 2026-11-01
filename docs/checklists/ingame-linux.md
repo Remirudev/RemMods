@@ -47,7 +47,7 @@ Paths below are relative to the Paks folder,
   loaded loose in `Mods`, at depth 3, inside `Mods/.disabled_Test/`, from both `Mods` and `mods`;
   does `-x` stop them; toggle and trash a mod during a match; which mod wins with a shared pak
   basename, and with the same asset in different paks; does `~mods` beat `Mods`.
-- **P3**: two profiles applied back and forth in-game.
+- **P3**: two profiles applied back and forth in-game; see "P3 steps" below.
 - **P4**: one zip, one rar and one 7z mod, dropped onto RemMods, load in-game.
 - **P5**: the same check with Steam started from the AppImage build; Steam gets a clean environment
   and working directory, and your gamescope launch options still work.
@@ -176,4 +176,51 @@ renamed; the copies are removed afterwards.
    Result:
 10. Claude records the answers (load order, winner wording, engine answers, hint confirmations) in
     PLAN §11, §7 and §12 after you agree. The "Runs" table gets a P2b line.
+    Result:
+
+## P3 steps (manage phase)
+
+The first phase that renames, trashes and deletes mod files and applies profiles. Backup first,
+together: Claude prepares and runs the commands, you play offline Practice mode and report. Every
+command works in fish. Each step ends with a "Result:" line to fill in. Never run a step without the
+backup of step 1.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p3-before.tsv`. Back up
+   `Paks/Mods`, `Paks/~mods`, `Paks/LogicMods` and `~/.local/share/com.remirudev.remmods/` with
+   `cp -a --reflink=auto` into `local/backup-p3/` (the sources stay read-only), and note the backup
+   size (`du -sh local/backup-p3`). Confirm the system Trash is on the same filesystem as Paks:
+   `stat -c %d "<Paks>" ~/.local/share/Trash` prints the same number twice (otherwise Trash uses a
+   `.Trash-<uid>` folder at the mount root; note which).
+   Result:
+2. In RemMods: save profile **A** (additive) with mod set 1 enabled; enable mod set 2 instead and save
+   profile **B** (exclusive). Note both sets.
+   Result:
+3. Apply A (check the changes listed in the diff dialog), launch, confirm set 1 is visible and set 2
+   is not. Quit. Apply B, launch, confirm set 2 is visible and set 1 is gone. Quit. Apply A again,
+   launch, confirm. After each apply an automatic snapshot appears in the profile list (the newest 10
+   are kept). This is the P3 exit check "two profiles applied back and forth in-game".
+   Result:
+4. Rename one enabled mod (for example `CoolSkin` to `CoolSkin2`): profile A's entry follows (its
+   diff shows no change), launch, the mod still loads.
+   Result:
+5. Case-only rename (`CoolSkin2` to `coolskin2`); check the folder name on disk with
+   `ls "<Paks>/Mods"`.
+   Result:
+6. Move one mod to the Trash: it leaves the table; launch, it is gone in-game. Restore it from
+   Dolphin's Trash; RemMods shows it again after the rescan; launch, it is back.
+   Result:
+7. Edit the metadata of one mod; open its `modinfo.json` and compare it with the expected bytes; the
+   original's reading rules (PLAN §7) still parse it (`python3 -I scripts/scan-expect.py` if it
+   applies).
+   Result:
+8. Import a copy of the original app's profiles (`python3 -I scripts/make-fixtures.py --profiles
+   local/profiles-fixture`, then pick `profiles.json`): the imported profiles are Exclusive, and the
+   diff of the empty Default lists every enabled mod as Disable. Cancel the apply.
+   Result:
+9. Repair tab: craft a leftover with `mkdir "<Paks>/Mods/_Test_tmp_0123456789abcdef0123456789abcdef"`
+   holding a `-x` file (for example `touch .../Old.pak-x`); it shows in Repair. Move it to the Trash.
+   Result:
+10. Game closed. `scripts/paks-snapshot.sh > local/paks-p3-after.tsv`, then
+    `diff -u local/paks-p3-before.tsv local/paks-p3-after.tsv` shows only the intended changes. Restore
+    from `local/backup-p3/` if anything is unexpected, and diff again: no output after the restore.
     Result:

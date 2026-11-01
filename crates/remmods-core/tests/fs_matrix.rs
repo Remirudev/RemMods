@@ -11,9 +11,11 @@ use std::sync::{Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use remmods_core::AppPaths;
-use remmods_core::platform::OsErrorClass;
+use remmods_core::platform::{
+    self, OsErrorClass, OsKind, TopdirPolicy, TrashEnv, TrashKind, TrashUnavailableReason,
+};
 use remmods_core::safe_fs::{
-    FsError, OpGate, PaksWatcher, RenameOp, Scope, WatchSignal, placeholder_noreplace,
+    FsError, OpGate, PaksWatcher, RenameOp, Scope, TrashReport, WatchSignal, placeholder_noreplace,
 };
 
 use support::{crash_after, fail_before, join_rel, options, snapshot, write_tree};
@@ -301,4 +303,97 @@ fn a_small_inotify_queue_overflows_into_a_rescan() {
         }
     }
     assert!(rescan, "no Rescan signal after 300 creations");
+}
+
+/// Trashes `Mods/Cool` of a fresh site on `base` with `env`; returns the result and whether the
+/// site's Paks tree is unchanged.
+fn trash_on(base: &Path, env: &TrashEnv) -> (Result<TrashReport, FsError>, bool) {
+    let site = site_in(base);
+    let before = snapshot(&site.paks);
+    let gate = OpGate::open(&site.app).expect("gate");
+    let guard = gate
+        .write(scope_of(&site.paks, &site.app))
+        .expect("write guard");
+    let item = join_rel(&site.paks, "Mods/Cool");
+    let result = guard.trash(env, &[item], chrono::Local::now());
+    (result, snapshot(&site.paks) == before)
+}
+
+fn detect_env(home_trash: Option<PathBuf>) -> TrashEnv {
+    TrashEnv {
+        home_trash,
+        uid: platform::current_uid(),
+        topdirs: TopdirPolicy::Detect,
+    }
+}
+
+/// F1: each labelled mount root must be chmod 1777 (CI), so `.Trash-$uid` can be created there.
+#[test]
+fn trash_on_mount_uses_topdir_user_trash() {
+    if platform::os_kind() != OsKind::Linux {
+        return;
+    }
+    for (label, base) in labelled_mounts() {
+        let (result, _) = trash_on(&base, &detect_env(None));
+        let report = result.unwrap_or_else(|error| panic!("{label}: trash failed: {error}"));
+        let uid = platform::current_uid().expect("uid");
+        let mount_root = dunce::canonicalize(&base).expect("canonical");
+        let trash_root = mount_root.join(format!(".Trash-{uid}"));
+        assert_eq!(report.kind, TrashKind::TopdirUser, "{label}");
+        assert!(report.items[0].trashed.starts_with(&trash_root), "{label}");
+        println!("fs-matrix: {label}: trashed into {}", trash_root.display());
+    }
+}
+
+/// F2: `REMMODS_FS_MATRIX_BTRFS_SUBVOL` = a nested btrfs subvolume; a home trash in its parent
+/// folder (the outer subvolume) has another st_dev and must be refused.
+#[test]
+fn trash_nested_btrfs_subvolume_is_other_device() {
+    let Some(subvolume) = env_path("REMMODS_FS_MATRIX_BTRFS_SUBVOL") else {
+        return;
+    };
+    let outer = subvolume
+        .parent()
+        .expect("outer subvolume")
+        .join("remmods-home");
+    fs::create_dir_all(&outer).expect("outer folder");
+    let home_trash = outer.join("Trash");
+    let env = TrashEnv {
+        home_trash: Some(home_trash.clone()),
+        uid: platform::current_uid(),
+        topdirs: TopdirPolicy::Deny,
+    };
+    let (result, unchanged) = trash_on(&subvolume, &env);
+    assert!(
+        matches!(
+            result,
+            Err(FsError::TrashUnavailable {
+                reason: TrashUnavailableReason::OtherDevice
+            })
+        ),
+        "{result:?}"
+    );
+    assert!(unchanged);
+    assert!(!home_trash.exists());
+}
+
+/// F3: `REMMODS_FS_MATRIX_NOREPLACE_UNSUPPORTED` = a mount whose renameat2 rejects NOREPLACE.
+/// None of today's matrix file systems does, so this normally only logs.
+#[test]
+fn trash_rename_flag_unsupported_refuses() {
+    let Some(base) = env_path("REMMODS_FS_MATRIX_NOREPLACE_UNSUPPORTED") else {
+        println!("fs-matrix: no file system without RENAME_NOREPLACE; F3 skipped");
+        return;
+    };
+    let (result, unchanged) = trash_on(&base, &detect_env(None));
+    assert!(
+        matches!(
+            result,
+            Err(FsError::TrashUnavailable {
+                reason: TrashUnavailableReason::NoUsableTrash
+            })
+        ),
+        "{result:?}"
+    );
+    assert!(unchanged);
 }

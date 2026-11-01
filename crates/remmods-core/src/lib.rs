@@ -9,12 +9,18 @@ pub mod navigation;
 pub mod paths;
 #[allow(unsafe_code)]
 pub mod platform;
+pub mod profiles;
 pub mod safe_fs;
 pub mod settings;
 
 pub use error::CoreError;
 pub use paths::AppPaths;
 
+use std::path::PathBuf;
+use std::sync::{Mutex, PoisonError};
+
+use platform::{TopdirPolicy, TrashEnv};
+use safe_fs::FaultPlan;
 use settings::{SettingsSnapshot, SettingsStore, SettingsUpdate};
 
 /// Facade the Tauri shell talks to. The game and mods methods live in `game/api.rs` and
@@ -27,7 +33,16 @@ pub struct Core {
     pub mods: mods::ModsService,
     /// Every mutation under Paks and every scan passes this gate (spec §4.6).
     pub ops: safe_fs::OpGate,
+    /// RemMods' own `data_dir/profiles.json`.
+    pub profiles: profiles::ProfileStore,
+    /// The second confirmation of permanent deletes (spec §5.4).
+    pub delete_tokens: mods::DeleteTokens,
+    pub trash_env: TrashEnv,
     require_marker: Option<String>,
+    /// The original app's data folder (Windows only); exports never go there.
+    tmm_dir: Option<PathBuf>,
+    /// Test hook: the next manage batch (rename, set-aside, profile apply, trash) runs with it.
+    fault: Mutex<Option<FaultPlan>>,
 }
 
 /// How `Core` finds the game. `--smoke` and tests turn Steam detection off.
@@ -36,6 +51,10 @@ pub struct CoreOptions {
     pub game: game::GameOptions,
     /// `--smoke`: mutations need this regular file in Paks (A9).
     pub require_marker: Option<String>,
+    /// Where trashed mods go; the default refuses every trash.
+    pub trash: TrashEnv,
+    /// `paths::tmm_profiles_dir()` in the shell.
+    pub tmm_dir: Option<PathBuf>,
 }
 
 impl Default for CoreOptions {
@@ -48,6 +67,12 @@ impl Default for CoreOptions {
                 processes: None,
             },
             require_marker: None,
+            trash: TrashEnv {
+                home_trash: None,
+                uid: None,
+                topdirs: TopdirPolicy::Deny,
+            },
+            tmm_dir: None,
         }
     }
 }
@@ -69,9 +94,32 @@ impl Core {
             game: game::GameService::new(options.game),
             mods: mods::ModsService::new(meta_path),
             ops,
+            profiles: profiles::ProfileStore::new(paths.profiles_file()),
+            delete_tokens: mods::DeleteTokens::new(),
+            trash_env: options.trash,
             require_marker: options.require_marker,
+            tmm_dir: options.tmm_dir,
+            fault: Mutex::new(None),
             paths,
         })
+    }
+
+    /// Test hook: the next manage batch (rename, set-aside, profile apply, trash) fails as `plan`
+    /// says.
+    #[doc(hidden)]
+    pub fn inject_batch_fault(&self, plan: FaultPlan) {
+        *self.fault.lock().unwrap_or_else(PoisonError::into_inner) = Some(plan);
+    }
+
+    pub(crate) fn take_batch_fault(&self) -> Option<FaultPlan> {
+        self.fault
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+    }
+
+    pub(crate) fn tmm_dir(&self) -> Option<&std::path::Path> {
+        self.tmm_dir.as_deref()
     }
 
     pub fn settings(&self) -> SettingsSnapshot {

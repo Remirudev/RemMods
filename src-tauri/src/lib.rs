@@ -20,7 +20,8 @@ use std::sync::Arc;
 
 use log::LevelFilter;
 use remmods_core::game::GameOptions;
-use remmods_core::{AppPaths, Core, CoreOptions, platform, safe_fs};
+use remmods_core::platform::TrashEnv;
+use remmods_core::{AppPaths, Core, CoreOptions, paths, platform, safe_fs};
 use tauri::plugin::{Plugin, TauriPlugin};
 use tauri::{App, AppHandle, Manager, RunEvent, Wry};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
@@ -156,10 +157,15 @@ fn smoke_fixture(args: &LaunchArgs) -> Option<SmokeFixture> {
 }
 
 /// The smoke run never reads the machine's Steam roots: no detection, and the fixture (if any)
-/// is the fixed game folder, and mutations only run inside a marked fixture.
+/// is the fixed game folder, and mutations only run inside a marked fixture. It also keeps the
+/// default trash env, which refuses every trash.
 fn core_options(args: &LaunchArgs) -> CoreOptions {
     if !args.smoke {
-        return CoreOptions::default();
+        return CoreOptions {
+            trash: TrashEnv::from_env(),
+            tmm_dir: paths::tmm_profiles_dir(),
+            ..CoreOptions::default()
+        };
     }
     CoreOptions {
         game: GameOptions {
@@ -169,6 +175,7 @@ fn core_options(args: &LaunchArgs) -> CoreOptions {
             processes: None,
         },
         require_marker: Some(smoke::FIXTURE_MARKER.to_owned()),
+        ..CoreOptions::default()
     }
 }
 

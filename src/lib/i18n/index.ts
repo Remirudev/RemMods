@@ -18,7 +18,7 @@ void i18next.use(initReactI18next).init({
   lng: detectLanguage(typeof navigator === 'undefined' ? undefined : navigator.language),
   fallbackLng: 'en',
   supportedLngs: ['en', 'de'],
-  ns: ['common', 'shell', 'settings', 'errors', 'mods', 'game', 'onboarding'],
+  ns: ['common', 'shell', 'settings', 'errors', 'mods', 'game', 'onboarding', 'profiles'],
   defaultNS: 'common',
   interpolation: { escapeValue: false },
   initAsync: false,

@@ -67,6 +67,7 @@ fn reveal_refuses_a_trailing_dot() {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(AppPaths::under(&root.join("app")), options).expect("core");
     let snapshot = core.mods_list().expect("mods_list");

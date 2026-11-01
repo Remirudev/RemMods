@@ -1,12 +1,14 @@
 //! Unsupported OSes (e.g. macOS): compiles, classifies by `io::ErrorKind` only.
 
+use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::process::Command;
 
 use super::{
-    NoReplace, OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues,
-    RegistryView, RetryPolicy, SteamHints,
+    DirTraits, MountId, NoReplace, OsErrorClass, OsKind, ProcessRecord, RegistryHive,
+    RegistrySteamValues, RegistryView, RetryPolicy, SteamHints, TopdirPolicy, TrashEnv,
+    TrashLocation, TrashUnavailableReason,
 };
 
 pub(super) const OS_KIND: OsKind = OsKind::Other;
@@ -69,3 +71,42 @@ pub(super) fn registry_string(
 }
 
 pub(super) fn prepare_detached(_command: &mut Command) {}
+
+pub(super) fn rename_noreplace_across(_from: &Path, _to: &Path) -> io::Result<NoReplace> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn create_private_dir(_path: &Path) -> io::Result<()> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn create_new_file(_path: &Path) -> io::Result<File> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn dir_traits(_path: &Path) -> io::Result<DirTraits> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn current_uid() -> Option<u32> {
+    None
+}
+
+pub(super) fn trash_env_from_env() -> TrashEnv {
+    TrashEnv {
+        home_trash: None,
+        uid: None,
+        topdirs: TopdirPolicy::Deny,
+    }
+}
+
+pub(super) fn trash_location(
+    _env: &TrashEnv,
+    _item: &Path,
+) -> io::Result<Result<TrashLocation, TrashUnavailableReason>> {
+    Ok(Err(TrashUnavailableReason::NotSupported))
+}
+
+pub(super) fn mount_identity(_path: &Path) -> io::Result<MountId> {
+    Err(io::ErrorKind::Unsupported.into())
+}

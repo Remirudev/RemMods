@@ -150,6 +150,7 @@ fn read_only_settings_keep_the_location_in_memory() {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(paths.clone(), options).expect("open");
     let status = core

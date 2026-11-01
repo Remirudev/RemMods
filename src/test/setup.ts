@@ -27,6 +27,12 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
+// Autosizing textareas listen for font loads.
+Object.defineProperty(document, 'fonts', {
+  configurable: true,
+  value: { addEventListener: vi.fn(), removeEventListener: vi.fn() },
+})
+
 Object.defineProperty(window, 'ResizeObserver', { writable: true, value: ResizeObserverStub })
 
 const jsdomGetComputedStyle = window.getComputedStyle.bind(window)

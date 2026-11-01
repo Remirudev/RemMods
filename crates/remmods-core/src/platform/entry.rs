@@ -46,6 +46,43 @@ pub fn os_str_cut(name: &OsStr, prefix: usize, suffix: usize) -> Option<OsString
     Some(cut.to_os_string())
 }
 
+/// The longest prefix of `name` that is at most `max_bytes` encoded bytes and at most
+/// `max_units` UTF-16 units, cut only where the OS form allows it (any byte on Unix, never inside
+/// a surrogate pair on Windows).
+pub(crate) fn os_str_prefix(name: &OsStr, max_bytes: usize, max_units: usize) -> OsString {
+    let cut = match raw_name(name) {
+        RawName::Bytes(mut bytes) => {
+            bytes.truncate(max_bytes.min(max_units));
+            RawName::Bytes(bytes)
+        }
+        RawName::Wide(units) => RawName::Wide(wide_prefix(&units, max_bytes, max_units)),
+    };
+    os_string(&cut).unwrap_or_default()
+}
+
+fn wide_prefix(units: &[u16], max_bytes: usize, max_units: usize) -> Vec<u16> {
+    let (mut bytes, mut index) = (0, 0);
+    while index < units.len() {
+        let unit = units[index];
+        let is_pair = (0xD800..0xDC00).contains(&unit)
+            && units
+                .get(index + 1)
+                .is_some_and(|next| (0xDC00..0xE000).contains(next));
+        let (width, encoded) = match unit {
+            _ if is_pair => (2, 4),
+            0..0x80 => (1, 1),
+            0x80..0x800 => (1, 2),
+            _ => (1, 3),
+        };
+        if index + width > max_units || bytes + encoded > max_bytes {
+            break;
+        }
+        bytes += encoded;
+        index += width;
+    }
+    units[..index].to_vec()
+}
+
 /// The form of `path` to hand to `std::fs`. Windows: verbatim (`\\?\`), so names Win32 would
 /// normalise (`Foo.`, `Foo `) reach the right entry; other OSes: the lexical absolute path.
 pub fn fs_path(path: &Path) -> io::Result<PathBuf> {
