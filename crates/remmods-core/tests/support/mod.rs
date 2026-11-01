@@ -62,8 +62,21 @@ fn collect(dir: &Path, rel: &Path, out: &mut BTreeMap<PathBuf, Option<Vec<u8>>>)
             out.insert(rel_path.clone(), None);
             collect(&path, &rel_path, out);
         } else {
-            out.insert(rel_path, Some(fs::read(entry.path()).expect("read")));
+            out.insert(rel_path, Some(file_contents(&entry.path())));
         }
+    }
+}
+
+/// A file's bytes, or its size for a file the running app holds locked: Windows refuses to read
+/// the lock files (sharing or lock violation) while a gate is alive.
+fn file_contents(path: &Path) -> Vec<u8> {
+    match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(error) if platform::classify(&error) == platform::OsErrorClass::InUse => {
+            let len = fs::metadata(path).expect("metadata").len();
+            format!("in-use:{len}").into_bytes()
+        }
+        Err(error) => panic!("read {}: {error}", path.display()),
     }
 }
 
