@@ -31,6 +31,7 @@ export const mods: LocaleShape<typeof en> = {
     count_other: '{{count}} von {{total}} Mods',
   },
   columns: {
+    toggle: 'An',
     name: 'Name',
     state: 'Status',
     kind: 'Typ',
@@ -56,6 +57,35 @@ export const mods: LocaleShape<typeof en> = {
     noPakFiles: 'Enthält keine .pak- oder .pak-x-Datei.',
     unknown:
       'RemMods konnte die .pak-Dateien nicht zählen: Der Ordner ist nicht lesbar, oder sie liegen in einem verknüpften Ordner.',
+  },
+  toggle: { enable: '{{name}} aktivieren', disable: '{{name}} deaktivieren' },
+  actionBar: {
+    label: 'Ausgewählte Mods',
+    selected_one: '{{count}} ausgewählt',
+    selected_other: '{{count}} ausgewählt',
+    enable: 'Aktivieren',
+    disable: 'Deaktivieren',
+    clear: 'Auswahl aufheben (Esc)',
+  },
+  watch: {
+    limitReached:
+      'Die automatische Aktualisierung ist aus: Das Systemlimit für überwachte Ordner ist erreicht. Drücke F5, nachdem du Mod-Dateien außerhalb von RemMods geändert hast.',
+    failed:
+      'Die automatische Aktualisierung ist nicht verfügbar. Drücke F5, nachdem du Mod-Dateien außerhalb von RemMods geändert hast.',
+  },
+  disableAll: {
+    button: 'Alle Mods deaktivieren',
+    confirmTitle: 'Alle Mods deaktivieren?',
+    confirmBody_one: '{{count}} Mod wird ausgeschaltet. Nicht verwaltete Dateien bleiben geladen.',
+    confirmBody_other:
+      '{{count}} Mods werden ausgeschaltet. Nicht verwaltete Dateien bleiben geladen.',
+    confirm: 'Alle deaktivieren',
+    cancel: 'Abbrechen',
+    done_one: '{{count}} Mod deaktiviert',
+    done_other: '{{count}} Mods deaktiviert',
+    skipped: '{{count}} übersprungen',
+    unmanaged_one: '{{count}} nicht verwaltete Datei noch geladen',
+    unmanaged_other: '{{count}} nicht verwaltete Dateien noch geladen',
   },
   kinds: { standard: 'Mods', legacy: '~mods', logic: 'LogicMods', loose: 'Lose' },
   size: { unknown: 'Unbekannt' },
@@ -137,6 +167,7 @@ export const mods: LocaleShape<typeof en> = {
   issues: {
     description: 'Was RemMods aufgefallen ist. Hier wird nichts automatisch geändert.',
     empty: 'Keine Probleme.',
+    fix: 'Beheben',
     leftovers_one:
       '{{count}} versteckter Ordner einer unvollständigen Installation (nicht geladen)',
     leftovers_other: '{{count}} versteckte Ordner unvollständiger Installationen (nicht geladen)',

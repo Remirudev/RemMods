@@ -1,6 +1,6 @@
 import { commands } from './bindings'
 import { unwrapResult } from './ipc-error'
-import type { LocationChoice, SettingsUpdate, SmokeReport } from './types'
+import type { LocationChoice, SettingsUpdate, SmokeReport, ToggleRequest } from './types'
 
 export const ipc = {
   platformInfo: () => unwrapResult('platform_info', () => commands.platformInfo()),
@@ -25,4 +25,9 @@ export const ipc = {
   modsRefresh: () => unwrapResult('mods_refresh', () => commands.modsRefresh()),
   modsDetails: (modRef: string) => unwrapResult('mods_details', () => commands.modsDetails(modRef)),
   modsReveal: (modRef: string) => unwrapResult('mods_reveal', () => commands.modsReveal(modRef)),
+  modsToggle: (request: ToggleRequest) =>
+    unwrapResult('mods_toggle', () => commands.modsToggle(request)),
+  modsDisableAll: (applyWhileRunning: boolean) =>
+    unwrapResult('mods_disable_all', () => commands.modsDisableAll(applyWhileRunning)),
+  modsWatchStatus: () => unwrapResult('mods_watch_status', () => commands.modsWatchStatus()),
 }

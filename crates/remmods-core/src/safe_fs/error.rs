@@ -1,6 +1,9 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use super::batch::BatchError;
+use super::journal::JournalProblem;
+use super::scope::ScopeViolation;
 use crate::platform::{self, OsErrorClass};
 
 #[derive(Debug, thiserror::Error)]
@@ -15,6 +18,26 @@ pub enum FsError {
         #[source]
         source: io::Error,
     },
+    #[error("{path} is outside the write scope ({reason:?})", path = path.display())]
+    OutOfScope {
+        path: PathBuf,
+        reason: ScopeViolation,
+    },
+    #[error("the target {path} or a name that differs only in case exists", path = path.display())]
+    TargetExists { path: PathBuf },
+    #[error("the source {path} is missing", path = path.display())]
+    SourceMissing { path: PathBuf },
+    #[error("invalid rename batch: {reason}")]
+    InvalidBatch { reason: &'static str },
+    #[error("the folder {path} is in use", path = path.display())]
+    FolderBusy {
+        path: PathBuf,
+        holders: Option<Vec<String>>,
+    },
+    #[error("{0}")]
+    Batch(Box<BatchError>),
+    #[error("the operation journal is not usable ({reason:?})")]
+    Journal { reason: JournalProblem },
 }
 
 impl FsError {
@@ -29,8 +52,15 @@ impl FsError {
 
     pub fn class(&self) -> Option<OsErrorClass> {
         match self {
-            Self::Busy => None,
             Self::Io { class, .. } => Some(*class),
+            Self::TargetExists { .. } => Some(OsErrorClass::AlreadyExists),
+            Self::FolderBusy { .. } => Some(OsErrorClass::InUse),
+            Self::Batch(batch) => batch.cause.class(),
+            Self::Busy
+            | Self::OutOfScope { .. }
+            | Self::SourceMissing { .. }
+            | Self::InvalidBatch { .. }
+            | Self::Journal { .. } => None,
         }
     }
 }

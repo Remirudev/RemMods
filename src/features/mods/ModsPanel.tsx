@@ -2,6 +2,7 @@ import { Center, Loader, Stack } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { useEffect, useRef } from 'react'
 import { useDetectGame } from '../../shared/game/queries'
+import { AutoRefreshBanner } from './AutoRefreshBanner'
 import { ModDetailsDrawer } from './ModDetailsDrawer'
 import { ModsErrorAlert } from './ModsErrorAlert'
 import { ModsHeader } from './ModsHeader'
@@ -12,6 +13,7 @@ import { RootNotices } from './RootNotices'
 import { isScanNotFound } from './scan-error'
 import type { ModsPanelProps } from './types'
 import { UpdateNotice } from './UpdateNotice'
+import { useReconcileRefs } from './use-reconcile-refs'
 
 export function ModsPanel({ status, install }: ModsPanelProps) {
   const snapshot = useModsSnapshot(true)
@@ -20,6 +22,7 @@ export function ModsPanel({ status, install }: ModsPanelProps) {
   const searchRef = useRef<HTMLInputElement>(null)
   const redetected = useRef(false)
   const data = snapshot.data
+  useReconcileRefs(data?.rows)
   const scanNotFound = snapshot.isError && isScanNotFound(snapshot.error)
 
   // A vanished Paks folder means the saved location is wrong: detection re-validates it, which
@@ -51,6 +54,7 @@ export function ModsPanel({ status, install }: ModsPanelProps) {
           refreshing={refresh.isPending}
           onRefresh={startRefresh}
         />
+        <AutoRefreshBanner />
         {status.update && <UpdateNotice update={status.update} />}
         {status.originalApp && <OriginalAppNotice />}
         {data && <RootNotices roots={data.roots} />}

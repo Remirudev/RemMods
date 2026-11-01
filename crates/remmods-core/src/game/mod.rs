@@ -23,8 +23,8 @@ pub use layout::{
 pub use model::{
     DetectionNote, FolderProblem, GameCandidate, GameLocation, GameOptions, GameStatus,
     GameStatusChange, InstallInfo, LaunchPlan, LocationChoice, LocationSource, NoteCode,
-    PaksLocation, PickResult, RunningState, STEAM_APP_ID, STEAM_LAUNCH_URL, SteamKind,
-    UpdateNotice, UpdateTracking,
+    PaksLocation, PickResult, ProcessSource, RunningState, STEAM_APP_ID, STEAM_LAUNCH_URL,
+    SteamKind, UpdateNotice, UpdateTracking,
 };
 pub use process::{
     COMM_MAX_BYTES, GAME_EXECUTABLES, GameMatch, GameSignal, ORIGINAL_APP_EXECUTABLE,

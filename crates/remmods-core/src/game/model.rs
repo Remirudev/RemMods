@@ -1,8 +1,11 @@
 //! Public game types: where the game is, whether it runs, what detection found.
 
+use std::fmt;
+use std::io;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use crate::platform::SteamHints;
+use crate::platform::{ProcessRecord, SteamHints};
 
 pub const STEAM_APP_ID: u32 = 1_778_820;
 pub const STEAM_LAUNCH_URL: &str = "steam://rungameid/1778820";
@@ -164,4 +167,22 @@ pub struct GameOptions {
     pub fixed_location: Option<PathBuf>,
     /// Injected by tests; `platform::steam_hints()` otherwise.
     pub steam_hints: Option<SteamHints>,
+    /// Injected by tests; `platform::processes()` otherwise.
+    pub processes: Option<ProcessSource>,
+}
+
+/// Where the running check gets its process list from.
+#[derive(Clone)]
+pub struct ProcessSource(pub Arc<dyn Fn() -> io::Result<Vec<ProcessRecord>> + Send + Sync>);
+
+impl ProcessSource {
+    pub fn scan(&self) -> io::Result<Vec<ProcessRecord>> {
+        (self.0)()
+    }
+}
+
+impl fmt::Debug for ProcessSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ProcessSource(..)")
+    }
 }

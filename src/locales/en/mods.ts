@@ -28,6 +28,7 @@ export const mods = {
     count_other: '{{count}} of {{total}} mods',
   },
   columns: {
+    toggle: 'On',
     name: 'Name',
     state: 'State',
     kind: 'Type',
@@ -53,6 +54,33 @@ export const mods = {
     noPakFiles: 'Contains no .pak or .pak-x file.',
     unknown:
       'RemMods could not count its .pak files: the folder is unreadable, or they sit in a linked folder.',
+  },
+  toggle: { enable: 'Enable {{name}}', disable: 'Disable {{name}}' },
+  actionBar: {
+    label: 'Selected mods',
+    selected_one: '{{count}} selected',
+    selected_other: '{{count}} selected',
+    enable: 'Enable',
+    disable: 'Disable',
+    clear: 'Clear (Esc)',
+  },
+  watch: {
+    limitReached:
+      'Auto-refresh is off: the system limit for watched folders is reached. Press F5 after changing mod files outside RemMods.',
+    failed: 'Auto-refresh is unavailable. Press F5 after changing mod files outside RemMods.',
+  },
+  disableAll: {
+    button: 'Disable all mods',
+    confirmTitle: 'Disable all mods?',
+    confirmBody_one: '{{count}} mod will be turned off. Unmanaged files stay loaded.',
+    confirmBody_other: '{{count}} mods will be turned off. Unmanaged files stay loaded.',
+    confirm: 'Disable all',
+    cancel: 'Cancel',
+    done_one: '{{count}} mod disabled',
+    done_other: '{{count}} mods disabled',
+    skipped: '{{count}} skipped',
+    unmanaged_one: '{{count}} unmanaged file still loaded',
+    unmanaged_other: '{{count}} unmanaged files still loaded',
   },
   kinds: { standard: 'Mods', legacy: '~mods', logic: 'LogicMods', loose: 'Loose' },
   size: { unknown: 'Unknown' },
@@ -134,6 +162,7 @@ export const mods = {
   issues: {
     description: 'What RemMods noticed. Nothing here is changed automatically.',
     empty: 'No issues.',
+    fix: 'Fix',
     leftovers_one: '{{count}} hidden folder from an unfinished install (not loaded)',
     leftovers_other: '{{count}} hidden folders from unfinished installs (not loaded)',
   },

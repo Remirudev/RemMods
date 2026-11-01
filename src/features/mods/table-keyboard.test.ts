@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isNavigationKey, nextActiveIndex } from './table-keyboard'
+import { isNavigationKey, nextActiveIndex, tableKeyIntent } from './table-keyboard'
 
 describe('nextActiveIndex', () => {
   it('starts at the first row, or the last for End, while none is active', () => {
@@ -38,5 +38,24 @@ describe('nextActiveIndex', () => {
     expect(nextActiveIndex(1, 'Enter', 10, 5)).toBeNull()
     expect(nextActiveIndex(0, 'ArrowDown', 0, 5)).toBeNull()
     expect(isNavigationKey('a')).toBe(false)
+  })
+})
+
+describe('tableKeyIntent', () => {
+  it('maps Space, Escape and Enter', () => {
+    expect(tableKeyIntent(' ', false)).toEqual({ kind: 'space' })
+    expect(tableKeyIntent('Escape', false)).toEqual({ kind: 'escape' })
+    expect(tableKeyIntent('Enter', false)).toEqual({ kind: 'open' })
+  })
+
+  it('moves with a navigation key and extends with Shift', () => {
+    expect(tableKeyIntent('ArrowDown', false)).toEqual({ kind: 'move', key: 'ArrowDown' })
+    expect(tableKeyIntent('ArrowDown', true)).toEqual({ kind: 'extend', key: 'ArrowDown' })
+    expect(tableKeyIntent('End', true)).toEqual({ kind: 'extend', key: 'End' })
+  })
+
+  it('ignores every other key', () => {
+    expect(tableKeyIntent('a', false)).toBeNull()
+    expect(tableKeyIntent('Tab', true)).toBeNull()
   })
 })

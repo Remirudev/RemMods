@@ -5,7 +5,7 @@ mod mods_support;
 mod support;
 
 use mods_support::{row, scan, smoke_tree};
-use remmods_core::mods::{ModState, UnmanagedKind};
+use remmods_core::mods::{ModState, ToggleBlock, UnmanagedKind};
 
 #[test]
 fn smoke_tree_matches_the_marker() {
@@ -29,6 +29,8 @@ fn smoke_tree_matches_the_marker() {
         let found = row(&content, key);
         assert_eq!(found.state, state, "{key}");
         assert_eq!(found.conflicts_with.len(), conflicts, "{key}");
+        let block = (state == ModState::NoPakFiles).then_some(ToggleBlock::NoPakFiles);
+        assert_eq!(found.toggle_block, block, "{key}");
     }
     let alpha = &row(&content, "Standard:Alpha").info;
     assert_eq!(

@@ -37,12 +37,18 @@ export const commands = {
 	modsDetails: (modRef: string) => typedError<ModDetails, AppError>(__TAURI_INVOKE("mods_details", { modRef })),
 	/**  Shows a mod, archive or unmanaged entry selected in the file manager. */
 	modsReveal: (modRef: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_reveal", { modRef })),
+	/**  Enables or disables the given rows in one all-or-none rename batch. */
+	modsToggle: (request: ToggleRequest) => typedError<ToggleOutcome, AppError>(__TAURI_INVOKE("mods_toggle", { request })),
+	/**  Disables every enabled, toggleable row; blocked rows come back as `skipped`. */
+	modsDisableAll: (applyWhileRunning: boolean) => typedError<ToggleOutcome, AppError>(__TAURI_INVOKE("mods_disable_all", { applyWhileRunning })),
+	modsWatchStatus: () => typedError<WatchStatus, AppError>(__TAURI_INVOKE("mods_watch_status")),
 };
 
 /** Events */
 export const events = {
 	gameStatusChanged: makeEvent<GameStatusChanged, GameStatusChanged>("game-status-changed"),
 	modsChanged: makeEvent<ModsChanged, ModsChanged>("mods-changed"),
+	watchStatusChanged: makeEvent<WatchStatusChanged, WatchStatusChanged>("watch-status-changed"),
 };
 
 /* Types */
@@ -50,7 +56,12 @@ export const events = {
  *  Error returned by every command. Carries no English: the UI translates by `kind`, and the raw
  *  OS error only goes to the log.
  */
-export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErrorClass } | { kind: "invalidInput"; field: string } | { kind: "readOnly" } | { kind: "internal" } | { kind: "stale" } | { kind: "gameNotSet" } | { kind: "invalidGameFolder"; reason: FolderProblem } | { kind: "launchFailed" } | { kind: "revealFailed"; reason: RevealProblem };
+export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErrorClass } | { kind: "invalidInput"; field: string } | { kind: "readOnly" } | { kind: "internal" } | { kind: "stale" } | { kind: "gameNotSet" } | { kind: "invalidGameFolder"; reason: FolderProblem } | { kind: "launchFailed" } | { kind: "revealFailed"; reason: RevealProblem } | { kind: "gameRunning" } | { kind: "targetExists" } | { kind: "outOfScope" } | { kind: "toggleBlocked"; reason: ToggleBlock } | 
+/**
+ *  A rename batch failed and was rolled back; `stuck` ops could not be undone (recovered on
+ *  the next start), `folder` says a folder rename was refused because something held it.
+ */
+{ kind: "batchFailed"; class: OsErrorClass; stuck: number; folder: boolean };
 
 export type AppPathsDto = {
 	config: string,
@@ -201,6 +212,8 @@ export type ModRow = {
 	conflictsWith: ConflictLink[],
 	ambiguous: boolean,
 	issues: ModIssue[],
+	/**  Set when the row cannot be toggled; core re-checks it on the fresh scan. */
+	toggleBlock: ToggleBlock | null,
 };
 
 export type ModState = "enabled" | "partial" | "disabled" | "noPakFiles" | "unknown";
@@ -228,7 +241,7 @@ export type NameProblem = "empty" | "dotName" | "tooLong" | "forbiddenChar" | "c
 
 export type NoteCode = "steamRoot" | "noSteam" | "vdfError" | "libraryMissing" | "libraryNotAbsolute" | "manifestError" | "installIncomplete" | "gameFolderInvalid" | "pathNotUnicode" | "registryUnreadable";
 
-export type OsErrorClass = "inUse" | "accessDenied" | "noSpace" | "readOnlyFs" | "crossDevice" | "nameTooLong" | "notFound" | "unsupported" | "other";
+export type OsErrorClass = "inUse" | "accessDenied" | "noSpace" | "readOnlyFs" | "crossDevice" | "nameTooLong" | "alreadyExists" | "notFound" | "unsupported" | "other";
 
 export type OsKind = "linux" | "windows" | "other";
 
@@ -299,6 +312,12 @@ export type SettingsUpdate = {
 	appearance?: AppearanceUpdate | null,
 };
 
+export type SkippedRow = {
+	key: string,
+	name: string,
+	reason: ToggleBlock,
+};
+
 export type SmokeCheck = {
 	name: string,
 	ok: boolean,
@@ -313,6 +332,31 @@ export type SmokeReport = {
 export type SteamKind = "native" | "flatpak" | "snap" | "windows";
 
 export type TitleBarMode = "custom" | "system";
+
+/**  Why a row cannot be toggled; the UI disables its switch and core re-checks it. */
+export type ToggleBlock = "ambiguous" | "linked" | "unknownState" | "noPakFiles" | "invalidLogicName";
+
+export type ToggleOutcome = {
+	snapshot: ModsSnapshot,
+	skipped: SkippedRow[],
+	/**  Unmanaged entries with live payload files, which "disable all" never touches. */
+	unmanaged: number,
+};
+
+export type ToggleRequest = {
+	targets: ToggleTarget[],
+	enable: boolean,
+	applyWhileRunning: boolean,
+};
+
+/**
+ *  A row as the UI saw it: core refuses the request as stale when `modRef` and `key` no longer
+ *  name the same row.
+ */
+export type ToggleTarget = {
+	modRef: string,
+	key: string,
+};
 
 export type UnmanagedEntry = {
 	modRef: string,
@@ -333,6 +377,20 @@ export type UpdateNotice = {
 };
 
 export type UpdateTracking = "available" | "noManifest" | "unreadable";
+
+export type WatchState = "active" | "limitReached" | "unavailable" | "failed";
+
+export type WatchStatus = {
+	state: WatchState,
+};
+
+/**
+ *  `watch-status-changed`: the Paks watcher became active, hit the watch limit, has no folder or
+ *  failed to start.
+ */
+export type WatchStatusChanged = {
+	state: WatchState,
+};
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

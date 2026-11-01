@@ -45,14 +45,22 @@ export type {
   ScanStats,
   Settings,
   SettingsUpdate,
+  SkippedRow,
   SmokeCheck,
   SmokeReport,
   SteamKind,
   TitleBarMode,
+  ToggleBlock,
+  ToggleOutcome,
+  ToggleRequest,
+  ToggleTarget,
   UnmanagedEntry,
   UnmanagedKind,
   UpdateNotice,
   UpdateTracking,
+  WatchState,
+  WatchStatus,
+  WatchStatusChanged,
 } from './bindings'
 
 export type CommandResult<T> = { status: 'ok'; data: T } | { status: 'error'; error: AppError }

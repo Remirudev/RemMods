@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { makeGameStatus, TEST_INSTALL } from '../../test/fixtures'
+import { makeGameStatus, makeModRow, makeSnapshot, TEST_INSTALL } from '../../test/fixtures'
 import {
   checkCommand,
   checkGameStatus,
@@ -7,6 +7,9 @@ import {
   checkModsListWithoutGame,
   checkModsTable,
   checkOnboarding,
+  checkToggleRoundTrip,
+  expectRowState,
+  hasToggleFixture,
 } from './smoke-checks'
 
 function documentWith(variables: Record<string, string>): Document {
@@ -102,5 +105,35 @@ describe('checkModsListWithoutGame', () => {
     expect(checkModsListWithoutGame({ rejected: true, kind: 'internal' }).ok).toBe(false)
     expect(checkModsListWithoutGame({ rejected: true, kind: null }).ok).toBe(false)
     expect(checkModsListWithoutGame({ rejected: false }).ok).toBe(false)
+  })
+})
+
+describe('toggle round trip', () => {
+  const alpha = makeModRow('Alpha', { key: 'Standard:Alpha' })
+  const tool = makeModRow('Tool', { key: 'Logic:Tool', kind: 'logic' })
+
+  it('needs both fixture rows', () => {
+    expect(hasToggleFixture(makeSnapshot([alpha, tool]))).toBe(true)
+    expect(hasToggleFixture(makeSnapshot([alpha]))).toBe(false)
+    expect(hasToggleFixture(makeSnapshot([]))).toBe(false)
+  })
+
+  it('compares the state of a row by key', () => {
+    const snapshot = makeSnapshot([{ ...alpha, state: 'disabled' }])
+    expect(expectRowState(snapshot, 'Standard:Alpha', 'disabled')).toBeNull()
+    expect(expectRowState(snapshot, 'Standard:Alpha', 'enabled')).toContain('expected enabled')
+    expect(expectRowState(snapshot, 'Logic:Tool', 'enabled')).toContain('missing')
+  })
+
+  it('passes with no failures, passes as skipped without a fixture, and fails otherwise', () => {
+    expect(checkToggleRoundTrip([]).ok).toBe(true)
+    expect(checkToggleRoundTrip(null)).toEqual({
+      name: 'toggleRoundTrip',
+      ok: true,
+      detail: 'no fixture',
+    })
+    const failed = checkToggleRoundTrip(['a', 'b'])
+    expect(failed.ok).toBe(false)
+    expect(failed.detail).toBe('a\nb')
   })
 })

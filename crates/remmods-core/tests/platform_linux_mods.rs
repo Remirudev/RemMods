@@ -17,7 +17,7 @@ use mods_support::{
     DATA, exercise_read_only, fixture, input, listing, paks_tree, row, scan, smoke_tree,
 };
 use remmods_core::mods::{
-    ModIssue, ModState, ModsError, UnmanagedKind, resolve_ref, scan_paks, shell_form,
+    ModIssue, ModState, ModsError, ToggleBlock, UnmanagedKind, resolve_ref, scan_paks, shell_form,
 };
 use remmods_core::platform::OsKind;
 
@@ -134,6 +134,8 @@ fn linked_root_and_linked_mod() {
     let linked = row(&content, "Legacy:Linked");
     assert!(has(&linked.issues, &ModIssue::LinkedMod));
     assert_eq!(linked.state, ModState::Disabled);
+    assert_eq!(linked.toggle_block, Some(ToggleBlock::Linked));
+    assert_eq!(row(&content, "Standard:RootMod").toggle_block, None);
 }
 
 #[test]
@@ -163,10 +165,10 @@ fn links_inside_mods_are_reported_not_followed() {
     assert!(has(&mixed.issues, &ModIssue::ContainsLink));
     assert_eq!(mixed.payload.live_pak, 1);
     assert_eq!(mixed.state, ModState::Enabled);
-    assert_eq!(
-        row(&content, "Standard:OnlyLinked").state,
-        ModState::Unknown
-    );
+    assert_eq!(mixed.toggle_block, None);
+    let only_linked = row(&content, "Standard:OnlyLinked");
+    assert_eq!(only_linked.state, ModState::Unknown);
+    assert_eq!(only_linked.toggle_block, Some(ToggleBlock::UnknownState));
     let linked: Vec<(&str, u32)> = content
         .unmanaged
         .iter()

@@ -13,9 +13,11 @@ import {
   checkRail,
   checkSettings,
   checkTitleBar,
+  checkToggleRoundTrip,
   failedCheck,
   passedCheck,
 } from './smoke-checks'
+import { runToggleRoundTrip } from './toggle-round-trip'
 import type { Loaded, Refusal } from './types'
 
 const RENDER_TIMEOUT_MS = 10_000
@@ -88,12 +90,18 @@ async function checkFixtureGame(): Promise<SmokeCheck[]> {
     : ({ ok: false, error: 'no first row to read details of' } as const)
   const detect = await load(() => ipc.gameDetect())
   const ack = await load(() => ipc.gameAckUpdate())
+  const roundTrip = snapshot.ok
+    ? await load(() => runToggleRoundTrip(snapshot.value))
+    : ({ ok: false, error: 'no snapshot to toggle in' } as const)
   return [
     checkModsTable(document),
     checkCommand('modsRefresh', snapshot),
     checkCommand('modsDetails', details),
     checkCommand('gameDetect', detect),
     checkCommand('gameAckUpdate', ack),
+    roundTrip.ok
+      ? checkToggleRoundTrip(roundTrip.value)
+      : failedCheck('toggleRoundTrip', roundTrip.error),
   ]
 }
 

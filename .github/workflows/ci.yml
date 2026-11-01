@@ -1,6 +1,7 @@
 name: ci
 
 # Merge gate (docs/PLAN.md §1, §9, §10): linux, windows, smoke (linux), smoke (windows) and policy.
+# fs-matrix (P2) joins the required checks once it is green on a pull request.
 # Actions are pinned by full commit SHA; Dependabot bumps the SHA and the version comment together.
 
 on:
@@ -186,7 +187,9 @@ jobs:
           TEMP: ${{ runner.temp }}
         run: ./target/debug/remmods.exe --smoke
 
-      # Scans the generated fixture (check scanFixture) and proves the run wrote nothing under Paks.
+      # Scans the generated fixture (check scanFixture), toggles Standard:Alpha and Logic:Tool off and
+      # on (check toggleRoundTrip) and proves Paks ends as it began. Folder mtimes are ignored: the
+      # round trip renames inside Mods and LogicMods, which bumps their mtimes on every file system.
       - name: Smoke test with fixture (Xvfb)
         if: runner.os == 'Linux'
         timeout-minutes: 5
@@ -197,7 +200,8 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" ./target/debug/remmods --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
+          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
+            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
 
       - name: Smoke test with fixture
         if: runner.os == 'Windows'
@@ -210,7 +214,8 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           ./target/debug/remmods.exe --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
+          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
+            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
 
       - name: Upload smoke logs
         if: failure()
@@ -222,6 +227,44 @@ jobs:
             ${{ runner.temp }}/paks-*.tsv
           if-no-files-found: ignore
           retention-days: 14
+
+  # Real file systems (docs/PLAN.md §9, SPEC-P2 §9.2): the batch, rollback and recovery checks run on
+  # tmpfs, ext4, btrfs, vfat and exfat mounts, plus read-only, root-owned, full-disk and tiny-inotify-
+  # queue cases. Needs sudo for the mounts, so it builds only remmods-core (no Tauri, no Node).
+  fs-matrix:
+    name: fs-matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install file system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y btrfs-progs dosfstools exfatprogs
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustc --version
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build the matrix test
+        run: cargo test --locked -p remmods-core --test fs_matrix --no-run
+
+      # stdout of the script is the REMMODS_FS_MATRIX* environment; notices go to stderr.
+      - name: Mount the file systems
+        run: sudo bash scripts/fs-matrix-mount.sh "$RUNNER_TEMP/fsm" >> "$GITHUB_ENV"
+
+      - name: File system matrix
+        run: cargo test --locked -p remmods-core --test fs_matrix -- --test-threads=1 --nocapture
 
   policy:
     name: policy

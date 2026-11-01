@@ -47,6 +47,8 @@ export function installIpcMock(
           return snapshot
         case 'mods_details':
           return details
+        case 'mods_watch_status':
+          return { state: 'active' }
         default:
           return null
       }

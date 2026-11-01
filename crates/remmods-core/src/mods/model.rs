@@ -56,6 +56,16 @@ pub enum ModState {
     Unknown,
 }
 
+/// Why a row cannot be toggled; the first matching reason wins (spec §5.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ToggleBlock {
+    Ambiguous,
+    Linked,
+    UnknownState,
+    NoPakFiles,
+    InvalidLogicName,
+}
+
 /// Payload files of a row: live = loaded by the game, off = renamed with `-x`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PayloadCounts {
@@ -130,6 +140,8 @@ pub struct ModRow {
     pub ambiguous: bool,
     /// In `ModIssue` declaration order.
     pub issues: Vec<ModIssue>,
+    /// `None` = toggleable.
+    pub toggle_block: Option<ToggleBlock>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

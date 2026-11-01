@@ -15,7 +15,8 @@ import { IssueBadge } from './IssueBadge'
 import { modInfoText } from './mod-info-text'
 import { NameCell } from './NameCell'
 import { StateBadge } from './StateBadge'
-import type { ModColumnId, ModColumnMeta, ModTableMeta } from './types'
+import { ToggleCell } from './ToggleCell'
+import type { ModColumnId, ModColumnMeta, ModTableMeta, ToggleRows } from './types'
 
 export const modTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -40,8 +41,11 @@ const COLUMN_WIDTHS: Record<ModColumnId, number | undefined> = {
   issues: 110,
 }
 
+export const TOGGLE_COLUMN_WIDTH = 56
+
 // Cell functions are component types for the table, so the columns are rebuilt per language.
-export function buildModColumns(t: TFunction<'mods'>, locale: string) {
+// `onToggle` must be stable, or the columns (and every switch) are rebuilt on each render.
+export function buildModColumns(t: TFunction<'mods'>, locale: string, onToggle: ToggleRows) {
   const collator = modCollator(locale)
   const sort = (column: ModColumnId) => (a: { original: ModRow }, b: { original: ModRow }) =>
     compareMods(a.original, b.original, column, collator)
@@ -54,6 +58,13 @@ export function buildModColumns(t: TFunction<'mods'>, locale: string) {
   })
 
   return columnHelper.columns([
+    columnHelper.display({
+      id: 'toggle',
+      header: t(($) => $.columns.toggle),
+      enableSorting: false,
+      meta: { width: TOGGLE_COLUMN_WIDTH },
+      cell: ({ row }) => <ToggleCell row={row.original} onToggle={onToggle} />,
+    }),
     columnHelper.accessor((row) => row.name, {
       ...base('name'),
       cell: ({ row }) => <NameCell row={row.original} />,

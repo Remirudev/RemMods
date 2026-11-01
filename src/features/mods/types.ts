@@ -53,11 +53,36 @@ export type KindLabel = (kind: ModKind) => string
 
 export type NavigationKey = 'ArrowUp' | 'ArrowDown' | 'Home' | 'End' | 'PageUp' | 'PageDown'
 
+export type TableKeyIntent =
+  | { kind: 'space' }
+  | { kind: 'escape' }
+  | { kind: 'open' }
+  | { kind: 'move'; key: NavigationKey }
+  | { kind: 'extend'; key: NavigationKey }
+
+export interface SelectionState {
+  selection: string[]
+  anchor: string | null
+}
+
+export type ModActionId = 'enable' | 'disable'
+
+export interface ModAction {
+  id: ModActionId
+  count: number
+  disabled: boolean
+}
+
+// Runs a toggle for these rows; the caller decides nothing else (the backend skips what it must).
+export type ToggleRows = (rows: readonly ModRow[], enable: boolean) => void
+
 export interface ModsUiState {
   filter: ModFilter
   tab: ModsTab
   detailsRef: string | null
   activeIndex: number
+  selection: string[]
+  anchor: string | null
   setText: (text: string) => void
   setStateFilter: (state: StateFilter) => void
   setKinds: (kinds: readonly ModKind[]) => void
@@ -69,6 +94,9 @@ export interface ModsUiState {
   openDetails: (modRef: string) => void
   closeDetails: () => void
   setActiveIndex: (index: number) => void
+  setSelection: (selection: string[], anchor: string | null) => void
+  clearSelection: () => void
+  reconcileRefs: (previous: readonly ModRow[] | undefined, next: readonly ModRow[]) => void
 }
 
 export interface ModTableMeta {
@@ -136,6 +164,17 @@ export interface ModFiltersProps {
 export interface ModTableProps {
   rows: readonly ModRow[]
   onOpen: (modRef: string) => void
+  onToggle: ToggleRows
+}
+
+export interface ToggleCellProps {
+  row: ModRow
+  onToggle: ToggleRows
+}
+
+export interface ActionBarProps {
+  rows: readonly ModRow[]
+  onToggle: ToggleRows
 }
 
 export interface ModRowCellProps {

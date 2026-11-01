@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { onGameStatusChanged, onModsChanged } from '../lib/ipc/events'
+import { onGameStatusChanged, onModsChanged, onWatchStatusChanged } from '../lib/ipc/events'
 import { describeForLog } from '../lib/ipc/ipc-error'
-import type { GameStatus, ModsSnapshot } from '../lib/ipc/types'
+import type { GameStatus, ModsSnapshot, WatchStatus } from '../lib/ipc/types'
 import { logError } from '../lib/log/frontend-log'
 import { applyGameStatusEvent } from '../shared/game/game-status-event'
 import { queryKeys } from '../shared/query-keys'
@@ -26,6 +26,9 @@ export function useBackendEvents(): void {
           applyGameStatusEvent(status, event),
         )
       }),
+      onWatchStatusChanged(({ state }) => {
+        queryClient.setQueryData<WatchStatus>(queryKeys.watchStatus, { state })
+      }),
     ]
     // The backend does not buffer events, and the first fetches started before the listeners were
     // in place, so whatever changed in between is fetched once more.
@@ -34,6 +37,7 @@ export function useBackendEvents(): void {
         if (!active) return
         void queryClient.invalidateQueries({ queryKey: queryKeys.gameStatus })
         void queryClient.invalidateQueries({ queryKey: queryKeys.mods })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.watchStatus })
       },
       (error: unknown) => logError(`event subscription failed: ${describeForLog(error)}`),
     )

@@ -18,6 +18,9 @@ const COMMANDS: &[&str] = &[
     "mods_refresh",
     "mods_details",
     "mods_reveal",
+    "mods_toggle",
+    "mods_disable_all",
+    "mods_watch_status",
 ];
 
 fn main() {

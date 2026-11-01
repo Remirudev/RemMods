@@ -22,9 +22,11 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
   const row =
     detailsRef === null ? undefined : rows.find((candidate) => candidate.modRef === detailsRef)
 
+  // The store is read again here: a reconcile that followed a renamed row ran after this render.
   useEffect(() => {
-    if (detailsRef !== null && !row) closeDetails()
-  }, [detailsRef, row, closeDetails])
+    const current = useModsUiStore.getState().detailsRef
+    if (current !== null && !rows.some((candidate) => candidate.modRef === current)) closeDetails()
+  }, [rows, closeDetails])
 
   const state = row ? displayState(row) : null
   const originText = row

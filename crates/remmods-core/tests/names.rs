@@ -307,3 +307,34 @@ fn win32_and_portable_split() {
         Some(TooLong)
     );
 }
+
+#[test]
+fn os_str_cut_removes_ascii_ends_only() {
+    use remmods_core::platform::{os_str_cut, os_string, raw_name};
+    use std::ffi::{OsStr, OsString};
+
+    assert_eq!(
+        os_str_cut(OsStr::new(".disabled_X"), 10, 0),
+        Some(OsString::from("X"))
+    );
+    assert_eq!(
+        os_str_cut(OsStr::new("Cool.pak-x"), 0, 2),
+        Some(OsString::from("Cool.pak"))
+    );
+    assert_eq!(
+        os_str_cut(OsStr::new("\u{E9}t\u{E9}.pak-x"), 0, 2),
+        Some(OsString::from("\u{E9}t\u{E9}.pak"))
+    );
+    assert_eq!(os_str_cut(OsStr::new("\u{E9}x"), 1, 0), None);
+    assert_eq!(os_str_cut(OsStr::new("x\u{E9}"), 0, 1), None);
+    assert_eq!(os_str_cut(OsStr::new("ab"), 2, 1), None);
+    assert_eq!(os_str_cut(OsStr::new("ab"), 1, 1), Some(OsString::new()));
+
+    let name = OsStr::new("Caf\u{E9}.pak");
+    assert_eq!(os_string(&raw_name(name)).as_deref(), Some(name));
+    let foreign = match raw_name(name) {
+        RawName::Bytes(_) => RawName::Wide(vec![0x41]),
+        RawName::Wide(_) => RawName::Bytes(vec![0x41]),
+    };
+    assert_eq!(os_string(&foreign), None);
+}

@@ -11,5 +11,7 @@ Linux-first still builds and passes its tests on Windows, and on Windows it eith
 
 | ID | Feature | What's missing on Windows | Release-blocking | Status |
 |----|---------|---------------------------|------------------|--------|
-
-No entries yet.
+| WG-1 | Restart Manager holder names | Folder-busy and in-use messages name no holder (PLAN §4 Retry) | no | open |
+| WG-2 | Folder-busy wait | The wait (up to 30 s) shows only the pending toggle; no toast with Cancel (PLAN §4 Retry) | yes | open |
+| WG-3 | Watcher overflow rescan | notify 8.2.1 emits no rescan on a ReadDirectoryChangesW overflow; focus and post-command rescans cover it until notify 9 (PLAN §4 Watcher) | no | open |
+| WG-4 | Toggle while TEKKEN 8 runs | The DELETE-access probe (InUse without a prompt) is verified in CI only, not on a real PC (PLAN §11) | no | open |

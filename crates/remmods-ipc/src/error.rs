@@ -2,11 +2,12 @@ use remmods_core::CoreError;
 use remmods_core::game::GameError;
 use remmods_core::mods::ModsError;
 use remmods_core::platform;
-use remmods_core::safe_fs::FsError;
+use remmods_core::safe_fs::{BatchError, FsError};
 use remmods_core::settings::SettingsError;
 use serde::{Deserialize, Serialize};
 
 use crate::game::{FolderProblem, RevealProblem};
+use crate::toggle::ToggleBlock;
 
 /// Error returned by every command. Carries no English: the UI translates by `kind`, and the raw
 /// OS error only goes to the log.
@@ -14,15 +15,37 @@ use crate::game::{FolderProblem, RevealProblem};
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AppError {
     Busy,
-    Io { op: String, class: OsErrorClass },
-    InvalidInput { field: String },
+    Io {
+        op: String,
+        class: OsErrorClass,
+    },
+    InvalidInput {
+        field: String,
+    },
     ReadOnly,
     Internal,
     Stale,
     GameNotSet,
-    InvalidGameFolder { reason: FolderProblem },
+    InvalidGameFolder {
+        reason: FolderProblem,
+    },
     LaunchFailed,
-    RevealFailed { reason: RevealProblem },
+    RevealFailed {
+        reason: RevealProblem,
+    },
+    GameRunning,
+    TargetExists,
+    OutOfScope,
+    ToggleBlocked {
+        reason: ToggleBlock,
+    },
+    /// A rename batch failed and was rolled back; `stuck` ops could not be undone (recovered on
+    /// the next start), `folder` says a folder rename was refused because something held it.
+    BatchFailed {
+        class: OsErrorClass,
+        stuck: u32,
+        folder: bool,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -34,6 +57,7 @@ pub enum OsErrorClass {
     ReadOnlyFs,
     CrossDevice,
     NameTooLong,
+    AlreadyExists,
     NotFound,
     Unsupported,
     Other,
@@ -67,6 +91,25 @@ fn fs_error(error: FsError) -> AppError {
             op: op.to_owned(),
             class: class.into(),
         },
+        FsError::OutOfScope { .. } => AppError::OutOfScope,
+        FsError::TargetExists { .. } => AppError::TargetExists,
+        FsError::SourceMissing { .. } => AppError::Stale,
+        FsError::Batch(batch) => batch_failed(&batch),
+        FsError::FolderBusy { .. } | FsError::InvalidBatch { .. } | FsError::Journal { .. } => {
+            log::error!("unexpected file-system error: {error}");
+            AppError::Internal
+        }
+    }
+}
+
+fn batch_failed(batch: &BatchError) -> AppError {
+    AppError::BatchFailed {
+        class: batch
+            .cause
+            .class()
+            .map_or(OsErrorClass::Other, OsErrorClass::from),
+        stuck: u32::try_from(batch.stuck.len()).unwrap_or(u32::MAX),
+        folder: matches!(batch.cause, FsError::FolderBusy { .. }),
     }
 }
 
@@ -98,6 +141,11 @@ fn mods_error(error: ModsError) -> AppError {
         ModsError::NotShellSafe => AppError::RevealFailed {
             reason: RevealProblem::UnsupportedName,
         },
+        ModsError::Blocked { reason, .. } => AppError::ToggleBlocked {
+            reason: reason.into(),
+        },
+        ModsError::GameRunning => AppError::GameRunning,
+        ModsError::NotAFixture => AppError::invalid_input("fixture"),
     }
 }
 
@@ -110,6 +158,7 @@ impl From<platform::OsErrorClass> for OsErrorClass {
             platform::OsErrorClass::ReadOnlyFs => Self::ReadOnlyFs,
             platform::OsErrorClass::CrossDevice => Self::CrossDevice,
             platform::OsErrorClass::NameTooLong => Self::NameTooLong,
+            platform::OsErrorClass::AlreadyExists => Self::AlreadyExists,
             platform::OsErrorClass::NotFound => Self::NotFound,
             platform::OsErrorClass::Unsupported => Self::Unsupported,
             platform::OsErrorClass::Other => Self::Other,

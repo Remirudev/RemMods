@@ -1,17 +1,20 @@
 use std::fmt;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use chrono::Utc;
 
 use super::error::ModsError;
+use super::meta_store::ModMetaStore;
 use super::model::{ScanInput, ScanOutput, ScanSnapshot};
 use super::scan::scan_paks;
 use super::scan_log;
 
-/// Cache of the last published snapshot with single-flight refreshes (spec §4.8). P1 has no
-/// writer under Paks, so there is no app lock or OpGate here yet.
+/// Cache of the last published snapshot with single-flight refreshes (P1 spec §4.8). The OpGate
+/// is taken by the callers (`Core`), always before the scan gate.
 pub struct ModsService {
+    meta: ModMetaStore,
     cache: Mutex<Option<Cached>>,
     scan_gate: Mutex<()>,
     /// One sequence for request registrations and scan starts, so their order is total.
@@ -30,20 +33,31 @@ struct Cached {
 }
 
 impl ModsService {
-    pub fn new() -> Self {
+    /// `meta_path`: `data_dir/mod-meta.json`.
+    pub fn new(meta_path: PathBuf) -> Self {
         Self {
+            meta: ModMetaStore::new(meta_path),
             cache: Mutex::new(None),
             scan_gate: Mutex::new(()),
             sequence: AtomicU64::new(0),
         }
     }
 
+    pub fn meta(&self) -> &ModMetaStore {
+        &self.meta
+    }
+
     /// The cached snapshot when it was made for the same Paks folder and identity, else a refresh.
     pub fn list(&self, input: &ScanInput) -> Result<Arc<ScanSnapshot>, ModsError> {
-        if let Some(cached) = self.cached_for(input) {
-            return Ok(cached.snapshot);
+        if let Some(cached) = self.cached(input) {
+            return Ok(cached);
         }
         Ok(self.refresh(input)?.snapshot)
+    }
+
+    /// The cached snapshot when it was made for the same Paks folder and identity.
+    pub fn cached(&self, input: &ScanInput) -> Option<Arc<ScanSnapshot>> {
+        self.cached_for(input).map(|cached| cached.snapshot)
     }
 
     /// Scans unless a scan that started after this call already published; at most one scan runs.
@@ -114,12 +128,6 @@ impl ModsService {
             snapshot,
             changed: true,
         }
-    }
-}
-
-impl Default for ModsService {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

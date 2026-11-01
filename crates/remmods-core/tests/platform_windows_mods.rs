@@ -64,7 +64,9 @@ fn reveal_refuses_a_trailing_dot() {
             steam_detection: false,
             fixed_location: Some(game_root),
             steam_hints: None,
+            processes: None,
         },
+        require_marker: None,
     };
     let core = Core::open_with(AppPaths::under(&root.join("app")), options).expect("core");
     let snapshot = core.mods_list().expect("mods_list");

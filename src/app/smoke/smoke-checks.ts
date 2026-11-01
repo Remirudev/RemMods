@@ -1,4 +1,12 @@
-import type { GameStatus, PlatformInfo, Settings, SmokeCheck } from '../../lib/ipc/types'
+import type {
+  GameStatus,
+  ModRow,
+  ModState,
+  ModsSnapshot,
+  PlatformInfo,
+  Settings,
+  SmokeCheck,
+} from '../../lib/ipc/types'
 import { QUIET_CANVAS_DARK } from '../../shared/theme/quiet-canvas'
 import type { Loaded, Refusal } from './types'
 
@@ -90,4 +98,32 @@ export function checkModsListWithoutGame(refusal: Refusal): SmokeCheck {
   return refusal.kind === 'gameNotSet'
     ? passedCheck('modsListWithoutGame')
     : failedCheck('modsListWithoutGame', `rejected with ${refusal.kind ?? 'an unknown error'}`)
+}
+
+// Only the generated smoke fixture carries these rows; a run without `--paks` has none.
+export const TOGGLE_FIXTURE_KEYS = ['Standard:Alpha', 'Logic:Tool'] as const
+
+export function findRowByKey(snapshot: ModsSnapshot, key: string): ModRow | undefined {
+  return snapshot.rows.find((row) => row.key === key)
+}
+
+export function hasToggleFixture(snapshot: ModsSnapshot): boolean {
+  return TOGGLE_FIXTURE_KEYS.every((key) => findRowByKey(snapshot, key) !== undefined)
+}
+
+// A problem text, or null when the row is in the expected state.
+export function expectRowState(
+  snapshot: ModsSnapshot,
+  key: string,
+  expected: ModState,
+): string | null {
+  const row = findRowByKey(snapshot, key)
+  if (!row) return `${key}: row missing after the toggle`
+  return row.state === expected ? null : `${key}: state ${row.state}, expected ${expected}`
+}
+
+export function checkToggleRoundTrip(failures: readonly string[] | null): SmokeCheck {
+  if (failures === null) return passedCheck('toggleRoundTrip', 'no fixture')
+  if (failures.length === 0) return passedCheck('toggleRoundTrip')
+  return failedCheck('toggleRoundTrip', failures.slice(0, MAX_REPORTED_ERRORS).join('\n'))
 }

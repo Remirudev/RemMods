@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::OsErrorClass;
 use crate::mod_issues::ModIssue;
+use crate::toggle::ToggleBlock;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -108,6 +109,8 @@ pub struct ModRow {
     pub conflicts_with: Vec<ConflictLink>,
     pub ambiguous: bool,
     pub issues: Vec<ModIssue>,
+    /// Set when the row cannot be toggled; core re-checks it on the fresh scan.
+    pub toggle_block: Option<ToggleBlock>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -326,6 +329,7 @@ impl From<&core::ModRow> for ModRow {
             conflicts_with: row.conflicts_with.iter().map(ConflictLink::from).collect(),
             ambiguous: row.ambiguous,
             issues: row.issues.iter().map(ModIssue::from).collect(),
+            toggle_block: row.toggle_block.map(ToggleBlock::from),
         }
     }
 }

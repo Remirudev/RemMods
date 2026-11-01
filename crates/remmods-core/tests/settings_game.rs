@@ -147,7 +147,9 @@ fn read_only_settings_keep_the_location_in_memory() {
             steam_detection: false,
             fixed_location: None,
             steam_hints: None,
+            processes: None,
         },
+        require_marker: None,
     };
     let core = Core::open_with(paths.clone(), options).expect("open");
     let status = core

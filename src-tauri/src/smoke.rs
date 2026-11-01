@@ -26,7 +26,7 @@ const EXIT_FAILED: i32 = 1;
 const EXIT_TIMEOUT: i32 = 2;
 
 /// Written into the fixture's Paks folder by `scripts/make-fixtures.py`.
-const FIXTURE_MARKER: &str = "remmods-smoke-fixture";
+pub const FIXTURE_MARKER: &str = "remmods-smoke-fixture";
 const FIXTURE_NAME: &str = "remmods-smoke";
 const FIXTURE_VERSION: u32 = 1;
 const FIXTURE_MAX_BYTES: u64 = 64 * 1024;

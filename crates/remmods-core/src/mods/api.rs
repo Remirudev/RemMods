@@ -13,11 +13,17 @@ impl Core {
     /// The cached snapshot of the current Paks folder, scanning on the first call.
     pub fn mods_list(&self) -> Result<Arc<ScanSnapshot>, CoreError> {
         let input = self.mods_scan_input()?;
+        if let Some(cached) = self.mods.cached(&input) {
+            return Ok(cached);
+        }
+        let _read = self.ops.read()?;
         Ok(self.mods.list(&input)?)
     }
 
+    /// Scans hold the shared app lock, so they never see a batch half done.
     pub fn mods_refresh(&self) -> Result<Refreshed, CoreError> {
         let input = self.mods_scan_input()?;
+        let _read = self.ops.read()?;
         Ok(self.mods.refresh(&input)?)
     }
 
@@ -40,7 +46,7 @@ impl Core {
         self.mods.last()
     }
 
-    fn mods_scan_input(&self) -> Result<ScanInput, CoreError> {
+    pub(super) fn mods_scan_input(&self) -> Result<ScanInput, CoreError> {
         let location = self.game_paks().ok_or(GameError::NotSet)?;
         Ok(ScanInput {
             game_view_len: utf16_len(&location.game_view),

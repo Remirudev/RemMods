@@ -1,7 +1,7 @@
 //! Directory entries as the OS sees them: raw name units, the path form handed to `std::fs` and
 //! the identity of an entry.
 
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -23,6 +23,29 @@ pub fn raw_name(name: &OsStr) -> RawName {
     imp::raw_name(name)
 }
 
+/// The OsString a [`RawName`] denotes; None when its form does not match the OS (bytes on
+/// Windows, UTF-16 units on Unix).
+pub fn os_string(raw: &RawName) -> Option<OsString> {
+    imp::os_string(raw)
+}
+
+/// `name` without its first `prefix` and last `suffix` encoded bytes. None when prefix + suffix
+/// exceeds the length or a removed byte is not ASCII.
+pub fn os_str_cut(name: &OsStr, prefix: usize, suffix: usize) -> Option<OsString> {
+    let bytes = name.as_encoded_bytes();
+    let end = bytes.len().checked_sub(suffix)?;
+    let head = bytes.get(..prefix)?;
+    let tail = bytes.get(end..)?;
+    let middle = bytes.get(prefix..end)?;
+    if !head.is_ascii() || !tail.is_ascii() {
+        return None;
+    }
+    // SAFETY: `middle` comes from a valid OsStr and both cuts sit right after or right before an
+    // ASCII byte, which the encoded-bytes contract allows as split points.
+    let cut = unsafe { OsStr::from_encoded_bytes_unchecked(middle) };
+    Some(cut.to_os_string())
+}
+
 /// The form of `path` to hand to `std::fs`. Windows: verbatim (`\\?\`), so names Win32 would
 /// normalise (`Foo.`, `Foo `) reach the right entry; other OSes: the lexical absolute path.
 pub fn fs_path(path: &Path) -> io::Result<PathBuf> {
@@ -36,9 +59,9 @@ pub fn file_id(path: &Path) -> io::Result<FileId> {
 
 #[cfg(unix)]
 mod imp {
-    use std::ffi::OsStr;
+    use std::ffi::{OsStr, OsString};
     use std::io;
-    use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::ffi::{OsStrExt, OsStringExt};
     use std::os::unix::fs::MetadataExt;
     use std::path::{Path, PathBuf};
 
@@ -46,6 +69,13 @@ mod imp {
 
     pub(super) fn raw_name(name: &OsStr) -> RawName {
         RawName::Bytes(name.as_bytes().to_vec())
+    }
+
+    pub(super) fn os_string(raw: &RawName) -> Option<OsString> {
+        match raw {
+            RawName::Bytes(bytes) => Some(OsString::from_vec(bytes.clone())),
+            RawName::Wide(_) => None,
+        }
     }
 
     pub(super) fn fs_path(path: &Path) -> io::Result<PathBuf> {
@@ -66,7 +96,7 @@ mod imp {
     use std::ffi::{OsStr, OsString};
     use std::fs::OpenOptions;
     use std::io;
-    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use std::path::{Component, Path, PathBuf, Prefix};
@@ -84,6 +114,13 @@ mod imp {
 
     pub(super) fn raw_name(name: &OsStr) -> RawName {
         RawName::Wide(name.encode_wide().collect())
+    }
+
+    pub(super) fn os_string(raw: &RawName) -> Option<OsString> {
+        match raw {
+            RawName::Wide(units) => Some(OsString::from_wide(units)),
+            RawName::Bytes(_) => None,
+        }
     }
 
     pub(super) fn fs_path(path: &Path) -> io::Result<PathBuf> {
@@ -158,7 +195,7 @@ mod imp {
 
 #[cfg(not(any(unix, windows)))]
 mod imp {
-    use std::ffi::OsStr;
+    use std::ffi::{OsStr, OsString};
     use std::io;
     use std::path::{Path, PathBuf};
 
@@ -166,6 +203,13 @@ mod imp {
 
     pub(super) fn raw_name(name: &OsStr) -> RawName {
         RawName::Bytes(name.as_encoded_bytes().to_vec())
+    }
+
+    pub(super) fn os_string(raw: &RawName) -> Option<OsString> {
+        match raw {
+            RawName::Bytes(bytes) => String::from_utf8(bytes.clone()).ok().map(OsString::from),
+            RawName::Wide(_) => None,
+        }
     }
 
     pub(super) fn fs_path(path: &Path) -> io::Result<PathBuf> {

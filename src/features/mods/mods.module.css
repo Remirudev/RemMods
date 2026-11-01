@@ -54,6 +54,10 @@
   box-shadow: inset 2px 0 0 var(--mantine-primary-color-filled);
 }
 
+.row[data-selected] {
+  background-color: var(--mantine-color-default-hover);
+}
+
 .alignRight {
   text-align: right;
 }

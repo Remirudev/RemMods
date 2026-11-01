@@ -11,6 +11,11 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   invalidGameFolder: true,
   launchFailed: true,
   revealFailed: true,
+  gameRunning: true,
+  targetExists: true,
+  outOfScope: true,
+  toggleBlocked: true,
+  batchFailed: true,
 }
 
 export class IpcError extends Error {

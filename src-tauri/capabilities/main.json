@@ -33,6 +33,9 @@
     "allow-mods-list",
     "allow-mods-refresh",
     "allow-mods-details",
-    "allow-mods-reveal"
+    "allow-mods-reveal",
+    "allow-mods-toggle",
+    "allow-mods-disable-all",
+    "allow-mods-watch-status"
   ]
 }
