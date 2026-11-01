@@ -146,6 +146,7 @@ fn loose_file(entry: Entry) -> Option<LooseFile> {
     let payload = classify_payload(&entry.name)?;
     Some(LooseFile {
         size: Ok(0),
+        modified: None,
         name: entry.name,
         key: entry.key,
         path: entry.path,

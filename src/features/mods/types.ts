@@ -1,7 +1,11 @@
 import type { ReactNode, RefObject } from 'react'
 import type {
   ArchiveEntry,
+  AssetEntry,
   ConflictLink,
+  ContainerSummary,
+  ContentConflictLink,
+  ContentSummary,
   GameStatus,
   InstallInfo,
   LeftoverEntry,
@@ -46,6 +50,7 @@ export interface ModFilter {
   state: StateFilter
   kinds: readonly ModKind[]
   conflictsOnly: boolean
+  contentConflictsOnly: boolean
   issuesOnly: boolean
 }
 
@@ -87,6 +92,7 @@ export interface ModsUiState {
   setStateFilter: (state: StateFilter) => void
   setKinds: (kinds: readonly ModKind[]) => void
   setConflictsOnly: (conflictsOnly: boolean) => void
+  setContentConflictsOnly: (contentConflictsOnly: boolean) => void
   setIssuesOnly: (issuesOnly: boolean) => void
   clearFilters: () => void
   toggleConflictsView: () => void
@@ -238,4 +244,24 @@ export interface DrawerSectionProps {
 export interface ModsErrorAlertProps {
   error: unknown
   onRetry: () => void
+}
+
+export interface ContentSectionProps {
+  row: ModRow
+}
+
+export interface ContentListProps {
+  entries: readonly AssetEntry[]
+}
+
+export interface ContentHintsProps {
+  content: ContentSummary
+}
+
+export interface UnsupportedContainersProps {
+  containers: readonly ContainerSummary[]
+}
+
+export interface ContentConflictListProps {
+  conflicts: readonly ContentConflictLink[]
 }

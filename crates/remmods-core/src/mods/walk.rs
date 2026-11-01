@@ -5,8 +5,9 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use super::listing::{Entry, EntryKind, Lister, problem};
-use super::model::{PayloadCounts, PayloadFile, ScanProblem};
+use super::model::{PayloadCounts, PayloadFile, PayloadKind, ScanProblem};
 use super::payload::{Payload, classify_payload, strip_off_suffix};
+use crate::content::UtocRef;
 use crate::safe_fs::names::{
     DISABLED_PREFIX, NAME_MAX_BYTES, PAYLOAD_NAME_MAX_BYTES, display_escaped, fold_key, order_key,
     portable_name_issue, utf16_len, windows_name_issue,
@@ -67,6 +68,8 @@ pub(crate) struct Walk {
     /// `collect_files` only.
     pub files: Vec<PayloadFile>,
     pub other_files: u32,
+    /// Every `.utoc` / `.utoc-x` (fs form), for the content reader.
+    pub utocs: Vec<UtocRef>,
 }
 
 impl Walk {
@@ -161,13 +164,14 @@ fn visit_file(
     file_len: usize,
     options: WalkOptions,
 ) {
-    let size = match entry.size() {
-        Ok(size) => Some(size),
+    let stat = match entry.stat() {
+        Ok(stat) => Some(stat),
         Err(found) => {
             walk.problem.get_or_insert(found);
             None
         }
     };
+    let size = stat.map(|stat| stat.size);
     walk.size = walk.size.saturating_add(size.unwrap_or(0));
     let payload = classify_payload(&entry.name);
     let live_payload = payload.is_some_and(|payload| payload.live);
@@ -185,13 +189,28 @@ fn visit_file(
         Some(payload) => record_payload(walk, &entry.key, payload),
         None => walk.other_files = walk.other_files.saturating_add(1),
     }
-    if options.collect_files
-        && let Some(payload) = payload
-    {
-        let mut keys = dir_keys.to_vec();
-        keys.push(entry.key.clone());
+    let Some(payload) = payload else {
+        return;
+    };
+    let is_utoc = payload.kind == PayloadKind::Utoc;
+    if !options.collect_files && !is_utoc {
+        return;
+    }
+    let mut keys = dir_keys.to_vec();
+    keys.push(entry.key.clone());
+    let rel_path = display_rel_path(&keys);
+    if is_utoc {
+        walk.utocs.push(UtocRef {
+            path: entry.path.clone(),
+            rel_path: rel_path.clone(),
+            live: payload.live,
+            size: size.unwrap_or(0),
+            modified: stat.and_then(|stat| stat.modified),
+        });
+    }
+    if options.collect_files {
         walk.files.push(PayloadFile {
-            rel_path: display_rel_path(&keys),
+            rel_path,
             kind: payload.kind,
             live: payload.live,
             size: size.unwrap_or(0),

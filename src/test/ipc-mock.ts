@@ -3,6 +3,7 @@ import { applySettingsUpdate } from '../features/settings/settings-update'
 import type { Settings, SettingsUpdate } from '../lib/ipc/types'
 import {
   makeGameStatus,
+  TEST_CONTENTS,
   TEST_DETAILS,
   TEST_PLATFORM_INFO,
   TEST_SETTINGS,
@@ -21,6 +22,7 @@ export function installIpcMock(
   const gameStatus = options.gameStatus ?? makeGameStatus()
   const snapshot = options.snapshot ?? TEST_SNAPSHOT
   const details = options.details ?? TEST_DETAILS
+  const contents = options.contents ?? TEST_CONTENTS
 
   mockIPC(
     (command, payload) => {
@@ -47,6 +49,8 @@ export function installIpcMock(
           return snapshot
         case 'mods_details':
           return details
+        case 'mods_contents':
+          return contents
         case 'mods_watch_status':
           return { state: 'active' }
         default:

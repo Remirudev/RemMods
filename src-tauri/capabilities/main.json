@@ -33,6 +33,7 @@
     "allow-mods-list",
     "allow-mods-refresh",
     "allow-mods-details",
+    "allow-mods-contents",
     "allow-mods-reveal",
     "allow-mods-toggle",
     "allow-mods-disable-all",

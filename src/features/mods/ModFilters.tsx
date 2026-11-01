@@ -20,8 +20,15 @@ const KIND_OPTIONS: readonly ModKind[] = ['standard', 'legacy', 'logic', 'loose'
 export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
   const { t } = useTranslation('mods')
   const filter = useModsUiStore((state) => state.filter)
-  const { setText, setStateFilter, setKinds, setConflictsOnly, setIssuesOnly, clearFilters } =
-    useModsUiStore.getState()
+  const {
+    setText,
+    setStateFilter,
+    setKinds,
+    setConflictsOnly,
+    setContentConflictsOnly,
+    setIssuesOnly,
+    clearFilters,
+  } = useModsUiStore.getState()
 
   return (
     <Group gap="md" align="flex-end" wrap="wrap">
@@ -60,6 +67,11 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
           label={t(($) => $.filters.conflictsOnly)}
           checked={filter.conflictsOnly}
           onChange={(event) => setConflictsOnly(event.currentTarget.checked)}
+        />
+        <Checkbox
+          label={t(($) => $.filters.contentConflictsOnly)}
+          checked={filter.contentConflictsOnly}
+          onChange={(event) => setContentConflictsOnly(event.currentTarget.checked)}
         />
         <Checkbox
           label={t(($) => $.filters.issuesOnly)}

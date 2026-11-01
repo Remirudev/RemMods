@@ -24,6 +24,8 @@ export const ipc = {
   modsList: () => unwrapResult('mods_list', () => commands.modsList()),
   modsRefresh: () => unwrapResult('mods_refresh', () => commands.modsRefresh()),
   modsDetails: (modRef: string) => unwrapResult('mods_details', () => commands.modsDetails(modRef)),
+  modsContents: (modRef: string) =>
+    unwrapResult('mods_contents', () => commands.modsContents(modRef)),
   modsReveal: (modRef: string) => unwrapResult('mods_reveal', () => commands.modsReveal(modRef)),
   modsToggle: (request: ToggleRequest) =>
     unwrapResult('mods_toggle', () => commands.modsToggle(request)),

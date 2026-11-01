@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatSize } from '../../shared/format-size'
 import { ConflictList } from './ConflictList'
+import { ContentConflictList } from './ContentConflictList'
+import { ContentSection } from './ContentSection'
 import { DetailsFiles } from './DetailsFiles'
 import { DrawerSection } from './DrawerSection'
 import { displayState } from './display-state'
@@ -146,6 +148,16 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
 
           <DrawerSection title={t(($) => $.drawer.files)}>
             <DetailsFiles modRef={row.modRef} />
+          </DrawerSection>
+
+          {row.contentConflicts.length > 0 && (
+            <DrawerSection title={t(($) => $.contentConflicts.title)}>
+              <ContentConflictList conflicts={row.contentConflicts} />
+            </DrawerSection>
+          )}
+
+          <DrawerSection title={t(($) => $.content.title)}>
+            <ContentSection key={row.modRef} row={row} />
           </DrawerSection>
 
           <Button

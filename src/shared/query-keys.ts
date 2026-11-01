@@ -6,4 +6,5 @@ export const queryKeys = {
   watchStatus: ['watchStatus'] as const,
   modDetailsAll: ['mods', 'details'] as const,
   modDetails: (modRef: string) => ['mods', 'details', modRef] as const,
+  modContents: (modRef: string) => ['mods', 'details', 'contents', modRef] as const,
 }

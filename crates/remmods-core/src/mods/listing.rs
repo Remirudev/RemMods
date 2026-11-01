@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::fs::{self, DirEntry};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use super::model::ScanProblem;
 use crate::platform;
@@ -42,8 +43,8 @@ pub(crate) struct Entry {
     pub path: PathBuf,
     pub kind: EntryKind,
     dir_entry: DirEntry,
-    /// The followed size of a link to a file.
-    link_size: Option<u64>,
+    /// The followed size and mtime of a link to a file.
+    link_stat: Option<FileStat>,
     /// The entry's type could not be read.
     pub problem: Option<ScanProblem>,
 }
@@ -51,13 +52,34 @@ pub(crate) struct Entry {
 impl Entry {
     /// Logical length of a file or of a link's target.
     pub(crate) fn size(&self) -> Result<u64, ScanProblem> {
-        if let Some(size) = self.link_size {
-            return Ok(size);
+        self.stat().map(|stat| stat.size)
+    }
+
+    /// Length and mtime from the one metadata read the scan already does.
+    pub(crate) fn stat(&self) -> Result<FileStat, ScanProblem> {
+        if let Some(stat) = self.link_stat {
+            return Ok(stat);
         }
         self.dir_entry
             .metadata()
-            .map(|metadata| metadata.len())
+            .map(|metadata| FileStat::of(&metadata))
             .map_err(|error| problem("stat", &error))
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FileStat {
+    pub size: u64,
+    /// `None` when the platform cannot report it.
+    pub modified: Option<SystemTime>,
+}
+
+impl FileStat {
+    fn of(metadata: &fs::Metadata) -> Self {
+        Self {
+            size: metadata.len(),
+            modified: metadata.modified().ok(),
+        }
     }
 }
 
@@ -99,7 +121,7 @@ fn describe(dir_entry: DirEntry) -> Entry {
         path,
         kind: EntryKind::Other,
         dir_entry,
-        link_size: None,
+        link_stat: None,
         problem: None,
     };
     match entry.dir_entry.file_type() {
@@ -118,7 +140,7 @@ fn resolve_link(entry: &mut Entry) {
         Ok(target) if target.is_dir() => entry.kind = EntryKind::LinkToDir,
         Ok(target) if target.is_file() => {
             entry.kind = EntryKind::LinkToFile;
-            entry.link_size = Some(target.len());
+            entry.link_stat = Some(FileStat::of(&target));
         }
         Ok(_) => {}
         Err(error) => log::debug!("broken link {}: {error}", entry.path.display()),

@@ -7,6 +7,7 @@ export const EMPTY_FILTER: ModFilter = {
   state: 'all',
   kinds: [],
   conflictsOnly: false,
+  contentConflictsOnly: false,
   issuesOnly: false,
 }
 
@@ -16,12 +17,17 @@ export function isFilterActive(filter: ModFilter): boolean {
     filter.state !== 'all' ||
     filter.kinds.length > 0 ||
     filter.conflictsOnly ||
+    filter.contentConflictsOnly ||
     filter.issuesOnly
   )
 }
 
 function matchesText(row: ModRow, needle: string, kindLabel: KindLabel, locale: string): boolean {
   const haystack = [row.name, row.key, row.info.category, row.info.author, kindLabel(row.kind)]
+  for (const hint of row.content.characters) {
+    haystack.push(hint.code)
+    if (hint.name !== null) haystack.push(hint.name)
+  }
   return haystack.some((value) => value.toLocaleLowerCase(locale).includes(needle))
 }
 
@@ -39,6 +45,7 @@ export function filterMods(
       (filter.state === 'all' || displayState(row) === filter.state) &&
       (filter.kinds.length === 0 || filter.kinds.includes(row.kind)) &&
       (!filter.conflictsOnly || row.conflictsWith.length > 0) &&
+      (!filter.contentConflictsOnly || row.contentConflicts.length > 0) &&
       (!filter.issuesOnly || row.issues.length > 0) &&
       (needle === '' || matchesText(row, needle, kindLabel, locale)),
   )

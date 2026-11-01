@@ -28,7 +28,9 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
                        watch (names.rs: Windows name rules)
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
+  src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
   tests/fixtures/      proc/ (fake /proc captures) and steam/ (VDF/ACF files); byte-exact, outside Biome
+crates/remmods-pak/    pure-Rust .utoc reader (header + directory index; no decompression, no Oodle); no core dep
 crates/remmods-ipc/    DTOs + AppError (serde + specta, no Tauri) and their tests
 src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust tests
   src/commands/        one file per domain; async, spawn_blocking, Result<T, AppError>
@@ -36,7 +38,7 @@ src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust te
   src/watcher.rs       Paks watcher thread: debounced rescans, auto-refresh status
   src/bin/             export-bindings (feature "bindings") writes src/lib/ipc/bindings.ts
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/scan-expect/proc-capture.py
+scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, checklists/
 ```
 
@@ -122,6 +124,7 @@ scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 npm run tauri -- build --debug --no-bundle && ./target/debug/remmods --smoke
 python3 -I scripts/make-fixtures.py smoke <empty dir>   # fixture game folder; then: remmods --smoke --paks <printed Paks path>
 python3 -I scripts/scan-expect.py <paks.tsv>            # expected scan-* log lines from a paks-snapshot
+scripts/utoc-compare.sh <dir>                           # Rust vs Python .utoc listing (read-only)
 python3 -I scripts/proc-capture.py <label> > local/proc-<label>.json   # redact by hand before committing
 scripts/paks-snapshot.sh > local/paks-<label>.tsv   # read-only listing of the game's Paks folder
 ```

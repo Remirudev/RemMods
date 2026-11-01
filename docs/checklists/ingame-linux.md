@@ -92,6 +92,7 @@ may change in this phase. Captures are reviewed and redacted by hand before any 
 |------|-------|----------------|--------|-------|
 | 2026-11-01 | P0 | c6ef614 | pass | Baseline, game build 25221600, started from Steam. Paks: 264 files (112 in `Mods`), 19 folders. Kunimitsu's modded outfits visible in offline Practice. Before and after snapshots identical. `Mods` backed up to `~/RemMods-backups/2026-11-01/`. |
 | 2026-11-01 | P1 | c5592bf | pass | Game build 25221600, launched from RemMods (`steam://rungameid/1778820` via xdg-open, gamescope launch options). In-app state showed RUNNING while playing and NOT RUNNING after quitting (owner; no stopwatch). Kunimitsu's modded outfits visible in offline Practice. Scan = disk: `scan-expect` vs the logged snapshot identical (27 lines: 17 rows incl. loose `SamuraiHair_P`/`SamuraiOutfit_P`, 10 archives, 0 unmanaged, 0 leftovers). Paks snapshot identical to P0. LIVE capture (09:55): argv[0] drive `S:`, shipping exe comm `GameThread`, reaper parent `gamescopereaper`. Launch/quit capture loops not run: `steam-install-live`/`steam-shutdown-live` fixtures still pending. Taskbar icon and safe-graphics action deferred to P5. |
+| 2026-11-01 | P2 | e5f296b | pass (basic) | Owner toggled a mod off in RemMods with the game closed: it was gone in offline Practice while the other enabled mods stayed; enabled again, it was back. Not run yet: the live toggle during a match and the PLAN §11 engine questions (loose/depth 3/dot folder/`mods` case variant, which mod wins, `~mods` vs `Mods`); proposed to move to the P2b in-game check. |
 
 ## P2 steps (toggle phase)
 
@@ -129,4 +130,49 @@ renamed.
    Result:
 8. Claude records the answers in PLAN §11 and §7 after you agree.
    Result:
-| 2026-11-01 | P2 | e5f296b | pass (basic) | Owner toggled a mod off in RemMods with the game closed: it was gone in offline Practice while the other enabled mods stayed; enabled again, it was back. Not run yet: the live toggle during a match and the PLAN §11 engine questions (loose/depth 3/dot folder/`mods` case variant, which mod wins, `~mods` vs `Mods`); proposed to move to the P2b in-game check. |
+
+## P2b steps (content view)
+
+The first phase that reads what is inside the mods (`.utoc` indexes). Same frame as P2: Claude
+prepares and moves files, you play offline Practice mode and report. Every command works in fish.
+Each step ends with a "Result:" line to fill in. Test mods are copies of an installed visible mod,
+renamed; the copies are removed afterwards.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p2b-before.tsv`. Back up
+   `Mods`, `~mods` and `LogicMods` with `tar` into `local/backup-p2b-<date>.tar` (read-only source).
+   Result:
+2. Exit check A (file lists match an independent listing):
+   `scripts/utoc-compare.sh "$HOME/.local/share/Steam/steamapps/common/TEKKEN 8/Polaris/Content/Paks/Mods"`
+   shows no diff (expected 31 containers, 2790 file lines on the owner's install of 2026-11-01).
+   Then open three mods in the RemMods drawer and compare each with
+   `python3 -I scripts/utoc-list.py "<Paks>/Mods" | grep '<mod folder>'`.
+   Result:
+3. Exit check B (same asset, same files): copy one installed costume mod into `Mods/P2bA/` and
+   `Mods/P2bB/`, renaming the pak trio to `P2bA_P.*` and `P2bB_P.*`. RemMods shows "Same assets" on
+   both rows and no pak-name conflict. Remove the copies.
+   Result:
+4. Exit check C (which one wins, same asset in different paks): two mods that ship the same asset
+   with a visible difference (for example `Qipao finemod`'s `Qipao_P` and
+   `20_(Option_Black_Color_Dress_2_P`), in separate folders `Mods/P2bW1` and `Mods/P2bW2`. Note which
+   one is visible in the game. Swap the folder names and note again. Then put one in `~mods` and the
+   other in `Mods` and note again. This settles the winner wording (SPEC-P2B Appendix A2).
+   Result:
+5. Same pak basename in two folders (P2 question): which one wins?
+   Result:
+6. P2 engine questions (PLAN §11), moved here from P2: a loose `Mods/P2Loose.*`; depth 3
+   `Mods/P2Deep/a/b/`; a dot folder `Mods/.disabled_P2Dot/`; a lowercase `mods/P2Case/` beside
+   `Mods`; a LogicMods folder renamed to `.disabled_X` whose paks are live. Which of them are visible?
+   Result:
+7. Live toggle: during a match toggle a mod off and on in RemMods ("Apply for next launch?"). Note
+   crashes or missing assets; this decides "ask" or "block" (PLAN §4).
+   Result:
+8. Hints: with a mod RemMods labels "Alisa" (`mnt`) and one labelled "Kunimitsu" (`ker`), check that
+   the costume appears on that character. Note any mismatch.
+   Result:
+9. Quit the game, restore from the backup, then
+   `scripts/paks-snapshot.sh > local/paks-p2b-after.tsv` and
+   `diff -u local/paks-p2b-before.tsv local/paks-p2b-after.tsv`: no output after the restore.
+   Result:
+10. Claude records the answers (load order, winner wording, engine answers, hint confirmations) in
+    PLAN §11, §7 and §12 after you agree. The "Runs" table gets a P2b line.
+    Result:

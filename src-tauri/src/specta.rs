@@ -28,6 +28,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods::mods_list,
             mods::mods_refresh,
             mods::mods_details,
+            mods::mods_contents,
             mods::mods_reveal,
             mods::mods_toggle,
             mods::mods_disable_all,

@@ -29,6 +29,18 @@ const ROWS: ModRow[] = [
     conflictsWith: [{ modRef: 'm:x', key: 'x', name: 'X', paks: ['a.pak'] }],
   }),
   makeModRow('Troubled', { issues: [{ kind: 'linkedMod' }] }),
+  makeModRow('Same Stuff', {
+    contentConflicts: [{ modRef: 'm:x', key: 'x', name: 'X', shared: 2, sample: ['a/b.uasset'] }],
+  }),
+  makeModRow('Samurai', {
+    content: {
+      ...makeModRow('x').content,
+      characters: [
+        { code: 'ker', name: 'Kunimitsu', common: false },
+        { code: 'zbr', name: null, common: false },
+      ],
+    },
+  }),
 ]
 
 function names(filter: Partial<ModFilter>, locale = 'en'): string[] {
@@ -74,6 +86,16 @@ describe('filterMods', () => {
     expect(names({ issuesOnly: true })).toEqual(['Troubled'])
   })
 
+  it('filters by content conflicts', () => {
+    expect(names({ contentConflictsOnly: true })).toEqual(['Same Stuff'])
+  })
+
+  it('searches the character names and codes of the contents', () => {
+    expect(names({ text: 'Kunimitsu' })).toEqual(['Samurai'])
+    expect(names({ text: 'ker' })).toEqual(['Samurai'])
+    expect(names({ text: 'ZBR' })).toEqual(['Samurai'])
+  })
+
   it('combines the criteria', () => {
     expect(names({ text: 'con', conflictsOnly: true })).toEqual(['Conflicted'])
     expect(names({ text: 'zzz' })).toEqual([])
@@ -91,6 +113,7 @@ describe('isFilterActive', () => {
     expect(isFilterActive({ ...EMPTY_FILTER, state: 'enabled' })).toBe(true)
     expect(isFilterActive({ ...EMPTY_FILTER, kinds: ['logic'] })).toBe(true)
     expect(isFilterActive({ ...EMPTY_FILTER, conflictsOnly: true })).toBe(true)
+    expect(isFilterActive({ ...EMPTY_FILTER, contentConflictsOnly: true })).toBe(true)
     expect(isFilterActive({ ...EMPTY_FILTER, issuesOnly: true })).toBe(true)
   })
 })

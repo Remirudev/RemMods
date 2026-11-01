@@ -8,19 +8,32 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use remmods_core::content::ContentCache;
 use remmods_core::game::{GameOptions, detect};
 use remmods_core::mods::{
     ModRef, ModRow, ScanContent, ScanInput, ScanOutput, paks_identity, read_details, resolve_ref,
-    scan_paks, shell_form,
+    scan_paks, scan_paks_with, shell_form,
 };
 use remmods_core::platform::{self, OsKind, RegistrySteamValues, SteamHints};
 use remmods_core::{AppPaths, Core, CoreOptions};
+use remmods_pak::fixture::TocBuilder;
 use tempfile::TempDir;
 
 /// UTF-16 length of `S:\steamapps\common\TEKKEN 8\Polaris\Content\Paks`.
 pub const GAME_VIEW_LEN: usize = 49;
 
 pub const DATA: &[u8] = b"data";
+
+/// The mount point of 26 of the 31 real mods (SPEC-P2B §4.4).
+pub const MOUNT: &str = "../../../Polaris/Content/";
+
+/// A crafted v5 `.utoc` (flags 0x09) listing `files` below `mount`.
+pub fn toc(mount: &str, files: &[&str]) -> Vec<u8> {
+    files
+        .iter()
+        .fold(TocBuilder::new(mount), |builder, file| builder.file(file))
+        .build()
+}
 
 /// Paks below a game root inside `out` (the §9.2 layout).
 pub fn paks_under(out: &Path) -> PathBuf {
@@ -84,6 +97,10 @@ pub fn scan(paks: &Path) -> ScanOutput {
     scan_paks(&input(paks)).expect("scan")
 }
 
+pub fn scan_with(paks: &Path, cache: &ContentCache) -> ScanOutput {
+    scan_paks_with(&input(paks), cache).expect("scan")
+}
+
 const SMOKE_MODINFO: &[u8] =
     br#"{"Version":"2.0","Category":"Character","Description":"Smoke fixture","Author":"RemMods"}"#;
 
@@ -102,6 +119,12 @@ pub fn smoke_tree(out: &Path) -> PathBuf {
         ],
     );
     let paks = paks_under(out);
+    let alpha_toc = toc(MOUNT, &["Smoke/Shared.uasset", "Smoke/Alpha.uasset"]);
+    let loose_toc = toc(
+        "../../../Polaris/Content/Smoke/",
+        &["Shared.uasset", "Shared.ubulk"],
+    );
+    let beta_toc = toc(MOUNT, &["Smoke/Shared.uasset"]);
     paks_tree(
         &paks,
         &[
@@ -114,11 +137,11 @@ pub fn smoke_tree(out: &Path) -> PathBuf {
             ("Stray.pak", DATA),
             ("Mods/Alpha/Alpha.pak", DATA),
             ("Mods/Alpha/Alpha.ucas", DATA),
-            ("Mods/Alpha/Alpha.utoc", DATA),
+            ("Mods/Alpha/Alpha.utoc", &alpha_toc),
             ("Mods/Alpha/modinfo.json", SMOKE_MODINFO),
             ("Mods/Beta/Beta.pak-x", DATA),
             ("Mods/Beta/Beta.ucas-x", DATA),
-            ("Mods/Beta/Beta.utoc-x", DATA),
+            ("Mods/Beta/Beta.utoc-x", &beta_toc),
             ("Mods/Gamma/Content/Paks/Gamma.pak", DATA),
             ("Mods/Gamma/Content/Paks/Gamma_alt.pak-x", DATA),
             ("Mods/Delta/Shared.pak", DATA),
@@ -126,7 +149,7 @@ pub fn smoke_tree(out: &Path) -> PathBuf {
             ("Mods/Empty/readme.txt", DATA),
             ("Mods/Loose.pak", DATA),
             ("Mods/Loose.ucas", DATA),
-            ("Mods/Loose.utoc", DATA),
+            ("Mods/Loose.utoc", &loose_toc),
             ("Mods/Pack.zip", DATA),
             (
                 "Mods/_Half_tmp_0123456789abcdef0123456789abcdef/Half.pak",
@@ -210,6 +233,8 @@ pub fn exercise_read_only(home: &Path, app_root: &Path) {
     for row in &content.rows {
         read_details(&scan_input, &row.mod_ref).expect("read_details");
     }
+    let cache = ContentCache::new();
+    scan_paks_with(&scan_input, &cache).expect("scan_paks_with");
     let hints = linux_hints(home);
     let _ = detect(&hints, 0);
     let options = CoreOptions {
@@ -227,5 +252,9 @@ pub fn exercise_read_only(home: &Path, app_root: &Path) {
     let first = snapshot.content.rows.first().expect("a first row");
     core.mods_details(first.mod_ref.as_str())
         .expect("mods_details");
+    for row in &snapshot.content.rows {
+        core.mods_contents(row.mod_ref.as_str())
+            .expect("mods_contents");
+    }
     let _ = core.game_detect();
 }

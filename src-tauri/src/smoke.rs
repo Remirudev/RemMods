@@ -52,6 +52,8 @@ struct FixtureRow {
     key: String,
     state: String,
     conflicts: usize,
+    #[serde(default)]
+    content_conflicts: usize,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -164,13 +166,22 @@ fn fixture_differences(
     build_id: Option<&str>,
 ) -> Vec<String> {
     let mut differences = Vec::new();
-    let expected_rows = fixture
-        .rows
-        .iter()
-        .map(|row| (row.key.clone(), row.state.clone(), row.conflicts));
+    let expected_rows = fixture.rows.iter().map(|row| {
+        (
+            row.key.clone(),
+            row.state.clone(),
+            row.conflicts,
+            row.content_conflicts,
+        )
+    });
     let actual_rows = snapshot.rows.iter().map(|row| {
         let state = wire_name(&row.state);
-        (row.key.clone(), state, row.conflicts_with.len())
+        (
+            row.key.clone(),
+            state,
+            row.conflicts_with.len(),
+            row.content_conflicts.len(),
+        )
     });
     compare_sets("row", expected_rows, actual_rows, &mut differences);
     compare_sets(

@@ -1,6 +1,8 @@
 use remmods_core::mods as core_mods;
 use remmods_core::{Core, CoreError};
-use remmods_ipc::{AppError, ModDetails, ModsSnapshot, ToggleOutcome, ToggleRequest, WatchStatus};
+use remmods_ipc::{
+    AppError, ModContents, ModDetails, ModsSnapshot, ToggleOutcome, ToggleRequest, WatchStatus,
+};
 use tauri::{AppHandle, State};
 
 use super::{reveal_in_file_manager, run_blocking};
@@ -50,6 +52,20 @@ pub async fn mods_details(
     run_blocking(state.core.clone(), move |core| {
         core.mods_details(&mod_ref)
             .map(|details| ModDetails::from(&details))
+    })
+    .await
+}
+
+/// The asset list of one row's `.utoc` containers; the base index is built on the first call.
+#[tauri::command]
+#[specta::specta]
+pub async fn mods_contents(
+    state: State<'_, AppState>,
+    mod_ref: String,
+) -> Result<ModContents, AppError> {
+    run_blocking(state.core.clone(), move |core| {
+        core.mods_contents(&mod_ref)
+            .map(|contents| ModContents::from(&contents))
     })
     .await
 }

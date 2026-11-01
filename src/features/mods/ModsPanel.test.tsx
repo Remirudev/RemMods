@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useBackendEvents } from '../../app/use-backend-events'
 import type { GameStatus } from '../../lib/ipc/types'
 import { useGameStatus } from '../../shared/game/queries'
-import { INSTALL_WITHOUT_MANIFEST, makeGameStatus, TEST_INSTALL } from '../../test/fixtures'
+import {
+  INSTALL_WITHOUT_MANIFEST,
+  makeGameStatus,
+  makeModRow,
+  makeSnapshot,
+  TEST_INSTALL,
+} from '../../test/fixtures'
 import { installIpcMock } from '../../test/ipc-mock'
 import { mockElementLayout } from '../../test/layout'
 import { renderWithProviders } from '../../test/render'
@@ -44,7 +50,14 @@ describe('ModsPanel', () => {
   beforeEach(() => {
     restoreLayout = mockElementLayout()
     useModsUiStore.setState({
-      filter: { text: '', state: 'all', kinds: [], conflictsOnly: false, issuesOnly: false },
+      filter: {
+        text: '',
+        state: 'all',
+        kinds: [],
+        conflictsOnly: false,
+        contentConflictsOnly: false,
+        issuesOnly: false,
+      },
       tab: 'mods',
       detailsRef: null,
       activeIndex: -1,
@@ -120,6 +133,20 @@ describe('ModsPanel', () => {
 
     await user.click(chip)
     expect(rowNames()).toHaveLength(3)
+  })
+
+  it('shows the same-assets badge and filters by it', async () => {
+    const user = userEvent.setup()
+    const same = makeModRow('Same', {
+      contentConflicts: [{ modRef: 'm:other', key: 'other', name: 'Other', shared: 2, sample: [] }],
+    })
+    renderMods(makeGameStatus(), { snapshot: makeSnapshot([same, makeModRow('Plain')]) })
+    await screen.findAllByTestId('mods-row')
+
+    expect(screen.getByText('Same assets · 1')).toBeVisible()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Same assets' }))
+    expect(rowNames()).toEqual(['Same'])
   })
 
   it('opens the details drawer with ArrowDown and Enter, ignores Space, closes with Escape', async () => {

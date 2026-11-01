@@ -1,5 +1,5 @@
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -8,8 +8,9 @@ use chrono::Utc;
 use super::error::ModsError;
 use super::meta_store::ModMetaStore;
 use super::model::{ScanInput, ScanOutput, ScanSnapshot};
-use super::scan::scan_paks;
+use super::scan::scan_paks_with;
 use super::scan_log;
+use crate::content::{BaseIndex, ContentCache};
 
 /// Cache of the last published snapshot with single-flight refreshes (P1 spec §4.8). The OpGate
 /// is taken by the callers (`Core`), always before the scan gate.
@@ -19,6 +20,9 @@ pub struct ModsService {
     scan_gate: Mutex<()>,
     /// One sequence for request registrations and scan starts, so their order is total.
     sequence: AtomicU64,
+    contents: ContentCache,
+    /// Built lazily by the first `mods_contents`, never by a scan.
+    base: Mutex<Option<Arc<BaseIndex>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +44,21 @@ impl ModsService {
             cache: Mutex::new(None),
             scan_gate: Mutex::new(()),
             sequence: AtomicU64::new(0),
+            contents: ContentCache::new(),
+            base: Mutex::new(None),
         }
+    }
+
+    pub fn contents(&self) -> &ContentCache {
+        &self.contents
+    }
+
+    /// The base-game index of `paks`, rebuilt when its top-level base `.utoc` files changed.
+    pub(crate) fn base_index(&self, paks: &Path) -> Arc<BaseIndex> {
+        let mut base = lock(&self.base);
+        let current = BaseIndex::current(paks, base.take());
+        *base = Some(Arc::clone(&current));
+        current
     }
 
     pub fn meta(&self) -> &ModMetaStore {
@@ -74,7 +92,7 @@ impl ModsService {
         }
         let scan_started = self.sequence.fetch_add(1, Ordering::SeqCst);
         let scanned_at = Utc::now();
-        let output = scan_paks(input)?;
+        let output = scan_paks_with(input, &self.contents)?;
         Ok(self.publish(output, scan_started, scanned_at))
     }
 

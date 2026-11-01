@@ -17,6 +17,7 @@ const COMMANDS: &[&str] = &[
     "mods_list",
     "mods_refresh",
     "mods_details",
+    "mods_contents",
     "mods_reveal",
     "mods_toggle",
     "mods_disable_all",

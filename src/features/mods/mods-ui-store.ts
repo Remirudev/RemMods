@@ -17,6 +17,8 @@ export const useModsUiStore = create<ModsUiState>((set) => ({
   setKinds: (kinds) => set((state) => ({ filter: { ...state.filter, kinds } })),
   setConflictsOnly: (conflictsOnly) =>
     set((state) => ({ filter: { ...state.filter, conflictsOnly } })),
+  setContentConflictsOnly: (contentConflictsOnly) =>
+    set((state) => ({ filter: { ...state.filter, contentConflictsOnly } })),
   setIssuesOnly: (issuesOnly) => set((state) => ({ filter: { ...state.filter, issuesOnly } })),
   clearFilters: () => set({ filter: EMPTY_FILTER }),
   toggleConflictsView: () =>

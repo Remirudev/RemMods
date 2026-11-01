@@ -8,11 +8,15 @@ smoke  A fake Steam library below <out> with TEKKEN 8 installed (appmanifest, bo
        `remmods-smoke-fixture` with the expected rows. Prints the Paks path; run the app with
        `remmods --smoke --paks <that path>`.
 
+Alpha, Loose and Beta also carry small crafted IoStore tables of contents (`.utoc`, TOC v5) so the
+content view has something to list: Alpha and the loose mod ship the same asset, Beta's is disabled.
+
 Refuses when <out> exists and is not empty. Writes only below <out> and never replaces a file.
 """
 
 import json
 import os
+import struct
 import sys
 
 PAKS_PARTS = ("steamapps", "common", "TEKKEN 8", "Polaris", "Content", "Paks")
@@ -77,22 +81,118 @@ ALPHA_MODINFO = (
     b'{"Version":"2.0","Category":"Character","Description":"Smoke fixture","Author":"RemMods"}'
 )
 
+CONTENT_MOUNT = "../../../Polaris/Content/"
+INVALID = 0xFFFFFFFF
+TOC_MAGIC = b"-==--==--==--==-"
+METHOD_NAME_LENGTH = 32
+
+
+def fstring(text):
+    raw = text.encode("latin-1") + b"\x00"
+    return struct.pack("<i", len(raw)) + raw
+
+
+def directory_tree(paths):
+    """Directories in pre-order (root first) as [name, [child indexes], [(file name, chunk)]]."""
+    root = {"dirs": {}, "files": []}
+    for chunk, path in enumerate(paths):
+        *folders, name = path.split("/")
+        node = root
+        for folder in folders:
+            node = node["dirs"].setdefault(folder, {"dirs": {}, "files": []})
+        node["files"].append((name, chunk))
+    flat = []
+
+    def visit(name, node):
+        index = len(flat)
+        entry = [name, [], node["files"]]
+        flat.append(entry)
+        for child_name in sorted(node["dirs"]):
+            entry[1].append(visit(child_name, node["dirs"][child_name]))
+        return index
+
+    visit(None, root)
+    return flat
+
+
+def directory_index(mount, paths):
+    dirs = directory_tree(paths)
+    strings = []
+
+    def string_id(text):
+        if text not in strings:
+            strings.append(text)
+        return strings.index(text)
+
+    sibling = [INVALID] * len(dirs)
+    for _name, children, _files in dirs:
+        for left, right in zip(children, children[1:]):
+            sibling[left] = right
+    file_entries = []
+    first_file = []
+    for _name, _children, files in dirs:
+        first_file.append(len(file_entries) if files else INVALID)
+        for position, (name, chunk) in enumerate(files):
+            following = len(file_entries) + 1 if position + 1 < len(files) else INVALID
+            file_entries.append((string_id(name), following, chunk))
+    out = bytearray(fstring(mount))
+    out += struct.pack("<i", len(dirs))
+    for index, (name, children, _files) in enumerate(dirs):
+        name_id = INVALID if name is None else string_id(name)
+        first_child = children[0] if children else INVALID
+        out += struct.pack("<IIII", name_id, first_child, sibling[index], first_file[index])
+    out += struct.pack("<i", len(file_entries))
+    for entry in file_entries:
+        out += struct.pack("<III", *entry)
+    out += struct.pack("<i", len(strings))
+    for text in strings:
+        out += fstring(text)
+    return bytes(out)
+
+
+def make_toc(mount, paths):
+    """A TOC v5 (flags 0x09, one Oodle method, unsigned) listing `paths` below `mount`."""
+    index = directory_index(mount, paths)
+    files = len(paths)
+    entries = files + 1  # the container header chunk
+    seeds = (files + 1) // 2
+    out = bytearray(TOC_MAGIC)
+    out += bytes([5, 0, 0, 0])
+    out += struct.pack("<9I", 144, entries, files, 12, 1, METHOD_NAME_LENGTH, 0x10000, len(index), 1)
+    out += struct.pack("<Q", 0x0123456789ABCDEF)
+    out += bytes(16)
+    out += bytes([0x09, 0, 0, 0])
+    out += struct.pack("<I", seeds)
+    out += struct.pack("<Q", 0xFFFFFFFFFFFFFFFF)
+    out += struct.pack("<I", 0)
+    out += bytes(144 - len(out))
+    out += bytes(entries * 22 + seeds * 4 + files * 12)
+    out += b"Oodle".ljust(METHOD_NAME_LENGTH, b"\x00")
+    out += index
+    out += bytes(entries * 33)
+    return bytes(out)
+
+
+ALPHA_TOC = make_toc(CONTENT_MOUNT, ["Smoke/Shared.uasset", "Smoke/Alpha.uasset"])
+LOOSE_TOC = make_toc(CONTENT_MOUNT + "Smoke/", ["Shared.uasset", "Shared.ubulk"])
+BETA_TOC = make_toc(CONTENT_MOUNT, ["Smoke/Shared.uasset"])
+
 # The scanner's expectations for the Paks tree below, read by `remmods --smoke --paks` (check
 # scanFixture) and mirrored by a Rust test in remmods-core, so script and scanner cannot drift.
 MARKER = """{
   "version": 1,
   "fixture": "remmods-smoke",
   "rows": [
-    { "key": "Standard:Alpha", "state": "enabled", "conflicts": 0 },
-    { "key": "Standard:Beta", "state": "disabled", "conflicts": 0 },
-    { "key": "Standard:Gamma", "state": "partial", "conflicts": 0 },
-    { "key": "Standard:Delta", "state": "enabled", "conflicts": 1 },
-    { "key": "Standard:Epsilon", "state": "enabled", "conflicts": 1 },
-    { "key": "Standard:Empty", "state": "noPakFiles", "conflicts": 0 },
-    { "key": "Loose:Mods/Loose", "state": "enabled", "conflicts": 0 },
-    { "key": "Legacy:Legacy", "state": "enabled", "conflicts": 0 },
-    { "key": "Logic:Tool", "state": "enabled", "conflicts": 0 },
-    { "key": "Logic:Off", "state": "disabled", "conflicts": 0 }
+    { "key": "Standard:Alpha", "state": "enabled", "conflicts": 0, "contentConflicts": 1 },
+    { "key": "Standard:Beta", "state": "disabled", "conflicts": 0, "contentConflicts": 0 },
+    { "key": "Standard:Gamma", "state": "partial", "conflicts": 0, "contentConflicts": 0 },
+    { "key": "Standard:Delta", "state": "enabled", "conflicts": 1, "contentConflicts": 0 },
+    { "key": "Standard:Epsilon", "state": "enabled", "conflicts": 1, "contentConflicts": 0 },
+    { "key": "Standard:Empty", "state": "noPakFiles", "conflicts": 0, "contentConflicts": 0 },
+    { "key": "Loose:Mods/Loose", "state": "enabled", "conflicts": 0, "contentConflicts": 1 },
+    { "key": "Legacy:Legacy", "state": "enabled", "conflicts": 0, "contentConflicts": 0 },
+    { "key": "Logic:Tool", "state": "enabled", "conflicts": 0, "contentConflicts": 0 },
+    { "key": "Logic:Off", "state": "disabled", "conflicts": 0, "contentConflicts": 0 }
   ],
   "archives": ["Mods/Pack.zip"],
   "unmanaged": [
@@ -122,11 +222,11 @@ SMOKE_PAKS_FILES = (
     ("Stray.pak", DATA),
     ("Mods/Alpha/Alpha.pak", DATA),
     ("Mods/Alpha/Alpha.ucas", DATA),
-    ("Mods/Alpha/Alpha.utoc", DATA),
+    ("Mods/Alpha/Alpha.utoc", ALPHA_TOC),
     ("Mods/Alpha/modinfo.json", ALPHA_MODINFO),
     ("Mods/Beta/Beta.pak-x", DATA),
     ("Mods/Beta/Beta.ucas-x", DATA),
-    ("Mods/Beta/Beta.utoc-x", DATA),
+    ("Mods/Beta/Beta.utoc-x", BETA_TOC),
     ("Mods/Gamma/Content/Paks/Gamma.pak", DATA),
     ("Mods/Gamma/Content/Paks/Gamma_alt.pak-x", DATA),
     ("Mods/Delta/Shared.pak", DATA),
@@ -134,7 +234,7 @@ SMOKE_PAKS_FILES = (
     ("Mods/Empty/readme.txt", DATA),
     ("Mods/Loose.pak", DATA),
     ("Mods/Loose.ucas", DATA),
-    ("Mods/Loose.utoc", DATA),
+    ("Mods/Loose.utoc", LOOSE_TOC),
     ("Mods/Pack.zip", DATA),
     ("Mods/_Half_tmp_0123456789abcdef0123456789abcdef/Half.pak", DATA),
     ("Mods/_Old_tmp_ABCDEF0123456789ABCDEF0123456789/Old.pak-x", DATA),

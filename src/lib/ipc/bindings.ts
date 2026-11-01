@@ -35,6 +35,8 @@ export const commands = {
 	/**  Rescans Paks; emits `mods-changed` when the content differs from the last snapshot. */
 	modsRefresh: () => typedError<ModsSnapshot, AppError>(__TAURI_INVOKE("mods_refresh")),
 	modsDetails: (modRef: string) => typedError<ModDetails, AppError>(__TAURI_INVOKE("mods_details", { modRef })),
+	/**  The asset list of one row's `.utoc` containers; the base index is built on the first call. */
+	modsContents: (modRef: string) => typedError<ModContents, AppError>(__TAURI_INVOKE("mods_contents", { modRef })),
 	/**  Shows a mod, archive or unmanaged entry selected in the file manager. */
 	modsReveal: (modRef: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_reveal", { modRef })),
 	/**  Enables or disables the given rows in one all-or-none rename batch. */
@@ -89,6 +91,28 @@ export type ArchiveEntry = {
 	sizeBytes: number,
 };
 
+export type AssetEntry = {
+	path: string,
+	container: string,
+	live: boolean,
+	origin: AssetOrigin,
+	character: CharacterHint | null,
+	slot: SlotHint | null,
+	/**  ModRef tokens of the rows that ship the same asset. */
+	sharedWith: string[],
+};
+
+export type AssetOrigin = "adds" | "replaces" | "unknown";
+
+export type BaseIndexState = "complete" | "partial" | "unavailable";
+
+/**  A raw character code; `name` only for mappings with local evidence. */
+export type CharacterHint = {
+	code: string,
+	name: string | null,
+	common: boolean,
+};
+
 export type ColorScheme = "dark" | "light" | "system";
 
 export type ConflictLink = {
@@ -97,6 +121,35 @@ export type ConflictLink = {
 	key: string,
 	name: string,
 	paks: string[],
+};
+
+export type ContainerStatus = "read" | "notIoStore" | "unsupportedVersion" | "encrypted" | "noIndex" | "malformed" | "tooLarge" | "unreadable";
+
+export type ContainerSummary = {
+	relPath: string,
+	/**  `false` for `.utoc-x`. */
+	live: boolean,
+	status: ContainerStatus,
+	version: number | null,
+	/**  File entries; 0 unless `read`. */
+	files: number,
+};
+
+export type ContentConflictLink = {
+	/**  The other row's ModRef token. */
+	modRef: string,
+	key: string,
+	name: string,
+	shared: number,
+	sample: string[],
+};
+
+export type ContentSummary = {
+	containers: ContainerSummary[],
+	assets: number,
+	characters: CharacterHint[],
+	slots: SlotHint[],
+	internalOverlaps: number,
 };
 
 export type DetectionNote = {
@@ -160,6 +213,14 @@ export type LocationChoice = { kind: "candidate"; id: string } | { kind: "path";
 
 export type LocationSource = "steam" | "manual" | "fixture";
 
+export type ModContents = {
+	modRef: string,
+	base: BaseIndexState,
+	entries: AssetEntry[],
+	total: number,
+	truncated: boolean,
+};
+
 export type ModDetails = {
 	modRef: string,
 	location: string,
@@ -210,6 +271,9 @@ export type ModRow = {
 	sizeBytes: number | null,
 	info: ModInfo,
 	conflictsWith: ConflictLink[],
+	content: ContentSummary,
+	/**  Rows that ship the same assets in live containers; independent of `conflicts_with`. */
+	contentConflicts: ContentConflictLink[],
 	ambiguous: boolean,
 	issues: ModIssue[],
 	/**  Set when the row cannot be toggled; core re-checks it on the fresh scan. */
@@ -299,6 +363,9 @@ export type ScanStats = {
 	dirsRead: number,
 	entriesSeen: number,
 	durationMs: number,
+	/**  `.utoc` indexes read in this scan; unchanged files come from the cache. */
+	containersRead: number,
+	containersCached: number,
 };
 
 export type Settings = {
@@ -316,6 +383,13 @@ export type SkippedRow = {
 	key: string,
 	name: string,
 	reason: ToggleBlock,
+};
+
+export type Slot = "upper" | "lower" | "bottom" | "fullBody" | "hair" | "head" | "fullHead" | "hat" | "face" | "facePaint" | "faceHair" | "eyeMakeup" | "eyes" | "cheek" | "lips" | "glasses" | "accessory" | "shoes" | "extra";
+
+export type SlotHint = {
+	code: string,
+	slot: Slot | null,
 };
 
 export type SmokeCheck = {

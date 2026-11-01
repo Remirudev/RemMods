@@ -29,6 +29,14 @@ export function useModDetails(modRef: string | null) {
   })
 }
 
+export function useModContents(modRef: string | null) {
+  return useQuery({
+    queryKey: queryKeys.modContents(modRef ?? ''),
+    queryFn: () => ipc.modsContents(modRef ?? ''),
+    enabled: modRef !== null,
+  })
+}
+
 export function useRevealEntry() {
   return useMutation({ mutationFn: (modRef: string) => ipc.modsReveal(modRef) })
 }

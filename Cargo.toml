@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/remmods-core", "crates/remmods-ipc", "src-tauri"]
+members = ["crates/remmods-core", "crates/remmods-ipc", "crates/remmods-pak", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ repository = "https://github.com/Remirudev/RemMods"
 [workspace.dependencies]
 remmods-core = { path = "crates/remmods-core" }
 remmods-ipc = { path = "crates/remmods-ipc" }
+remmods-pak = { path = "crates/remmods-pak" }
 
 tauri = { version = "=2.12.5" }
 tauri-build = { version = "=2.7.4" }

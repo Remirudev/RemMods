@@ -167,6 +167,11 @@ jobs:
           if [[ "$RUNNER_OS" == Windows ]]; then PY=python; else PY=python3; fi
           "$PY" -I scripts/make-fixtures.py smoke "$RUNNER_TEMP/remmods-fixture"
 
+      # The Rust .utoc reader against the independent Python lister on the crafted fixture.
+      - name: Cross-check the .utoc reader
+        if: runner.os == 'Linux'
+        run: bash scripts/utoc-compare.sh "$RUNNER_TEMP/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+
       - name: Build the app (debug, production assets and CSP)
         run: npm run tauri -- build --debug --no-bundle
 

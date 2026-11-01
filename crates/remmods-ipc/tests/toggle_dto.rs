@@ -30,6 +30,9 @@ fn empty_snapshot() -> core::ScanSnapshot {
             dirs_read: 1,
             entries_seen: 0,
             duration: Duration::from_millis(1),
+            containers_read: 0,
+            containers_cached: 0,
+            content_duration: Duration::ZERO,
         },
         content: core::ScanContent {
             paks: PathBuf::from("Paks"),

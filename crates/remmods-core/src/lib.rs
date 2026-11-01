@@ -1,6 +1,7 @@
 //! RemMods core: all logic, synchronous, no Tauri.
 #![deny(unsafe_code)]
 
+pub mod content;
 pub mod error;
 pub mod game;
 pub mod mods;

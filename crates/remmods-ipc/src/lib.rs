@@ -1,6 +1,7 @@
 //! Types that cross the IPC boundary: serde + specta only, no Tauri. No `PathBuf` (display strings
 //! only) and no `u64` (JavaScript numbers lose precision past 2^53).
 
+mod content;
 mod error;
 mod game;
 mod mod_issues;
@@ -10,6 +11,10 @@ mod settings;
 mod smoke;
 mod toggle;
 
+pub use content::{
+    AssetEntry, AssetOrigin, BaseIndexState, CharacterHint, ContainerStatus, ContainerSummary,
+    ContentConflictLink, ContentSummary, ModContents, Slot, SlotHint,
+};
 pub use error::{AppError, OsErrorClass};
 pub use game::{
     DetectionNote, FolderProblem, GameCandidate, GameLocation, GameStatus, InstallInfo,

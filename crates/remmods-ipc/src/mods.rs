@@ -2,6 +2,7 @@ use remmods_core::mods as core;
 use remmods_core::paths::display_path;
 use serde::{Deserialize, Serialize};
 
+use crate::content::{ContentConflictLink, ContentSummary};
 use crate::error::OsErrorClass;
 use crate::mod_issues::ModIssue;
 use crate::toggle::ToggleBlock;
@@ -107,6 +108,9 @@ pub struct ModRow {
     pub size_bytes: Option<f64>,
     pub info: ModInfo,
     pub conflicts_with: Vec<ConflictLink>,
+    pub content: ContentSummary,
+    /// Rows that ship the same assets in live containers; independent of `conflicts_with`.
+    pub content_conflicts: Vec<ContentConflictLink>,
     pub ambiguous: bool,
     pub issues: Vec<ModIssue>,
     /// Set when the row cannot be toggled; core re-checks it on the fresh scan.
@@ -167,6 +171,9 @@ pub struct ScanStats {
     pub entries_seen: u32,
     #[specta(type = specta_typescript::Number)]
     pub duration_ms: f64,
+    /// `.utoc` indexes read in this scan; unchanged files come from the cache.
+    pub containers_read: u32,
+    pub containers_cached: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
@@ -327,6 +334,12 @@ impl From<&core::ModRow> for ModRow {
             size_bytes: row.size.map(bytes),
             info: (&row.info).into(),
             conflicts_with: row.conflicts_with.iter().map(ConflictLink::from).collect(),
+            content: (&row.content).into(),
+            content_conflicts: row
+                .content_conflicts
+                .iter()
+                .map(ContentConflictLink::from)
+                .collect(),
             ambiguous: row.ambiguous,
             issues: row.issues.iter().map(ModIssue::from).collect(),
             toggle_block: row.toggle_block.map(ToggleBlock::from),
@@ -394,6 +407,8 @@ impl From<core::ScanStats> for ScanStats {
             dirs_read: stats.dirs_read,
             entries_seen: stats.entries_seen,
             duration_ms: stats.duration.as_nanos() as f64 / NANOS_PER_MILLI,
+            containers_read: stats.containers_read,
+            containers_cached: stats.containers_cached,
         }
     }
 }

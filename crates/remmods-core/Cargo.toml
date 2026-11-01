@@ -13,6 +13,7 @@ name = "remmods_core"
 doctest = false
 
 [dependencies]
+remmods-pak.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

@@ -21,6 +21,9 @@ overwritten, and the change is journaled so an interrupted toggle is rolled back
 Installing, profiles and removal come in later phases. The full plan, including the phases and their
 exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
 
+**Phase 2b (in progress)**: shows what each mod contains (from its `.utoc` index) and flags mods that
+ship the same assets. It only reads mod files.
+
 ## Platforms
 
 | Platform | Support |

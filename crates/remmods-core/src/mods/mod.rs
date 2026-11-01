@@ -13,8 +13,8 @@ mod metadata;
 mod model;
 mod modref;
 mod path_length;
-mod payload;
-mod rows;
+pub(crate) mod payload;
+pub(crate) mod rows;
 mod scan;
 mod scan_log;
 mod service;
@@ -40,7 +40,7 @@ pub use model::{
     ScanStats, ToggleBlock, UnmanagedEntry, UnmanagedKind,
 };
 pub use modref::{ModRef, ParsedRef, RefKind, paks_identity};
-pub use scan::scan_paks;
+pub use scan::{scan_paks, scan_paks_with};
 pub use service::{ModsService, Refreshed};
 pub use toggle_apply::{SkippedRow, ToggleOutcome, ToggleRequest, ToggleTarget};
 pub use toggle_files::{FileClass, ModFile, ModFiles, list_toggle_files};

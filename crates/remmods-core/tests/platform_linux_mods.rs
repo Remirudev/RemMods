@@ -14,8 +14,9 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use mods_support::{
-    DATA, exercise_read_only, fixture, input, listing, paks_tree, row, scan, smoke_tree,
+    DATA, MOUNT, exercise_read_only, fixture, input, listing, paks_tree, row, scan, smoke_tree, toc,
 };
+use remmods_core::content::ContainerStatus;
 use remmods_core::mods::{
     ModIssue, ModState, ModsError, ToggleBlock, UnmanagedKind, resolve_ref, scan_paks, shell_form,
 };
@@ -179,6 +180,54 @@ fn links_inside_mods_are_reported_not_followed() {
         linked,
         [("Mods/Mixed/Extra", 0), ("Mods/OnlyLinked/Extra", 0)]
     );
+}
+
+#[test]
+fn unreadable_utoc_is_unreadable() {
+    let (_dir, paks) = fixture();
+    let bytes = toc(MOUNT, &["Smoke/A.uasset"]);
+    paks_tree(&paks, &[("Mods/U/U.pak", DATA), ("Mods/U/U.utoc", &bytes)]);
+    let utoc = paks.join("Mods").join("U").join("U.utoc");
+    fs::set_permissions(&utoc, Permissions::from_mode(0o000)).expect("chmod");
+    if fs::File::open(&utoc).is_ok() {
+        // Running as root: permission bits are not enforced.
+        fs::set_permissions(&utoc, Permissions::from_mode(0o644)).expect("restore");
+        return;
+    }
+    let content = scan_paks(&input(&paks)).map(|out| out.content);
+    fs::set_permissions(&utoc, Permissions::from_mode(0o644)).expect("restore");
+    let content = content.expect("scan");
+    let containers = &row(&content, "Standard:U").content.containers;
+    assert_eq!(containers[0].status, ContainerStatus::Unreadable);
+    assert_eq!(containers[0].files, 0);
+}
+
+/// Unknown rows (here: only a linked folder, no live pak) are summarised but never conflict.
+#[test]
+fn unknown_state_rows_are_skipped() {
+    let (_dir, paks) = fixture();
+    let elsewhere = paks.parent().expect("parent").join("elsewhere");
+    paks_tree(&elsewhere, &[("Extra/x.pak", DATA)]);
+    let shared = toc(MOUNT, &["Smoke/Shared.uasset"]);
+    paks_tree(
+        &paks,
+        &[
+            ("Mods/OnlyLinked/OnlyLinked.utoc", &shared),
+            ("Mods/Other/Other.pak", DATA),
+            ("Mods/Other/Other.utoc", &shared),
+        ],
+    );
+    symlink(
+        elsewhere.join("Extra"),
+        paks.join("Mods").join("OnlyLinked").join("Extra"),
+    )
+    .expect("link");
+    let content = scan(&paks).content;
+    let unknown = row(&content, "Standard:OnlyLinked");
+    assert_eq!(unknown.state, ModState::Unknown);
+    assert_eq!(unknown.content.assets, 1);
+    assert!(unknown.content_conflicts.is_empty());
+    assert!(row(&content, "Standard:Other").content_conflicts.is_empty());
 }
 
 #[test]

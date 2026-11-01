@@ -7,12 +7,14 @@ use super::issues::{ModIssue, NameProblem};
 use super::listing::Entry;
 use super::metadata::{MODINFO_MAX_BYTES, parse_modinfo};
 use super::model::{
-    ModInfo, ModInfoOrigin, ModKind, ModRow, ModState, PayloadCounts, RootKind, ToggleBlock,
+    ModInfo, ModInfoOrigin, ModKind, ModRow, ModState, PayloadCounts, PayloadKind, RootKind,
+    ToggleBlock,
 };
 use super::modref::{ModRef, RefKind};
 use super::path_length::path_too_long;
 use super::strategy::{LooseGroup, StateInput, logic_state, pak_state};
 use super::walk::{TopFile, Walk, insert_smallest};
+use crate::content::{ContentSummary, UtocRef};
 use crate::safe_fs::names::{
     DISABLED_PREFIX, LOGIC_NAME_MAX_BYTES, NAME_MAX_BYTES, PAYLOAD_NAME_MAX_BYTES, display_escaped,
     fold_key, has_disabled_prefix_ascii, portable_name_issue, utf16_len, windows_name_issue,
@@ -47,6 +49,8 @@ pub(crate) struct RowDraft {
     pub live_paks: BTreeMap<String, String>,
     /// Every payload basename, `-x` stripped (fold → display).
     pub payload_names: BTreeMap<String, String>,
+    /// Every `.utoc` / `.utoc-x` of the row, read by `content::attach`.
+    pub utocs: Vec<UtocRef>,
 }
 
 pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: ModRef) -> RowDraft {
@@ -105,6 +109,8 @@ pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: Mod
         size: walk.problem.is_none().then_some(walk.size),
         info,
         conflicts_with: Vec::new(),
+        content: ContentSummary::default(),
+        content_conflicts: Vec::new(),
         ambiguous: false,
         issues,
         toggle_block: None,
@@ -117,6 +123,7 @@ pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: Mod
         loose_root: None,
         live_paks: walk.live_paks,
         payload_names: walk.payload_names,
+        utocs: walk.utocs,
     }
 }
 
@@ -133,6 +140,7 @@ pub(crate) fn loose_row(
     let mut live_paks = BTreeMap::new();
     let mut payload_names = BTreeMap::new();
     let mut longest_file = 0;
+    let mut utocs = Vec::new();
     for file in &group.files {
         let payload = file.payload;
         let counter = match (payload.is_pak(), payload.live) {
@@ -142,6 +150,15 @@ pub(crate) fn loose_row(
             (false, false) => &mut counts.off_companion,
         };
         *counter = counter.saturating_add(1);
+        if payload.kind == PayloadKind::Utoc {
+            utocs.push(UtocRef {
+                path: file.path.clone(),
+                rel_path: display_escaped(&file.key),
+                live: payload.live,
+                size: *file.size.as_ref().unwrap_or(&0),
+                modified: file.modified,
+            });
+        }
         match file.size {
             Ok(bytes) => size = size.map(|sum| sum.saturating_add(bytes)),
             Err(found) => {
@@ -186,6 +203,8 @@ pub(crate) fn loose_row(
         size,
         info: ModInfo::defaults(ModInfoOrigin::Missing),
         conflicts_with: Vec::new(),
+        content: ContentSummary::default(),
+        content_conflicts: Vec::new(),
         ambiguous: false,
         issues,
         toggle_block: None,
@@ -198,6 +217,7 @@ pub(crate) fn loose_row(
         loose_root: Some(root.kind),
         live_paks,
         payload_names,
+        utocs,
     }
 }
 

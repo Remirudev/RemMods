@@ -3021,6 +3021,7 @@ dependencies = [
  "log",
  "notify",
  "proptest",
+ "remmods-pak",
  "rustix",
  "same-file",
  "serde",
@@ -3043,6 +3044,15 @@ dependencies = [
  "serde_json",
  "specta",
  "specta-typescript",
+]
+
+[[package]]
+name = "remmods-pak"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

@@ -1,7 +1,9 @@
 import type {
+  ContentSummary,
   GameCandidate,
   GameStatus,
   InstallInfo,
+  ModContents,
   ModDetails,
   ModInfo,
   ModRow,
@@ -81,6 +83,14 @@ export const TEST_INFO: ModInfo = {
   defaulted: { version: true, category: true, description: true, author: true },
 }
 
+export const EMPTY_CONTENT: ContentSummary = {
+  containers: [],
+  assets: 0,
+  characters: [],
+  slots: [],
+  internalOverlaps: 0,
+}
+
 export function makeModRow(name: string, overrides: Partial<ModRow> = {}): ModRow {
   const key = name.toLowerCase()
   return {
@@ -97,6 +107,8 @@ export function makeModRow(name: string, overrides: Partial<ModRow> = {}): ModRo
     sizeBytes: 2048,
     info: TEST_INFO,
     conflictsWith: [],
+    content: EMPTY_CONTENT,
+    contentConflicts: [],
     ambiguous: false,
     toggleBlock: null,
     issues: [],
@@ -114,7 +126,13 @@ export function makeSnapshot(rows: ModRow[], overrides: Partial<ModsSnapshot> = 
     archives: [],
     unmanaged: [],
     leftovers: [],
-    stats: { dirsRead: 3, entriesSeen: rows.length, durationMs: 2 },
+    stats: {
+      dirsRead: 3,
+      entriesSeen: rows.length,
+      durationMs: 2,
+      containersRead: 0,
+      containersCached: 0,
+    },
     ...overrides,
   }
 }
@@ -140,6 +158,14 @@ export const TEST_DETAILS: ModDetails = {
   files: [{ relPath: 'alpha.pak', kind: 'pak', live: true, sizeBytes: 2048 }],
   truncated: false,
   otherFiles: 0,
+}
+
+export const TEST_CONTENTS: ModContents = {
+  modRef: 'm:alpha skin',
+  base: 'complete',
+  entries: [],
+  total: 0,
+  truncated: false,
 }
 
 export const INSTALL_WITHOUT_MANIFEST: Pick<InstallInfo, 'buildId' | 'updateTracking'> = {
