@@ -146,3 +146,19 @@ fn file_ids_are_stable_and_distinct() {
     assert_eq!(platform::file_id(&a).expect("id a again"), first);
     assert_ne!(platform::file_id(&b).expect("id b"), first);
 }
+
+#[test]
+fn fs_path_keeps_trailing_dots_and_spaces() {
+    let kept = remmods_core::platform::fs_path(Path::new(r"C:\Games\Mods\Foo.\Bar \a.pak"));
+    assert_eq!(
+        kept.expect("fs path"),
+        Path::new(r"\\?\C:\Games\Mods\Foo.\Bar \a.pak")
+    );
+    let resolved = remmods_core::platform::fs_path(Path::new(r"C:\Games\x\..\y\.\z"));
+    assert_eq!(resolved.expect("fs path"), Path::new(r"\\?\C:\Games\y\z"));
+    let unc = remmods_core::platform::fs_path(Path::new(r"\\server\share\Mods\Foo."));
+    assert_eq!(
+        unc.expect("fs path"),
+        Path::new(r"\\?\UNC\server\share\Mods\Foo.")
+    );
+}

@@ -66,7 +66,7 @@ mod imp {
     use std::ffi::{OsStr, OsString};
     use std::fs::OpenOptions;
     use std::io;
-    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    use std::os::windows::ffi::OsStrExt;
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use std::path::{Component, Path, PathBuf, Prefix};
@@ -91,27 +91,51 @@ mod imp {
         if bytes.starts_with(VERBATIM.as_bytes()) || bytes.starts_with(NT_OBJECT.as_bytes()) {
             return Ok(path.to_path_buf());
         }
-        let absolute = std::path::absolute(path)?;
-        let kind = match absolute.components().next() {
-            Some(Component::Prefix(prefix)) => prefix.kind(),
-            _ => return Ok(absolute),
+        // `std::path::absolute` runs GetFullPathNameW, which drops trailing dots from components
+        // (`Foo.\a.pak` becomes `Foo\a.pak`), so the verbatim form is built lexically instead.
+        let absolute = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(path)
         };
-        Ok(match kind {
-            Prefix::Disk(_) => prefixed(VERBATIM, absolute.as_os_str()),
-            Prefix::UNC(..) => {
-                // `\\server\share\rest` becomes `\\?\UNC\server\share\rest`.
-                let rest: Vec<u16> = absolute.as_os_str().encode_wide().skip(2).collect();
-                prefixed(VERBATIM_UNC, &OsString::from_wide(&rest))
+        let mut components = absolute.components();
+        let mut verbatim = match components.next() {
+            Some(Component::Prefix(prefix)) => match prefix.kind() {
+                Prefix::Disk(letter) => {
+                    let mut root = OsString::from(VERBATIM);
+                    root.push(format!("{}:", char::from(letter)));
+                    root
+                }
+                Prefix::UNC(server, share) => {
+                    let mut root = OsString::from(VERBATIM_UNC);
+                    root.push(server);
+                    root.push(r"\");
+                    root.push(share);
+                    root
+                }
+                // Device namespace paths (`\\.\`) are not normalised by Win32 either.
+                _ => return Ok(absolute),
+            },
+            _ => return std::path::absolute(path),
+        };
+        let mut parts: Vec<&OsStr> = Vec::new();
+        for component in components {
+            match component {
+                Component::Normal(part) => parts.push(part),
+                Component::ParentDir => {
+                    parts.pop();
+                }
+                Component::Prefix(_) | Component::RootDir | Component::CurDir => {}
             }
-            // Device namespace paths (`\\.\`) are not normalised by Win32 either.
-            _ => absolute,
-        })
-    }
-
-    fn prefixed(prefix: &str, rest: &OsStr) -> PathBuf {
-        let mut joined = OsString::from(prefix);
-        joined.push(rest);
-        PathBuf::from(joined)
+        }
+        if parts.is_empty() {
+            verbatim.push(r"\");
+        }
+        for part in parts {
+            verbatim.push(r"\");
+            verbatim.push(part);
+        }
+        Ok(PathBuf::from(verbatim))
     }
 
     pub(super) fn file_id(path: &Path) -> io::Result<FileId> {
