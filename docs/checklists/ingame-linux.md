@@ -129,3 +129,4 @@ renamed.
    Result:
 8. Claude records the answers in PLAN §11 and §7 after you agree.
    Result:
+| 2026-11-01 | P2 | e5f296b | pass (basic) | Owner toggled a mod off in RemMods with the game closed: it was gone in offline Practice while the other enabled mods stayed; enabled again, it was back. Not run yet: the live toggle during a match and the PLAN §11 engine questions (loose/depth 3/dot folder/`mods` case variant, which mod wins, `~mods` vs `Mods`); proposed to move to the P2b in-game check. |
