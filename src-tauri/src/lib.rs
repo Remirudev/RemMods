@@ -1,6 +1,7 @@
 //! Thin Tauri shell around `remmods-core`: window, plugins, commands and the `--smoke` run.
 
 mod args;
+mod base_index;
 mod commands;
 mod events;
 mod focus;

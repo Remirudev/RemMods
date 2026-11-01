@@ -3,15 +3,37 @@
 mod mods_support;
 mod support;
 
-use mods_support::{DATA, MOUNT, fixture, paks_tree, row, scan, toc};
+use mods_support::{BASE_TOC, DATA, MOUNT, base_toc, fixture, paks_tree, row, scan_based, toc};
 use remmods_core::content::{CONFLICT_SAMPLE, ContainerStatus, ContainerSummary};
 use remmods_core::mods::{ModIssue, ModState, ScanContent};
 use remmods_pak::fixture::TocBuilder;
 
-fn scanned(entries: &[(&str, &[u8])]) -> ScanContent {
+/// The base game of these tests: the files the conflict tests share replace game files.
+const GAME_FILES: &[&str] = &[
+    "Polaris/Content/S/F1.uasset",
+    "Polaris/Content/S/F2.uasset",
+    "Polaris/Content/S/F3.uasset",
+    "Polaris/Content/S/F4.uasset",
+    "Polaris/Content/S/F5.uasset",
+    "Polaris/Content/S/F6.uasset",
+    "Polaris/Content/S/F7.uasset",
+    "Polaris/Content/Smoke/Shared.uasset",
+    "Polaris/Content/Common_umin/Materials/M_Skin.uasset",
+    "Polaris/Content/X/Tex.uasset",
+    "Polaris/Content/Ker/Upper.uasset",
+    "Polaris/Content/Cmn/Common.uasset",
+    "Polaris/Content/Smoke/One.uasset",
+];
+
+fn scanned_with_base(base: &[u8], entries: &[(&str, &[u8])]) -> ScanContent {
     let (_dir, paks) = fixture();
+    paks_tree(&paks, &[(BASE_TOC, base)]);
     paks_tree(&paks, entries);
-    scan(&paks).content
+    scan_based(&paks).content
+}
+
+fn scanned(entries: &[(&str, &[u8])]) -> ScanContent {
+    scanned_with_base(&base_toc(GAME_FILES), entries)
 }
 
 fn linked(content: &ScanContent, key: &str) -> Vec<(String, u32)> {
@@ -410,4 +432,45 @@ fn unknown_hashes_count_as_different() {
         ("Mods/Bee/Bee.utoc", &b),
     ]);
     assert_eq!(linked(&content, "Standard:Aye"), link_to("Standard:Bee", 1));
+}
+
+#[test]
+fn differing_mod_files_absent_from_the_game_are_counted_not_linked() {
+    let a = hashed(&[("Lib/Common.uasset", 1), ("Ker/Upper.uasset", 5)]);
+    let b = hashed(&[("Lib/Common.uasset", 2), ("Ker/Upper.uasset", 5)]);
+    let content = scanned(&[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+    ]);
+    for key in ["Standard:Aye", "Standard:Bee"] {
+        assert!(linked(&content, key).is_empty(), "{key}");
+        let summary = &row(&content, key).content;
+        assert_eq!(summary.shared_other_versions, 1, "{key}");
+        assert_eq!(summary.shared_identical, 1, "{key}");
+    }
+}
+
+#[test]
+fn without_a_usable_base_nothing_conflicts() {
+    let a = hashed(&[("Ker/Upper.uasset", 5)]);
+    let b = hashed(&[("Ker/Upper.uasset", 6)]);
+    let mods: &[(&str, &[u8])] = &[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+    ];
+    let unavailable = scanned_with_base(DATA, mods);
+    let (_dir, paks) = fixture();
+    paks_tree(&paks, &[(BASE_TOC, &base_toc(GAME_FILES))]);
+    paks_tree(&paks, mods);
+    let not_built = mods_support::scan(&paks).content;
+    for content in [unavailable, not_built] {
+        for key in ["Standard:Aye", "Standard:Bee"] {
+            assert!(linked(&content, key).is_empty(), "{key}");
+            assert_eq!(row(&content, key).content.shared_other_versions, 0, "{key}");
+        }
+    }
 }

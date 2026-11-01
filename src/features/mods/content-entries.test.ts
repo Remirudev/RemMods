@@ -60,7 +60,6 @@ describe('sharedLabel', () => {
   it('names what a differing shared file does', () => {
     expect(sharedLabel('replaces', 0, t)).toBeNull()
     expect(sharedLabel('replaces', 1, t)).toBe('Both replace this game file')
-    expect(sharedLabel('adds', 1, t)).toBe('Both add this file, different versions')
     expect(sharedLabel('unknown', 2, t)).toBe('Different versions in 2 other mods')
   })
 })

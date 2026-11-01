@@ -490,7 +490,8 @@ fn mod_row_shape() {
             "characters": [],
             "slots": [],
             "internalOverlaps": 0,
-            "sharedIdentical": 0
+            "sharedIdentical": 0,
+            "sharedOtherVersions": 0
         },
         "contentConflicts": [],
         "ambiguous": false,

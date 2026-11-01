@@ -130,6 +130,10 @@ fn with_navigation_check(mut report: SmokeReport, smoke: &SmokeState) -> SmokeRe
 
 /// The frontend opened the mods table, so a snapshot must exist and match the marker as sets.
 fn scan_fixture_check(core: &Core, fixture: &SmokeFixture) -> SmokeCheck {
+    // The background build may still be running; this waits for it or builds the index itself.
+    if let Err(error) = core.mods_base_refresh() {
+        log::warn!("smoke: base index check failed: {error}");
+    }
     let differences = match core.mods_last() {
         Some(snapshot) => {
             let build_id = installed_build(core);

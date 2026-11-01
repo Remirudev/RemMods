@@ -48,6 +48,7 @@ pub(crate) fn summarize(utocs: &[UtocRef], results: &[ContainerResult]) -> Conte
         slots: slots.into_iter().collect(),
         internal_overlaps: count(live_owners.values().filter(|n| **n > 1).count()),
         shared_identical: 0,
+        shared_other_versions: 0,
     }
 }
 

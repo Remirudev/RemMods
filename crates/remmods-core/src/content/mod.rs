@@ -12,7 +12,7 @@ mod summary;
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
-pub(crate) use base_index::BaseIndex;
+pub use base_index::BaseIndex;
 pub use cache::ContentCache;
 pub(crate) use model::UtocRef;
 pub use model::{
@@ -31,7 +31,11 @@ pub(crate) struct Attached {
 }
 
 /// Summaries and content conflicts for every draft; evicts containers the scan did not see.
-pub(crate) fn attach(drafts: &mut [RowDraft], cache: &ContentCache) -> Attached {
+pub(crate) fn attach(
+    drafts: &mut [RowDraft],
+    cache: &ContentCache,
+    base: Option<&BaseIndex>,
+) -> Attached {
     let started = Instant::now();
     let mut attached = Attached::default();
     let mut seen = HashSet::new();
@@ -56,7 +60,7 @@ pub(crate) fn attach(drafts: &mut [RowDraft], cache: &ContentCache) -> Attached 
         draft.row.content = summary::summarize(&draft.utocs, &row_results);
         results.push(row_results);
     }
-    conflicts::link_content_conflicts(drafts, &results);
+    conflicts::link_content_conflicts(drafts, &results, base);
     cache.retain(&seen);
     cache.set_rows(
         drafts

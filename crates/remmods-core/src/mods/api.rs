@@ -46,7 +46,7 @@ impl Core {
         self.mods.last()
     }
 
-    pub(super) fn mods_scan_input(&self) -> Result<ScanInput, CoreError> {
+    pub(crate) fn mods_scan_input(&self) -> Result<ScanInput, CoreError> {
         let location = self.game_paks().ok_or(GameError::NotSet)?;
         Ok(ScanInput {
             game_view_len: utf16_len(&location.game_view),

@@ -67,6 +67,12 @@ describe('ContentSection', () => {
     ).toBeVisible()
   })
 
+  it('counts mod files other mods ship in other versions', () => {
+    renderSection({ ...READ_CONTENT, sharedOtherVersions: 3 })
+
+    expect(screen.getByText(/^3 shared mod files in other versions\./)).toBeVisible()
+  })
+
   it('says so when the mod has no .utoc files', () => {
     renderSection(EMPTY_CONTENT)
 
@@ -77,6 +83,18 @@ describe('ContentSection', () => {
     renderSection(READ_CONTENT, { ...TEST_CONTENTS, base: 'partial' })
 
     expect(await screen.findByText(/Whether a file adds or replaces/)).toBeVisible()
+  })
+
+  it('says the game index is still loading', async () => {
+    renderSection(READ_CONTENT, { ...TEST_CONTENTS, base: 'loading' })
+
+    expect(await screen.findByText(/Still reading the game’s own index/)).toBeVisible()
+  })
+
+  it('says conflicts are not checked without the game index', async () => {
+    renderSection(READ_CONTENT, { ...TEST_CONTENTS, base: 'unavailable' })
+
+    expect(await screen.findByText(/does not check for conflicts/)).toBeVisible()
   })
 
   it('says when the list is cut off', async () => {

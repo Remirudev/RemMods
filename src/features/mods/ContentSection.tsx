@@ -13,6 +13,8 @@ export function ContentSection({ row }: ContentSectionProps) {
   const readCount = content.containers.filter((container) => container.status === 'read').length
   const unsupported = content.containers.filter((container) => container.status !== 'read')
   const contents = useModContents(readCount > 0 ? row.modRef : null)
+  const base = contents.data?.base
+  const baseNote = base === undefined || base === 'complete' ? null : base
 
   if (content.containers.length === 0) {
     return <Text size="sm">{t(($) => $.content.noUtoc)}</Text>
@@ -36,6 +38,11 @@ export function ContentSection({ row }: ContentSectionProps) {
               {t(($) => $.content.sharedIdentical, { count: content.sharedIdentical })}
             </Text>
           )}
+          {content.sharedOtherVersions > 0 && (
+            <Text size="sm" c="var(--qc-text-2)">
+              {t(($) => $.content.sharedOtherVersions, { count: content.sharedOtherVersions })}
+            </Text>
+          )}
         </>
       )}
       {unsupported.length > 0 && <UnsupportedContainers containers={unsupported} />}
@@ -52,9 +59,9 @@ export function ContentSection({ row }: ContentSectionProps) {
       )}
       {contents.data && (
         <>
-          {contents.data.base !== 'complete' && (
+          {baseNote && (
             <Text size="sm" c="var(--qc-text-2)">
-              {t(($) => $.content.baseNote)}
+              {t(($) => $.content.baseNote[baseNote])}
             </Text>
           )}
           <ContentList entries={contents.data.entries} />

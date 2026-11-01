@@ -18,7 +18,7 @@ use super::rows::{RootRef, RowDraft, folder_row, loose_row, toggle_block};
 use super::strategy::{LooseFile, group_loose_files};
 use super::unmanaged::{UnmanagedDraft, mark_loose_copies};
 use super::walk::{Walk, WalkOptions, display_rel_path, walk};
-use crate::content::{self, Attached, ContentCache};
+use crate::content::{self, Attached, BaseIndex, ContentCache};
 use crate::platform;
 use crate::safe_fs::FsError;
 use crate::safe_fs::names::{
@@ -31,7 +31,17 @@ pub fn scan_paks(input: &ScanInput) -> Result<ScanOutput, ModsError> {
 }
 
 /// `scan_paks` reading `.utoc` indexes through `cache` (P2b): unchanged containers are not re-read.
+/// Without a base-game index no content conflicts are linked.
 pub fn scan_paks_with(input: &ScanInput, cache: &ContentCache) -> Result<ScanOutput, ModsError> {
+    scan_paks_with_base(input, cache, None)
+}
+
+/// `scan_paks_with` linking content conflicts only for files of the base game in `base`.
+pub fn scan_paks_with_base(
+    input: &ScanInput,
+    cache: &ContentCache,
+    base_index: Option<&BaseIndex>,
+) -> Result<ScanOutput, ModsError> {
     let started = Instant::now();
     let base =
         platform::fs_path(&input.paks).map_err(|error| FsError::io("scan", &input.paks, error))?;
@@ -64,7 +74,7 @@ pub fn scan_paks_with(input: &ScanInput, cache: &ContentCache) -> Result<ScanOut
         scan.non_root_folder(&entry);
     }
     let (dirs_read, entries_seen) = (scan.lister.dirs_read, scan.lister.entries_seen);
-    let (content, attached) = scan.finish(cache);
+    let (content, attached) = scan.finish(cache, base_index);
     let stats = ScanStats {
         dirs_read,
         entries_seen,
@@ -287,12 +297,12 @@ impl Scan<'_> {
         ModRef::build(kind, file_id, &self.input.paks_id, keys)
     }
 
-    fn finish(mut self, cache: &ContentCache) -> (ScanContent, Attached) {
+    fn finish(mut self, cache: &ContentCache, base: Option<&BaseIndex>) -> (ScanContent, Attached) {
         mark_ambiguous(&mut self.drafts);
         mark_case_collisions(&mut self.drafts);
         link_conflicts(&mut self.drafts);
         mark_loose_copies(&mut self.drafts, &mut self.unmanaged);
-        let attached = content::attach(&mut self.drafts, cache);
+        let attached = content::attach(&mut self.drafts, cache, base);
         self.drafts.sort_by(compare_drafts);
         let rows = self
             .drafts

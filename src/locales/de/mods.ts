@@ -160,17 +160,25 @@ export const mods: LocaleShape<typeof en> = {
     showAll: 'Alle {{count}} anzeigen',
     truncated: 'Nur die ersten {{shown}} von {{total}} Dateien werden gezeigt.',
     origin: { adds: 'Neu', replaces: 'Ersetzt', unknown: 'Unbekannt' },
-    baseNote:
-      'Ob eine Datei Spielinhalt ersetzt oder hinzufügt, ist unbekannt: Der Index des Spiels ließ sich nicht vollständig lesen.',
+    baseNote: {
+      partial:
+        'Ob eine Datei Spielinhalt ersetzt oder hinzufügt, ist unbekannt: Der Index des Spiels ließ sich nicht vollständig lesen.',
+      unavailable:
+        'Der Index des Spiels ließ sich nicht lesen. RemMods erkennt daher nicht, welche Dateien Spieldateien ersetzen, und prüft keine Konflikte.',
+      loading:
+        'Der Index des Spiels wird noch gelesen. Konflikte zwischen Mods erscheinen, sobald er bereit ist.',
+    },
     sharedWith_one: 'Andere Version in {{count}} anderen Mod',
     sharedWith_other: 'Andere Versionen in {{count}} anderen Mods',
     conflictReplaces_one: 'Beide ersetzen diese Spieldatei',
     conflictReplaces_other: 'Ersetzt diese Spieldatei, wie {{count}} andere Mods',
-    conflictAdds_one: 'Beide fügen diese Datei hinzu, verschiedene Versionen',
-    conflictAdds_other: 'Fügt diese Datei hinzu, wie {{count}} andere Mods, verschiedene Versionen',
     sharedIdentical_one: '{{count}} Datei teilt diese Mod mit anderen Mods als identische Kopie.',
     sharedIdentical_other:
       '{{count}} Dateien teilt diese Mod mit anderen Mods als identische Kopien.',
+    sharedOtherVersions_one:
+      '{{count}} gemeinsame Mod-Datei in anderen Versionen. Sie ist keine Spieldatei, daher kein Konflikt.',
+    sharedOtherVersions_other:
+      '{{count}} gemeinsame Mod-Dateien in anderen Versionen. Sie sind keine Spieldateien, daher kein Konflikt.',
     internalOverlaps_one: '{{count}} Asset ist in mehreren Containern dieser Mod enthalten.',
     internalOverlaps_other: '{{count}} Assets sind in mehreren Containern dieser Mod enthalten.',
     status: {

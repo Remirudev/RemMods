@@ -8,11 +8,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use remmods_core::content::ContentCache;
+use remmods_core::content::{BaseIndex, ContentCache};
 use remmods_core::game::{GameOptions, detect};
 use remmods_core::mods::{
     ModRef, ModRow, ScanContent, ScanInput, ScanOutput, paks_identity, read_details, resolve_ref,
-    scan_paks, scan_paks_with, shell_form,
+    scan_paks, scan_paks_with, scan_paks_with_base, shell_form,
 };
 use remmods_core::platform::{self, OsKind, RegistrySteamValues, SteamHints};
 use remmods_core::{AppPaths, Core, CoreOptions};
@@ -97,6 +97,20 @@ pub fn scan(paks: &Path) -> ScanOutput {
     scan_paks(&input(paks)).expect("scan")
 }
 
+/// A scan with the base index the app builds in the background (content conflicts need it).
+pub fn scan_based(paks: &Path) -> ScanOutput {
+    let base = BaseIndex::load(paks);
+    scan_paks_with_base(&input(paks), &ContentCache::new(), Some(&base)).expect("scan")
+}
+
+/// A crafted base-game `.utoc` (mount `../../../`) listing `files` such as
+/// `Polaris/Content/Ker/Upper.uasset`.
+pub const BASE_TOC: &str = "pakchunk0-Windows.utoc";
+
+pub fn base_toc(files: &[&str]) -> Vec<u8> {
+    toc("../../../", files)
+}
+
 pub fn scan_with(paks: &Path, cache: &ContentCache) -> ScanOutput {
     scan_paks_with(&input(paks), cache).expect("scan")
 }
@@ -125,13 +139,14 @@ pub fn smoke_tree(out: &Path) -> PathBuf {
         &["Shared.uasset", "Shared.ubulk"],
     );
     let beta_toc = toc(MOUNT, &["Smoke/Shared.uasset"]);
+    let base = base_toc(&["Polaris/Content/Smoke/Shared.uasset"]);
     paks_tree(
         &paks,
         &[
             ("remmods-smoke-fixture", b"{}"),
             ("pakchunk0-Windows.pak", b""),
             ("pakchunk0-Windows.ucas", b""),
-            ("pakchunk0-Windows.utoc", b""),
+            ("pakchunk0-Windows.utoc", &base),
             ("global.ucas", b""),
             ("global.utoc", b""),
             ("Stray.pak", DATA),

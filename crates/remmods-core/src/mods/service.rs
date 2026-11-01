@@ -8,7 +8,7 @@ use chrono::Utc;
 use super::error::ModsError;
 use super::meta_store::ModMetaStore;
 use super::model::{ScanInput, ScanOutput, ScanSnapshot};
-use super::scan::scan_paks_with;
+use super::scan::scan_paks_with_base;
 use super::scan_log;
 use crate::content::{BaseIndex, ContentCache};
 
@@ -21,8 +21,10 @@ pub struct ModsService {
     /// One sequence for request registrations and scan starts, so their order is total.
     sequence: AtomicU64,
     contents: ContentCache,
-    /// Built lazily by the first `mods_contents`, never by a scan.
+    /// Built by `Core::mods_base_refresh` in the background, never by a scan; scans only use it.
     base: Mutex<Option<Arc<BaseIndex>>>,
+    /// Single flight for base builds and the rescan that follows them.
+    base_gate: Mutex<()>,
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +48,7 @@ impl ModsService {
             sequence: AtomicU64::new(0),
             contents: ContentCache::new(),
             base: Mutex::new(None),
+            base_gate: Mutex::new(()),
         }
     }
 
@@ -53,12 +56,28 @@ impl ModsService {
         &self.contents
     }
 
-    /// The base-game index of `paks`, rebuilt when its top-level base `.utoc` files changed.
-    pub(crate) fn base_index(&self, paks: &Path) -> Arc<BaseIndex> {
-        let mut base = lock(&self.base);
-        let current = BaseIndex::current(paks, base.take());
-        *base = Some(Arc::clone(&current));
-        current
+    pub(crate) fn base_gate(&self) -> MutexGuard<'_, ()> {
+        lock(&self.base_gate)
+    }
+
+    /// The last built base index of `paks`, if any; never reads the disk.
+    pub(crate) fn stored_base_index(&self, paks: &Path) -> Option<Arc<BaseIndex>> {
+        lock(&self.base)
+            .as_ref()
+            .filter(|base| base.is_for(paks))
+            .map(Arc::clone)
+    }
+
+    /// Rebuilds the base index of `paks` unless its top-level base `.utoc` files are unchanged;
+    /// `true` when a new index was stored. The build runs outside the `base` lock.
+    pub(crate) fn update_base_index(&self, paks: &Path) -> bool {
+        let previous = self.stored_base_index(paks);
+        let current = BaseIndex::current(paks, previous.clone());
+        if previous.is_some_and(|previous| Arc::ptr_eq(&previous, &current)) {
+            return false;
+        }
+        *lock(&self.base) = Some(current);
+        true
     }
 
     pub fn meta(&self) -> &ModMetaStore {
@@ -92,7 +111,8 @@ impl ModsService {
         }
         let scan_started = self.sequence.fetch_add(1, Ordering::SeqCst);
         let scanned_at = Utc::now();
-        let output = scan_paks_with(input, &self.contents)?;
+        let base = self.stored_base_index(&input.paks);
+        let output = scan_paks_with_base(input, &self.contents, base.as_deref())?;
         Ok(self.publish(output, scan_started, scanned_at))
     }
 

@@ -21,7 +21,9 @@ fn base_toc(files: &[&str]) -> Vec<u8> {
     toc("../../../", files)
 }
 
+/// Builds the base index first, as the app's background check does after a scan.
 fn contents(fixture: &ToggleFixture, key: &str) -> ModContents {
+    fixture.core.mods_base_refresh().expect("mods_base_refresh");
     let row = fixture.row(key);
     fixture
         .core
@@ -191,7 +193,9 @@ fn shared_with_lists_enabled_others() {
         ],
     );
     let b = toc(MOUNT, &["Smoke/Shared.uasset"]);
+    let base = base_toc(&["Polaris/Content/Smoke/Shared.uasset"]);
     let fixture = ToggleFixture::new(&[
+        (BASE, &base),
         ("Mods/A/A.pak", DATA),
         ("Mods/A/A.utoc", &a),
         ("Mods/B/B.pak", DATA),
@@ -219,7 +223,9 @@ fn shared_with_lists_enabled_others() {
 #[test]
 fn off_entries_have_no_shared_with() {
     let shared = toc(MOUNT, &["Smoke/Shared.uasset"]);
+    let base = base_toc(&["Polaris/Content/Smoke/Shared.uasset"]);
     let fixture = ToggleFixture::new(&[
+        (BASE, &base),
         ("Mods/A/A.pak", DATA),
         ("Mods/A/A.utoc", &shared),
         ("Mods/A/Off/A_Off.utoc-x", &shared),
@@ -278,6 +284,7 @@ fn contents_never_write() {
     ]);
     let game = fixture.root.join("game");
     let before = listing(&game);
+    fixture.core.mods_base_refresh().expect("mods_base_refresh");
     for row in fixture.snapshot().content.rows.iter() {
         fixture
             .core
@@ -297,7 +304,12 @@ fn shared_with_skips_identical_copies() {
         .file_with_hash("Smoke/Same.uasset", [1; 20])
         .file_with_hash("Smoke/Other.uasset", [3; 20])
         .build();
+    let base = base_toc(&[
+        "Polaris/Content/Smoke/Same.uasset",
+        "Polaris/Content/Smoke/Other.uasset",
+    ]);
     let fixture = ToggleFixture::new(&[
+        (BASE, &base),
         ("Mods/A/A.pak", DATA),
         ("Mods/A/A.utoc", &a),
         ("Mods/B/B.pak", DATA),
@@ -313,5 +325,72 @@ fn shared_with_skips_identical_copies() {
     assert_eq!(
         entry(&found, "Polaris/Content/Smoke/Other.uasset").shared_with,
         [b_ref]
+    );
+}
+
+#[test]
+fn shared_with_only_for_game_files() {
+    let shared = toc(MOUNT, &["Smoke/Game.uasset", "Smoke/Library.uasset"]);
+    let base = base_toc(&["Polaris/Content/Smoke/Game.uasset"]);
+    let fixture = ToggleFixture::new(&[
+        (BASE, &base),
+        ("Mods/A/A.pak", DATA),
+        ("Mods/A/A.utoc", &shared),
+        ("Mods/B/B.pak", DATA),
+        ("Mods/B/B.utoc", &shared),
+    ]);
+    let found = contents(&fixture, "Standard:A");
+    assert_eq!(
+        entry(&found, "Polaris/Content/Smoke/Game.uasset")
+            .shared_with
+            .len(),
+        1
+    );
+    assert!(
+        entry(&found, "Polaris/Content/Smoke/Library.uasset")
+            .shared_with
+            .is_empty()
+    );
+}
+
+#[test]
+fn loading_until_the_base_index_is_built() {
+    let shared = toc(MOUNT, &["Smoke/Game.uasset"]);
+    let base = base_toc(&["Polaris/Content/Smoke/Game.uasset"]);
+    let fixture = ToggleFixture::new(&[
+        (BASE, &base),
+        ("Mods/A/A.pak", DATA),
+        ("Mods/A/A.utoc", &shared),
+        ("Mods/B/B.pak", DATA),
+        ("Mods/B/B.utoc", &shared),
+    ]);
+    let first = fixture.snapshot();
+    let a = fixture.row("Standard:A");
+    assert!(a.content_conflicts.is_empty());
+    let loading = fixture
+        .core
+        .mods_contents(a.mod_ref.as_str())
+        .expect("mods_contents");
+    assert_eq!(loading.base, BaseIndexState::Loading);
+    assert_eq!(loading.entries[0].origin, AssetOrigin::Unknown);
+    assert!(loading.entries[0].shared_with.is_empty());
+
+    let refreshed = fixture
+        .core
+        .mods_base_refresh()
+        .expect("mods_base_refresh")
+        .expect("a new revision");
+    assert!(refreshed.snapshot.revision > first.revision);
+    assert_eq!(fixture.row("Standard:A").content_conflicts.len(), 1);
+    assert!(
+        fixture
+            .core
+            .mods_base_refresh()
+            .expect("mods_base_refresh")
+            .is_none()
+    );
+    assert_eq!(
+        contents(&fixture, "Standard:A").base,
+        BaseIndexState::Complete
     );
 }

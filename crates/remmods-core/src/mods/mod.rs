@@ -40,7 +40,7 @@ pub use model::{
     ScanStats, ToggleBlock, UnmanagedEntry, UnmanagedKind,
 };
 pub use modref::{ModRef, ParsedRef, RefKind, paks_identity};
-pub use scan::{scan_paks, scan_paks_with};
+pub use scan::{scan_paks, scan_paks_with, scan_paks_with_base};
 pub use service::{ModsService, Refreshed};
 pub use toggle_apply::{SkippedRow, ToggleOutcome, ToggleRequest, ToggleTarget};
 pub use toggle_files::{FileClass, ModFile, ModFiles, list_toggle_files};

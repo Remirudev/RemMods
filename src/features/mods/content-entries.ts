@@ -11,7 +11,6 @@ export function sharedLabel(
 ): string | null {
   if (count === 0) return null
   if (origin === 'replaces') return t(($) => $.content.conflictReplaces, { count })
-  if (origin === 'adds') return t(($) => $.content.conflictAdds, { count })
   return t(($) => $.content.sharedWith, { count })
 }
 

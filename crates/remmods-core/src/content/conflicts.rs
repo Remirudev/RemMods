@@ -1,11 +1,14 @@
-//! Content conflicts: rows shipping the same asset key in live Read containers in different
-//! versions (§5.3 rule 3). Identical copies (same content hashes) are not conflicts.
+//! Content conflicts: rows replacing the same base-game asset in live Read containers with
+//! different versions (§5.3 rule 3). Identical copies (same content hashes) are not conflicts, and
+//! mod files absent from the base game are only counted (`shared_other_versions`).
 
 use std::collections::{BTreeMap, HashMap};
 
 use remmods_pak::ContentHash;
 
+use super::base_index::BaseIndex;
 use super::cache::ContainerResult;
+use super::model::BaseIndexState;
 use super::model::{CONFLICT_SAMPLE, ContentConflictLink, UtocRef};
 use super::summary::count;
 use crate::mods::ModState;
@@ -64,7 +67,14 @@ pub(crate) fn live_assets<'a>(
 
 type SortKey = ((String, Vec<u8>), Vec<u8>, String);
 
-pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<ContainerResult>]) {
+/// Without a usable base index (still loading, or unavailable) nothing differing is classified:
+/// no links and no `shared_other_versions`.
+pub(crate) fn link_content_conflicts(
+    drafts: &mut [RowDraft],
+    results: &[Vec<ContainerResult>],
+    base: Option<&BaseIndex>,
+) {
+    let base = base.filter(|base| base.state() != BaseIndexState::Unavailable);
     let live: Vec<BTreeMap<&str, LiveAsset<'_>>> = drafts
         .iter()
         .zip(results)
@@ -84,7 +94,9 @@ pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<Con
     }
     let mut differing: BTreeMap<(usize, usize), Vec<&str>> = BTreeMap::new();
     let mut identical_only = vec![0usize; drafts.len()];
+    let mut other_versions = vec![0usize; drafts.len()];
     for (key, rows) in owners.iter().filter(|(_, rows)| rows.len() > 1) {
+        let replaces_game_file = base.is_some_and(|base| base.contains_asset(key));
         for &this in rows {
             let print = live[this].get(key).and_then(|asset| asset.print);
             let mut conflicting = false;
@@ -92,11 +104,15 @@ pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<Con
                 let other_print = live[other].get(key).and_then(|asset| asset.print);
                 if !identical(print, other_print) {
                     conflicting = true;
-                    differing.entry((this, other)).or_default().push(key);
+                    if replaces_game_file {
+                        differing.entry((this, other)).or_default().push(key);
+                    }
                 }
             }
             if !conflicting {
                 identical_only[this] += 1;
+            } else if base.is_some() && !replaces_game_file {
+                other_versions[this] += 1;
             }
         }
     }
@@ -123,9 +139,11 @@ pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<Con
         );
         links[this].push((sort_key, link));
     }
-    for ((draft, mut found), identical) in drafts.iter_mut().zip(links).zip(identical_only) {
+    let counts = identical_only.into_iter().zip(other_versions);
+    for ((draft, mut found), (identical, other)) in drafts.iter_mut().zip(links).zip(counts) {
         found.sort_by(|a, b| a.0.cmp(&b.0));
         draft.row.content_conflicts = found.into_iter().map(|(_, link)| link).collect();
         draft.row.content.shared_identical = count(identical);
+        draft.row.content.shared_other_versions = count(other);
     }
 }

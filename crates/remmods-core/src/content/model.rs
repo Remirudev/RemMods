@@ -47,6 +47,9 @@ pub struct ContentSummary {
     pub internal_overlaps: u32,
     /// Asset keys this row shares with other enabled rows only as identical copies.
     pub shared_identical: u32,
+    /// Asset keys absent from the base game that other enabled rows ship in other versions;
+    /// 0 while no usable base index exists.
+    pub shared_other_versions: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -54,7 +57,8 @@ pub struct ContentConflictLink {
     pub other: ModRef,
     pub key: String,
     pub name: String,
-    /// Asset keys both rows ship in live Read containers with different content (or unknown).
+    /// Base-game asset keys both rows ship in live Read containers with different content (or
+    /// unknown).
     pub shared: u32,
     /// At most `CONFLICT_SAMPLE` display paths of this row, sorted by asset key.
     pub sample: Vec<String>,
@@ -72,6 +76,8 @@ pub enum BaseIndexState {
     Complete,
     Partial,
     Unavailable,
+    /// Not built yet; it is built in the background after the first scan.
+    Loading,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

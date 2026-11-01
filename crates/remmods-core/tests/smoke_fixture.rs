@@ -4,7 +4,7 @@
 mod mods_support;
 mod support;
 
-use mods_support::{row, scan, smoke_tree};
+use mods_support::{row, scan, scan_based, smoke_tree};
 use remmods_core::content::ContainerStatus;
 use remmods_core::mods::{ModState, ToggleBlock, UnmanagedKind};
 
@@ -12,7 +12,7 @@ use remmods_core::mods::{ModState, ToggleBlock, UnmanagedKind};
 fn smoke_tree_matches_the_marker() {
     let (_dir, root) = support::temp_root();
     let paks = smoke_tree(&root.join("fixture"));
-    let content = scan(&paks).content;
+    let content = scan_based(&paks).content;
     let expected = [
         ("Standard:Alpha", ModState::Enabled, 0, 1),
         ("Standard:Beta", ModState::Disabled, 0, 0),
@@ -42,6 +42,13 @@ fn smoke_tree_matches_the_marker() {
     let alpha_link = &row(&content, "Standard:Alpha").content_conflicts[0];
     assert_eq!(alpha_link.key, "Loose:Mods/Loose");
     assert_eq!(alpha_link.sample, ["Polaris/Content/Smoke/Shared.uasset"]);
+    let without_base = scan(&paks).content;
+    assert!(
+        without_base
+            .rows
+            .iter()
+            .all(|row| row.content_conflicts.is_empty())
+    );
     let tool = &row(&content, "Logic:Tool").content;
     assert!(tool.containers.is_empty());
     let alpha = &row(&content, "Standard:Alpha");

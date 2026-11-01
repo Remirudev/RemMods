@@ -75,6 +75,8 @@ pub struct ContentSummary {
     pub slots: Vec<SlotHint>,
     pub internal_overlaps: u32,
     pub shared_identical: u32,
+    /// Mod files (absent from the base game) other enabled mods ship in other versions.
+    pub shared_other_versions: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -102,6 +104,7 @@ pub enum BaseIndexState {
     Complete,
     Partial,
     Unavailable,
+    Loading,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -220,6 +223,7 @@ impl From<&core::ContentSummary> for ContentSummary {
                 .collect(),
             internal_overlaps: summary.internal_overlaps,
             shared_identical: summary.shared_identical,
+            shared_other_versions: summary.shared_other_versions,
         }
     }
 }
@@ -252,6 +256,7 @@ impl From<core::BaseIndexState> for BaseIndexState {
             core::BaseIndexState::Complete => Self::Complete,
             core::BaseIndexState::Partial => Self::Partial,
             core::BaseIndexState::Unavailable => Self::Unavailable,
+            core::BaseIndexState::Loading => Self::Loading,
         }
     }
 }

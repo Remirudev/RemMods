@@ -35,7 +35,7 @@ export const commands = {
 	/**  Rescans Paks; emits `mods-changed` when the content differs from the last snapshot. */
 	modsRefresh: () => typedError<ModsSnapshot, AppError>(__TAURI_INVOKE("mods_refresh")),
 	modsDetails: (modRef: string) => typedError<ModDetails, AppError>(__TAURI_INVOKE("mods_details", { modRef })),
-	/**  The asset list of one row's `.utoc` containers; the base index is built on the first call. */
+	/**  The asset list of one row's `.utoc` containers; `base` is `loading` until the index is built. */
 	modsContents: (modRef: string) => typedError<ModContents, AppError>(__TAURI_INVOKE("mods_contents", { modRef })),
 	/**  Shows a mod, archive or unmanaged entry selected in the file manager. */
 	modsReveal: (modRef: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_reveal", { modRef })),
@@ -104,7 +104,7 @@ export type AssetEntry = {
 
 export type AssetOrigin = "adds" | "replaces" | "unknown";
 
-export type BaseIndexState = "complete" | "partial" | "unavailable";
+export type BaseIndexState = "complete" | "partial" | "unavailable" | "loading";
 
 /**  A raw character code; `name` only for mappings with local evidence. */
 export type CharacterHint = {
@@ -151,6 +151,8 @@ export type ContentSummary = {
 	slots: SlotHint[],
 	internalOverlaps: number,
 	sharedIdentical: number,
+	/**  Mod files (absent from the base game) other enabled mods ship in other versions. */
+	sharedOtherVersions: number,
 };
 
 export type DetectionNote = {

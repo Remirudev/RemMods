@@ -90,6 +90,7 @@ export const EMPTY_CONTENT: ContentSummary = {
   slots: [],
   internalOverlaps: 0,
   sharedIdentical: 0,
+  sharedOtherVersions: 0,
 }
 
 export function makeModRow(name: string, overrides: Partial<ModRow> = {}): ModRow {

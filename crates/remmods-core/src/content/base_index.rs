@@ -1,5 +1,6 @@
 //! The game's own file paths from the top-level base `.utoc` indexes (§4.5, §5.3 rule 5). Built
-//! lazily by the first `mods_contents`, kept in memory only, rebuilt when the base files change.
+//! in the background after the first scan, kept in memory only, rebuilt when the base files change.
+//! Content conflicts are limited to asset keys found here.
 
 use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use remmods_pak::{PakError, file_key, read_toc};
+use remmods_pak::{PakError, asset_key, file_key, read_toc};
 
 use super::model::BaseIndexState;
 use crate::mods::payload::is_game_file;
@@ -19,12 +20,14 @@ use crate::safe_fs::names::key_text;
 type Fingerprint = Vec<(String, u64, Option<SystemTime>)>;
 
 #[derive(Debug)]
-pub(crate) struct BaseIndex {
+pub struct BaseIndex {
     paks: PathBuf,
     fingerprint: Fingerprint,
-    pub state: BaseIndexState,
+    state: BaseIndexState,
     /// `DefaultHasher` hashes of file keys.
     files: HashSet<u64>,
+    /// `DefaultHasher` hashes of asset keys.
+    assets: HashSet<u64>,
 }
 
 struct BaseContainer {
@@ -80,8 +83,25 @@ fn fingerprint_of(containers: &[BaseContainer]) -> Fingerprint {
 }
 
 impl BaseIndex {
+    /// A fresh build for `paks`.
+    pub fn load(paks: &Path) -> Arc<BaseIndex> {
+        Self::current(paks, None)
+    }
+
+    pub fn state(&self) -> BaseIndexState {
+        self.state
+    }
+
+    pub(crate) fn is_for(&self, paks: &Path) -> bool {
+        self.paks == paks
+    }
+
     pub(crate) fn contains(&self, file_key: &str) -> bool {
         self.files.contains(&hash_key(file_key))
+    }
+
+    pub(crate) fn contains_asset(&self, asset_key: &str) -> bool {
+        self.assets.contains(&hash_key(asset_key))
     }
 
     /// `previous` when it was built for the same Paks and fingerprint, else a fresh build.
@@ -96,12 +116,16 @@ impl BaseIndex {
 
     fn build(paks: &Path, fingerprint: Fingerprint, containers: &[BaseContainer]) -> BaseIndex {
         let mut files = HashSet::new();
+        let mut assets = HashSet::new();
         let (mut indexed, mut failed) = (0u32, 0u32);
         for container in containers {
             match read_toc(&container.path) {
                 Ok(listing) => {
                     indexed += 1;
-                    files.extend(listing.files.iter().map(|f| hash_key(&file_key(&f.path))));
+                    for file in &listing.files {
+                        files.insert(hash_key(&file_key(&file.path)));
+                        assets.insert(hash_key(&asset_key(&file.path)));
+                    }
                 }
                 Err(PakError::NoDirectoryIndex) => {}
                 Err(error) => {
@@ -125,6 +149,7 @@ impl BaseIndex {
             fingerprint,
             state,
             files,
+            assets,
         }
     }
 }

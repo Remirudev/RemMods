@@ -155,16 +155,23 @@ export const mods = {
     showAll: 'Show all {{count}}',
     truncated: 'Only the first {{shown}} of {{total}} files are listed.',
     origin: { adds: 'Adds', replaces: 'Replaces', unknown: 'Unknown' },
-    baseNote:
-      'Whether a file adds or replaces game content is unknown: the game’s own index could not be read completely.',
+    baseNote: {
+      partial:
+        'Whether a file adds or replaces game content is unknown: the game’s own index could not be read completely.',
+      unavailable:
+        'The game’s own index could not be read, so RemMods cannot tell which files replace game files and does not check for conflicts.',
+      loading: 'Still reading the game’s own index. Conflicts between mods show once it is ready.',
+    },
     sharedWith_one: 'Different version in {{count}} other mod',
     sharedWith_other: 'Different versions in {{count}} other mods',
     conflictReplaces_one: 'Both replace this game file',
     conflictReplaces_other: 'Replaces this game file, like {{count}} other mods',
-    conflictAdds_one: 'Both add this file, different versions',
-    conflictAdds_other: 'Adds this file, like {{count}} other mods, different versions',
     sharedIdentical_one: '{{count}} file is shared with other mods as an identical copy.',
     sharedIdentical_other: '{{count}} files are shared with other mods as identical copies.',
+    sharedOtherVersions_one:
+      '{{count}} shared mod file in other versions. It is not a game file, so this is not a conflict.',
+    sharedOtherVersions_other:
+      '{{count}} shared mod files in other versions. They are not game files, so this is not a conflict.',
     internalOverlaps_one: '{{count}} asset is shipped by more than one container of this mod.',
     internalOverlaps_other: '{{count}} assets are shipped by more than one container of this mod.',
     status: {

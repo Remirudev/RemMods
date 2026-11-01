@@ -10,6 +10,8 @@ smoke  A fake Steam library below <out> with TEKKEN 8 installed (appmanifest, bo
 
 Alpha, Loose and Beta also carry small crafted IoStore tables of contents (`.utoc`, TOC v5) so the
 content view has something to list: Alpha and the loose mod ship the same asset, Beta's is disabled.
+The base `pakchunk0-Windows.utoc` lists that asset too, so the two enabled ones replace a game file
+and conflict (content conflicts count only game files).
 
 Refuses when <out> exists and is not empty. Writes only below <out> and never replaces a file.
 """
@@ -176,6 +178,8 @@ def make_toc(mount, paths):
 ALPHA_TOC = make_toc(CONTENT_MOUNT, ["Smoke/Shared.uasset", "Smoke/Alpha.uasset"])
 LOOSE_TOC = make_toc(CONTENT_MOUNT + "Smoke/", ["Shared.uasset", "Shared.ubulk"])
 BETA_TOC = make_toc(CONTENT_MOUNT, ["Smoke/Shared.uasset"])
+# The base game's own index: Smoke/Shared is a game file, so Alpha and Loose replace it.
+BASE_TOC = make_toc("../../../", ["Polaris/Content/Smoke/Shared.uasset"])
 
 # The scanner's expectations for the Paks tree below, read by `remmods --smoke --paks` (check
 # scanFixture) and mirrored by a Rust test in remmods-core, so script and scanner cannot drift.
@@ -216,7 +220,7 @@ SMOKE_PAKS_FILES = (
     (MARKER_NAME, MARKER.encode("utf-8")),
     ("pakchunk0-Windows.pak", b""),
     ("pakchunk0-Windows.ucas", b""),
-    ("pakchunk0-Windows.utoc", b""),
+    ("pakchunk0-Windows.utoc", BASE_TOC),
     ("global.ucas", b""),
     ("global.utoc", b""),
     ("Stray.pak", DATA),

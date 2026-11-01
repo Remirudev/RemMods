@@ -6,18 +6,24 @@ use remmods_ipc::{
 use tauri::{AppHandle, State};
 
 use super::{reveal_in_file_manager, run_blocking};
+use crate::base_index;
 use crate::events::{self, ModsChanged};
 use crate::state::AppState;
 
 /// The cached snapshot when it belongs to the current Paks folder, else a fresh scan.
 #[tauri::command]
 #[specta::specta]
-pub async fn mods_list(state: State<'_, AppState>) -> Result<ModsSnapshot, AppError> {
-    run_blocking(state.core.clone(), |core| {
+pub async fn mods_list(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ModsSnapshot, AppError> {
+    let snapshot = run_blocking(state.core.clone(), |core| {
         core.mods_list()
             .map(|snapshot| ModsSnapshot::from(&*snapshot))
     })
-    .await
+    .await?;
+    base_index::check_soon(&app, &state.core);
+    Ok(snapshot)
 }
 
 /// Rescans Paks; emits `mods-changed` when the content differs from the last snapshot.
@@ -32,6 +38,7 @@ pub async fn mods_refresh(
             .map(|refreshed| (ModsSnapshot::from(&*refreshed.snapshot), refreshed.changed))
     })
     .await?;
+    base_index::check_soon(&app, &state.core);
     if changed {
         events::emit(
             &app,
@@ -56,7 +63,7 @@ pub async fn mods_details(
     .await
 }
 
-/// The asset list of one row's `.utoc` containers; the base index is built on the first call.
+/// The asset list of one row's `.utoc` containers; `base` is `loading` until the index is built.
 #[tauri::command]
 #[specta::specta]
 pub async fn mods_contents(

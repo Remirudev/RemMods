@@ -18,10 +18,13 @@ fn read_all(cache: &ContentCache, utocs: &[UtocRef]) -> Vec<ContainerResult> {
     utocs.iter().map(|utoc| cache.get_or_read(utoc).0).collect()
 }
 
-fn origin(base: &BaseIndex, path: &str) -> AssetOrigin {
+fn origin(base: Option<&BaseIndex>, path: &str) -> AssetOrigin {
+    let Some(base) = base else {
+        return AssetOrigin::Unknown;
+    };
     if base.contains(&file_key(path)) {
         AssetOrigin::Replaces
-    } else if base.state == BaseIndexState::Complete {
+    } else if base.state() == BaseIndexState::Complete {
         AssetOrigin::Adds
     } else {
         AssetOrigin::Unknown
@@ -53,7 +56,7 @@ pub(crate) fn mod_contents(
     row: &ModRow,
     utocs: &[UtocRef],
     cache: &ContentCache,
-    base: &BaseIndex,
+    base: Option<&BaseIndex>,
 ) -> ModContents {
     let partners = partner_assets(row, cache);
     let results = read_all(cache, utocs);
@@ -65,8 +68,8 @@ pub(crate) fn mod_contents(
             continue;
         };
         for file in &container.listing.files {
-            let shared_with = if utoc.live {
-                let key = asset_key(&file.path);
+            let key = asset_key(&file.path);
+            let shared_with = if utoc.live && base.is_some_and(|base| base.contains_asset(&key)) {
                 shared_cache
                     .entry(key)
                     .or_insert_with_key(|key| {
@@ -102,7 +105,7 @@ pub(crate) fn mod_contents(
     entries.truncate(CONTENTS_MAX_ENTRIES);
     ModContents {
         mod_ref: row.mod_ref.clone(),
-        base: base.state,
+        base: base.map_or(BaseIndexState::Loading, BaseIndex::state),
         entries,
         total,
         truncated,
