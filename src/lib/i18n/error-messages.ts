@@ -23,6 +23,26 @@ export function describeAppError(error: AppError): ErrorDescription {
       return { title: t(($) => $.titles.readOnly), message: t(($) => $.messages.readOnly) }
     case 'internal':
       return { title: t(($) => $.titles.internal), message: t(($) => $.messages.internal) }
+    case 'stale':
+      return { title: t(($) => $.titles.stale), message: t(($) => $.messages.stale) }
+    case 'gameNotSet':
+      return { title: t(($) => $.titles.gameNotSet), message: t(($) => $.messages.gameNotSet) }
+    case 'invalidGameFolder': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.invalidGameFolder),
+        message: t(($) => $.folderProblems[reason]),
+      }
+    }
+    case 'launchFailed':
+      return { title: t(($) => $.titles.launchFailed), message: t(($) => $.messages.launchFailed) }
+    case 'revealFailed': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.revealFailed),
+        message: t(($) => $.revealProblems[reason]),
+      }
+    }
   }
 }
 

@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "source": "LIVE capture 2026-11-01T08:56:20Z, game closed; $HOME anonymised, option lists trimmed, personal processes replaced by synthetic decoys",
+  "expect": {
+    "running": false,
+    "signal": null,
+    "pid": null,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 120,
+      "ppid": 2,
+      "comm": "oom_reaper",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 7371,
+      "ppid": 7327,
+      "comm": "srt-bwrap",
+      "cmdline": [
+        "/home/user/.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap",
+        "--args",
+        "26",
+        "/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh",
+        "-nocrashdialog",
+        "-lang=en_US"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null,
+      "note": "steamwebhelper, no TEKKEN"
+    },
+    {
+      "pid": 7504,
+      "ppid": 7371,
+      "comm": "pv-adverb",
+      "cmdline": [
+        "/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh",
+        "-nocrashdialog",
+        "-lang=en_US"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 900,
+      "ppid": 1,
+      "comm": "python3",
+      "cmdline": [
+        "/usr/bin/python3",
+        "-m",
+        "unrelated.daemon"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null,
+      "note": "SYNTHETIC decoy"
+    },
+    {
+      "pid": 24013,
+      "ppid": 1,
+      "comm": "bash",
+      "cmdline": [
+        "/usr/bin/bash",
+        "-c",
+        "grep -E 'comm=\\[reaper\\]|AppId=1778820' capture.txt"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null,
+      "note": "SYNTHETIC: a shell that only mentions the app id"
+    }
+  ]
+}

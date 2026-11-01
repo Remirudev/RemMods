@@ -22,6 +22,17 @@
     "allow-set-ui-scale",
     "allow-app-ready",
     "allow-open-logs",
-    "allow-smoke-report"
+    "allow-smoke-report",
+    "allow-game-status",
+    "allow-game-detect",
+    "allow-game-set-location",
+    "allow-game-pick-location",
+    "allow-game-ack-update",
+    "allow-game-launch",
+    "allow-game-reveal",
+    "allow-mods-list",
+    "allow-mods-refresh",
+    "allow-mods-details",
+    "allow-mods-reveal"
   ]
 }

@@ -6,6 +6,11 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   invalidInput: true,
   readOnly: true,
   internal: true,
+  stale: true,
+  gameNotSet: true,
+  invalidGameFolder: true,
+  launchFailed: true,
+  revealFailed: true,
 }
 
 export class IpcError extends Error {

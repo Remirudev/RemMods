@@ -1,6 +1,6 @@
-import type { PlatformInfo, Settings, SmokeCheck } from '../../lib/ipc/types'
+import type { GameStatus, PlatformInfo, Settings, SmokeCheck } from '../../lib/ipc/types'
 import { QUIET_CANVAS_DARK } from '../../shared/theme/quiet-canvas'
-import type { Loaded } from './types'
+import type { Loaded, Refusal } from './types'
 
 const MAX_REPORTED_ERRORS = 10
 
@@ -58,4 +58,36 @@ export function checkCommand(name: string, result: Loaded<unknown>): SmokeCheck 
 export function checkCollectedErrors(errors: readonly string[]): SmokeCheck {
   if (errors.length === 0) return passedCheck('errors')
   return failedCheck('errors', errors.slice(0, MAX_REPORTED_ERRORS).join('\n'))
+}
+
+// The smoke run points the app at a fixture (`--paks`) or at nothing: any other location would
+// make the checks below depend on the machine.
+export function checkGameStatus(status: Loaded<GameStatus>): SmokeCheck {
+  if (!status.ok) return failedCheck('gameStatus', status.error)
+  const { location } = status.value
+  if (location.kind === 'notSet') return passedCheck('gameStatus', 'notSet')
+  if (location.kind === 'ready' && location.install.source === 'fixture') {
+    return passedCheck('gameStatus', 'ready (fixture)')
+  }
+  const detail = location.kind === 'ready' ? `ready (${location.install.source})` : location.kind
+  return failedCheck('gameStatus', `unexpected location ${detail}`)
+}
+
+export function checkModsTable(doc: Document): SmokeCheck {
+  const rows = doc.querySelectorAll('[data-testid="mods-row"]').length
+  return rows >= 1 ? passedCheck('modsTable', `${rows} rows`) : failedCheck('modsTable', 'no rows')
+}
+
+export function checkOnboarding(doc: Document): SmokeCheck {
+  const rendered = doc.querySelector('[data-testid="onboarding"]') !== null
+  return rendered
+    ? passedCheck('onboarding')
+    : failedCheck('onboarding', 'onboarding panel not rendered')
+}
+
+export function checkModsListWithoutGame(refusal: Refusal): SmokeCheck {
+  if (!refusal.rejected) return failedCheck('modsListWithoutGame', 'mods_list succeeded')
+  return refusal.kind === 'gameNotSet'
+    ? passedCheck('modsListWithoutGame')
+    : failedCheck('modsListWithoutGame', `rejected with ${refusal.kind ?? 'an unknown error'}`)
 }

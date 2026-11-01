@@ -7,6 +7,7 @@ mod backup;
 mod dirs;
 mod error;
 mod lock;
+pub mod names;
 mod retry;
 
 pub use atomic::write_atomic;

@@ -20,3 +20,8 @@ export interface SectionHeadingProps {
   title: string
   description: string
 }
+
+export interface GameRow {
+  label: string
+  value: string
+}

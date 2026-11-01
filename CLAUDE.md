@@ -4,7 +4,7 @@ Mod manager for TEKKEN 8: Tauri 2 shell, Rust core, React 19 + Mantine 9 UI. Lin
 KDE Plasma 6 Wayland is the dev machine), Windows working at all times. Port of Unfug's
 TekkenModManager; folders made by either app keep working in both.
 
-The plan is `docs/PLAN.md` (v3.1, the owner's decisions in §15; phases and exit criteria in §13), the review
+The plan is `docs/PLAN.md` (v3.2, the owner's decisions in §15; phases and exit criteria in §13), the review
 trail `docs/REVIEW-LOG.md`. Read the plan section for the area you touch first. Where code and plan
 disagree, ask before changing either.
 
@@ -24,14 +24,17 @@ disagree, ask before changing either.
 ```
 crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/platform/        the only place for cfg and unsafe; one API, identical signatures on both OSes
-  src/safe_fs/         the only place that mutates the file system
+  src/safe_fs/         the only place that mutates the file system (names.rs: Windows name rules)
+  src/game/            Steam detection, game folder layout, status, process tracker, launch
+  src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
+  tests/fixtures/      proc/ (fake /proc captures) and steam/ (VDF/ACF files); byte-exact, outside Biome
 crates/remmods-ipc/    DTOs + AppError (serde + specta, no Tauri) and their tests
 src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust tests
   src/commands/        one file per domain; async, spawn_blocking, Result<T, AppError>
   src/os/              the only other cfg place (navigation, webview checks)
   src/bin/             export-bindings (feature "bindings") writes src/lib/ipc/bindings.ts
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg.sh, check-native.sh, paks-snapshot.sh
+scripts/               check-cfg/native/commands.sh, paks-snapshot.sh, make-fixtures/scan-expect/proc-capture.py
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, checklists/
 ```
 
@@ -56,8 +59,9 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - Rust: one thiserror enum per module; no `unwrap()`/`expect()` in non-test code unless provably
   infallible (clippy's `unwrap_used`/`expect_used` enforce it: add an `#[allow]` and say why in a
   short comment). Test helpers outside `#[test]` functions need `#![allow(clippy::expect_used)]`.
-- IPC: DTOs are camelCase with no `PathBuf`/`OsString` (display strings only) and no `u64` (use `f64`
-  or `u32`). `AppError` is tagged by `kind` and carries no English; the UI translates it.
+- IPC: DTOs are camelCase with no `PathBuf`/`OsString` (display strings only) and no `u64`/`usize`/`i64`
+  (use `f64` or `u32`); every `f64` field carries `#[specta(type = specta_typescript::Number)]`;
+  struct variants inside `#[serde(tag = "kind")]` enums use single-word field names only. `AppError` is tagged by `kind` and carries no English; the UI translates it.
 
 ## Platform and file-system rules
 
@@ -65,6 +69,8 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   `src-tauri/src/os/**`, `crates/*/tests/platform_*.rs`, `build.rs` files and Cargo target-specific
   dependency tables. `scripts/check-cfg.sh` enforces it in CI.
 - `#![deny(unsafe_code)]` in core; only `platform` may use `unsafe`.
+- Every `std::fs` call on a path inside the game folder goes through `platform::fs_path`; which form
+  a returned path carries (plain or verbatim) is fixed in PLAN/SPEC §4.2.
 - Classify OS errors only through `platform::classify`: raw codes collide (Windows 5/32/33 are
   EIO/EPIPE/EDOM on Linux).
 - Every file-system mutation goes through `remmods_core::safe_fs`; clippy's `disallowed-methods`
@@ -106,8 +112,11 @@ npm run bindings                  # regenerate src/lib/ipc/bindings.ts (commit i
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
-scripts/check-cfg.sh && scripts/check-native.sh
+scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 npm run tauri -- build --debug --no-bundle && ./target/debug/remmods --smoke
+python3 -I scripts/make-fixtures.py smoke <empty dir>   # fixture game folder; then: remmods --smoke --paks <printed Paks path>
+python3 -I scripts/scan-expect.py <paks.tsv>            # expected scan-* log lines from a paks-snapshot
+python3 -I scripts/proc-capture.py <label> > local/proc-<label>.json   # redact by hand before committing
 scripts/paks-snapshot.sh > local/paks-<label>.tsv   # read-only listing of the game's Paks folder
 ```
 

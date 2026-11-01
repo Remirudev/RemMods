@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: the game started by Wine without Steam",
+  "expect": {
+    "running": true,
+    "signal": "gameExecutable",
+    "pid": 200,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 200,
+      "ppid": 1,
+      "comm": "TEKKEN 8.exe",
+      "cmdline": [
+        "Z:\\games\\TEKKEN 8\\TEKKEN 8.exe"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 201,
+      "ppid": 200,
+      "comm": "GameThread",
+      "cmdline": [
+        "S:\\steamapps\\common\\TEKKEN 8\\Polaris\\Binaries\\Win64\\Polaris-Win64-Shipping.exe",
+        "Polaris",
+        "-sm5"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    }
+  ]
+}

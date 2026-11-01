@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: processes that mention TEKKEN 8 or its app id but are not the game",
+  "expect": {
+    "running": false,
+    "signal": null,
+    "pid": null,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 400,
+      "ppid": 1,
+      "comm": "reaper",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "AppId=17788200",
+        "--",
+        "x"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 401,
+      "ppid": 1,
+      "comm": "reaper",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "--",
+        "AppId=1778820"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 402,
+      "ppid": 1,
+      "comm": "reaper",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "AppId=1778820",
+        "--",
+        "x"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 403,
+      "ppid": 1,
+      "comm": "oom_reaper",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 404,
+      "ppid": 1,
+      "comm": "steam",
+      "cmdline": [
+        "/usr/lib/steam/steam",
+        "steam://rungameid/1778820"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 405,
+      "ppid": 1,
+      "comm": "steam",
+      "cmdline": [
+        "steam",
+        "-applaunch",
+        "1778820"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 406,
+      "ppid": 1,
+      "comm": "fossilize_repla",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_64/fossilize_replay",
+        "/home/user/.local/share/Steam/steamapps/shadercache/1778820/fozpipelinesv6/steamapp_pipeline_cache.foz"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 407,
+      "ppid": 1,
+      "comm": "vim",
+      "cmdline": [
+        "vim",
+        "TEKKEN 8.exe notes.txt"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 408,
+      "ppid": 1,
+      "comm": "grep",
+      "cmdline": [
+        "grep",
+        "-r",
+        "Polaris-Win64-Shipping.exe",
+        "/home/user"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 409,
+      "ppid": 1,
+      "comm": "dolphin",
+      "cmdline": [
+        "dolphin",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 410,
+      "ppid": 1,
+      "comm": "python3",
+      "cmdline": [
+        "python3",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 411,
+      "ppid": 1,
+      "comm": "steam.exe",
+      "cmdline": [
+        "c:\\windows\\system32\\steam.exe",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 218,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 412,
+      "ppid": 1,
+      "comm": "wine",
+      "cmdline": [
+        "Z:\\x\\TEKKEN 8.exe.bak"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 413,
+      "ppid": 1,
+      "comm": "Polaris-Win64-X",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 414,
+      "ppid": 1,
+      "comm": "GameThread",
+      "cmdline": [
+        "S:\\other\\Game.exe"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    }
+  ]
+}

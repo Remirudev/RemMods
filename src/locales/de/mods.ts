@@ -1,0 +1,197 @@
+import type { mods as en } from '../en/mods'
+import type { LocaleShape } from '../types'
+
+export const mods: LocaleShape<typeof en> = {
+  header: {
+    refresh: 'Aktualisieren',
+    openPaks: 'Paks-Ordner öffnen',
+    scannedAt: 'Gelesen um {{time}}',
+    conflicts_one: '{{count}} Mod im Konflikt',
+    conflicts_other: '{{count}} Mods im Konflikt',
+  },
+  tabs: { mods: 'Mods', archives: 'Archive', unmanaged: 'Noch geladen', issues: 'Probleme' },
+  filters: {
+    search: 'Mods durchsuchen',
+    searchPlaceholder: 'Name, Kategorie, Autor oder Typ',
+    state: 'Status',
+    states: {
+      all: 'Alle',
+      enabled: 'Aktiv',
+      partial: 'Teilweise',
+      disabledLoaded: 'Inaktiv · wird geladen',
+      disabled: 'Inaktiv',
+      noPakFiles: 'Keine Pak-Dateien',
+      unknown: 'Unbekannt',
+    },
+    kinds: 'Typ',
+    conflictsOnly: 'Konflikte',
+    issuesOnly: 'Probleme',
+    clear: 'Filter zurücksetzen',
+    count_one: '{{count}} von {{total}} Mod',
+    count_other: '{{count}} von {{total}} Mods',
+  },
+  columns: {
+    name: 'Name',
+    state: 'Status',
+    kind: 'Typ',
+    version: 'Version',
+    category: 'Kategorie',
+    size: 'Größe',
+    conflicts: 'Konflikte',
+    issues: 'Probleme',
+  },
+  states: {
+    enabled: 'Aktiv',
+    partial: 'Teilweise',
+    disabledLoaded: 'Inaktiv · wird geladen',
+    disabled: 'Inaktiv',
+    noPakFiles: 'Keine Pak-Dateien',
+    unknown: 'Unbekannt',
+  },
+  stateHints: {
+    enabled: 'Alle .pak-Dateien sind aktiv.',
+    partial: 'Einige .pak-Dateien sind aktiv, andere sind abgeschaltet (-x).',
+    disabledLoaded: 'Nur dem Namen nach deaktiviert: Das Spiel lädt seine .pak-Dateien weiterhin.',
+    disabled: 'Alle .pak-Dateien sind abgeschaltet (-x).',
+    noPakFiles: 'Enthält keine .pak- oder .pak-x-Datei.',
+    unknown:
+      'RemMods konnte die .pak-Dateien nicht zählen: Der Ordner ist nicht lesbar, oder sie liegen in einem verknüpften Ordner.',
+  },
+  kinds: { standard: 'Mods', legacy: '~mods', logic: 'LogicMods', loose: 'Lose' },
+  size: { unknown: 'Unbekannt' },
+  info: { defaults: { category: 'Sonstiges', author: 'Unbekannt' } },
+  badges: {
+    conflicts_one: '{{count}} Konflikt',
+    conflicts_other: '{{count}} Konflikte',
+    issues_one: '{{count}} Problem',
+    issues_other: '{{count}} Probleme',
+    ambiguous: 'Mehrdeutig',
+  },
+  table: { label: 'Installierte Mods', noMatch: 'Kein Mod passt zu den Filtern.' },
+  empty: {
+    title: 'Keine Mods gefunden',
+    description: 'Mods, ~mods und LogicMods sind in {{paks}} leer oder fehlen.',
+  },
+  error: { title: 'Die Mod-Ordner konnten nicht gelesen werden', retry: 'Erneut versuchen' },
+  notices: {
+    caseVariantRoots:
+      'Ordner, die sich nur in Groß- und Kleinschreibung unterscheiden, liegen nebeneinander: {{names}}. Das Spiel lädt womöglich beide.',
+    unreadableRoot: '{{root}} konnte nicht gelesen werden: {{reason}}',
+  },
+  drawer: {
+    key: 'Schlüssel',
+    folder: 'Ort',
+    kind: 'Typ',
+    state: 'Status',
+    size: 'Größe',
+    payload: 'Pak-Dateien',
+    payloadValue: '{{livePak}} aktiv, {{offPak}} aus',
+    payloadCompanions_one: '{{count}} Begleitdatei',
+    payloadCompanions_other: '{{count}} Begleitdateien',
+    info: 'modinfo.json',
+    infoFile: 'Aus modinfo.json gelesen.',
+    infoMissing: 'Keine modinfo.json; es werden Standardwerte angezeigt.',
+    infoInvalid: 'modinfo.json konnte nicht gelesen werden; es werden Standardwerte angezeigt.',
+    version: 'Version',
+    category: 'Kategorie',
+    author: 'Autor',
+    description: 'Beschreibung',
+    descriptionEmpty: 'Keine Beschreibung.',
+    conflicts: 'Konflikte',
+    conflictsNone: 'Kein anderer Mod verwendet dieselben .pak-Namen.',
+    conflictPaks: 'Gemeinsam: {{paks}}',
+    issues: 'Probleme',
+    issuesNone: 'Nichts zu melden.',
+    files: 'Pak-Dateien auf der Festplatte',
+    filesLoading: 'Ordner wird gelesen …',
+    filesError: 'Der Ordner konnte nicht gelesen werden.',
+    filesTruncated: 'Die ersten {{count}} Dateien werden angezeigt.',
+    otherFiles_one: 'und {{count}} weitere Datei',
+    otherFiles_other: 'und {{count}} weitere Dateien',
+    live: 'aktiv',
+    off: 'aus',
+    reveal: 'Im Dateimanager zeigen',
+    close: 'Schließen',
+  },
+  archives: {
+    description:
+      'Archive, die in Paks, Mods, ~mods oder LogicMods liegen. Das Spiel ignoriert sie; die Installation kommt in einer späteren Version.',
+    empty: 'Keine Archive.',
+    reveal: 'Im Dateimanager zeigen',
+  },
+  unmanaged: {
+    description: 'Aktive Pak-Dateien, die RemMods nicht verwaltet. Das Spiel lädt sie trotzdem.',
+    empty: 'Nichts Unverwaltetes.',
+    kinds: {
+      paksFile: 'Lose Datei in Paks',
+      folder: 'Ordner in Paks',
+      linkedFolder: 'Verknüpfter Ordner',
+      tempFolder: 'Unvollständige Installation',
+    },
+    liveFiles_one: '{{count}} aktive Datei',
+    liveFiles_other: '{{count}} aktive Dateien',
+    notInspected: 'Nicht untersucht',
+    copyOf: 'Kopie von Dateien aus {{mods}}',
+    reveal: 'Im Dateimanager zeigen',
+  },
+  issues: {
+    description: 'Was RemMods aufgefallen ist. Hier wird nichts automatisch geändert.',
+    empty: 'Keine Probleme.',
+    leftovers_one:
+      '{{count}} versteckter Ordner einer unvollständigen Installation (nicht geladen)',
+    leftovers_other: '{{count}} versteckte Ordner unvollständiger Installationen (nicht geladen)',
+  },
+  issue: {
+    ambiguousKey:
+      'Eine andere Zeile hat denselben Schlüssel. Änderungen an diesen Zeilen werden blockiert.',
+    caseCollision:
+      'Unterscheidet sich von {{others}} nur in Groß-/Kleinschreibung oder Unicode-Form; Windows oder die Original-App behandeln sie womöglich als einen Namen.',
+    caseVariantRoot:
+      'Liegt in {{root}}, das sich nur in Groß- und Kleinschreibung von einem anderen Stammordner unterscheidet.',
+    nonUnicodeName: 'Der Name ist kein gültiges Unicode und wird maskiert angezeigt.',
+    invalidName: 'Der Name ist unter Windows ungültig: {{problem}}.',
+    nameNotPortable: 'RemMods würde diesen Namen nicht anlegen: {{problem}}.',
+    disabledPrefixName:
+      'Benannt wie ein deaktivierter LogicMod, aber in diesem Ordner ist es ein normaler Mod.',
+    emptyName: 'Der Ordner heißt nur „.disabled_“.',
+    logicDisabledButLoaded:
+      'Nur dem Namen nach deaktiviert: Das Spiel lädt seine .pak-Dateien weiterhin.',
+    logicEnabledNotLoaded:
+      'Dem Namen nach aktiv, aber alle .pak-Dateien sind abgeschaltet (-x), daher lädt das Spiel ihn nicht.',
+    modinfoInvalid: 'modinfo.json konnte nicht gelesen werden; es werden Standardwerte angezeigt.',
+    modinfoCaseVariants:
+      'Mehrere modinfo.json-Dateien unterscheiden sich nur in Groß- und Kleinschreibung; keine wird verwendet.',
+    pathTooLong:
+      'Pfade erreichen {{longest}} Zeichen; Windows und das Spiel können ab 259 (Ordner: 247) scheitern.',
+    linkedRoot: 'Sein Stammordner ist eine Verknüpfung zu einem anderen Ort.',
+    linkedMod: 'Dieser Mod ist eine Verknüpfung zu einem anderen Ordner.',
+    containsLink:
+      'Dateien im verknüpften Ordner werden nicht gezählt; das Spiel lädt sie trotzdem.',
+    looseCopy:
+      'Eine Kopie von {{files}} liegt an anderer Stelle in Paks und wird weiterhin geladen.',
+    looseCaseVariants:
+      'Seine Dateien haben Namen, die sich nur in Groß- und Kleinschreibung unterscheiden.',
+    nonUnicodeFiles_one: '{{count}} Dateiname ist kein gültiges Unicode.',
+    nonUnicodeFiles_other: '{{count}} Dateinamen sind kein gültiges Unicode.',
+    invalidFileNames_one: '{{count}} Dateiname ist unter Windows ungültig.',
+    invalidFileNames_other: '{{count}} Dateinamen sind unter Windows ungültig.',
+    nonPortableFileNames_one:
+      '{{count}} Dateiname verstößt gegen die Namensregeln von RemMods (zu lang oder versteckte Zeichen).',
+    nonPortableFileNames_other:
+      '{{count}} Dateinamen verstoßen gegen die Namensregeln von RemMods (zu lang oder versteckte Zeichen).',
+    unreadable: 'Ein Teil des Ordners konnte nicht gelesen werden: {{reason}}',
+  },
+  nameProblems: {
+    empty: 'er ist leer',
+    dotName: 'er ist „.“ oder „..“',
+    tooLong: 'er ist zu lang',
+    forbiddenChar: 'er enthält < > : " / \\ | ? oder *',
+    controlChar: 'er enthält ein Steuerzeichen',
+    bidiControl: 'er enthält ein unsichtbares Schreibrichtungszeichen',
+    trailingDotOrSpace: 'er endet mit einem Punkt oder Leerzeichen',
+    reservedDeviceName: 'er ist ein reservierter Gerätename wie CON, NUL oder COM1',
+    disabledPrefix: 'er beginnt mit .disabled_',
+    tempName: 'er sieht wie der Ordner einer unvollständigen Installation aus',
+  },
+  severity: { error: 'Fehler', warning: 'Warnung', info: 'Hinweis' },
+}

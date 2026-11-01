@@ -3,7 +3,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::paths::AppPaths;
 use crate::safe_fs::{self, AppLock, FsError};
@@ -32,6 +32,46 @@ pub enum SettingsError {
 pub struct Settings {
     pub version: u32,
     pub appearance: Appearance,
+    /// Omitted while empty; a malformed section reads as empty instead of making the whole file
+    /// corrupt (it is backed up before the first write that drops it).
+    #[serde(
+        default,
+        skip_serializing_if = "GameSettings::is_empty",
+        deserialize_with = "lenient_game"
+    )]
+    pub game: GameSettings,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GameSettings {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<StoredLocation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_seen_build: Option<LastSeenBuild>,
+}
+
+/// The game folder the user chose or RemMods auto-selected; `game_root` is a display path.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredLocation {
+    pub game_root: String,
+    pub source: StoredSource,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StoredSource {
+    Steam,
+    Manual,
+}
+
+/// The Steam build last acknowledged for `game_root` (update notice).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LastSeenBuild {
+    pub game_root: String,
+    pub build_id: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -85,7 +125,14 @@ impl Default for Settings {
         Self {
             version: SETTINGS_VERSION,
             appearance: Appearance::default(),
+            game: GameSettings::default(),
         }
+    }
+}
+
+impl GameSettings {
+    pub fn is_empty(&self) -> bool {
+        self.location.is_none() && self.last_seen_build.is_none()
     }
 }
 
@@ -168,13 +215,21 @@ pub struct SettingsStore {
 struct StoreState {
     snapshot: SettingsSnapshot,
     backed_up_fingerprint: Option<u64>,
+    /// A file with a malformed `game` section was backed up during this start.
+    game_section_backed_up: bool,
 }
 
 enum DiskSettings {
     Missing,
-    Valid(Settings),
+    /// `game_discarded`: the file has a `game` section that did not parse and reads as empty.
+    Valid {
+        settings: Settings,
+        game_discarded: bool,
+    },
     Newer(u64),
-    Corrupt { fingerprint: u64 },
+    Corrupt {
+        fingerprint: u64,
+    },
 }
 
 impl SettingsStore {
@@ -184,7 +239,7 @@ impl SettingsStore {
         let mut backed_up_fingerprint = None;
         let snapshot = match read_disk(&file) {
             Ok(DiskSettings::Missing) => SettingsSnapshot::clean(Settings::default()),
-            Ok(DiskSettings::Valid(settings)) => SettingsSnapshot::clean(settings),
+            Ok(DiskSettings::Valid { settings, .. }) => SettingsSnapshot::clean(settings),
             Ok(DiskSettings::Newer(version)) => {
                 log::warn!(
                     "{} has format version {version}; using defaults read-only",
@@ -222,6 +277,7 @@ impl SettingsStore {
             state: Mutex::new(StoreState {
                 snapshot,
                 backed_up_fingerprint,
+                game_section_backed_up: false,
             }),
         }
     }
@@ -238,13 +294,49 @@ impl SettingsStore {
         }
         update.validate()?;
         let _app_lock = AppLock::try_exclusive(&self.lock_file)?;
-        let base = match read_disk(&self.file)? {
-            DiskSettings::Missing => Settings::default(),
-            DiskSettings::Valid(settings) => settings,
+        let base = self.read_base(&mut state)?;
+        self.write(&mut state, base.with_update(update))
+    }
+
+    /// Same discipline as [`SettingsStore::update`] for the `game` section: app lock, re-read,
+    /// merge the change into what is on disk now, write atomically.
+    pub fn update_game(
+        &self,
+        change: impl FnOnce(&mut GameSettings),
+    ) -> Result<SettingsSnapshot, SettingsError> {
+        let mut state = self.lock_state();
+        if state.snapshot.read_only {
+            return Err(SettingsError::ReadOnly);
+        }
+        let _app_lock = AppLock::try_exclusive(&self.lock_file)?;
+        let mut next = self.read_base(&mut state)?;
+        change(&mut next.game);
+        self.write(&mut state, next.normalized())
+    }
+
+    /// The file as it is on disk now (under the app lock), with corrupt data backed up first.
+    fn read_base(&self, state: &mut StoreState) -> Result<Settings, SettingsError> {
+        match read_disk(&self.file)? {
+            DiskSettings::Missing => Ok(Settings::default()),
+            DiskSettings::Valid {
+                settings,
+                game_discarded,
+            } => {
+                if game_discarded && !state.game_section_backed_up {
+                    let backup = safe_fs::backup_file(&self.file)?;
+                    log::warn!(
+                        "{} has an unreadable game section; backed up to {} before it is replaced",
+                        self.file.display(),
+                        backup.display()
+                    );
+                    state.game_section_backed_up = true;
+                }
+                Ok(settings)
+            }
             DiskSettings::Newer(version) => {
                 log::warn!("settings became format version {version}; now read-only");
                 state.snapshot.read_only = true;
-                return Err(SettingsError::ReadOnly);
+                Err(SettingsError::ReadOnly)
             }
             DiskSettings::Corrupt { fingerprint } => {
                 if state.backed_up_fingerprint != Some(fingerprint) {
@@ -252,10 +344,16 @@ impl SettingsStore {
                     state.backed_up_fingerprint = Some(fingerprint);
                 }
                 state.snapshot.recovered = true;
-                Settings::default()
+                Ok(Settings::default())
             }
-        };
-        let next = base.with_update(update);
+        }
+    }
+
+    fn write(
+        &self,
+        state: &mut StoreState,
+        next: Settings,
+    ) -> Result<SettingsSnapshot, SettingsError> {
         safe_fs::write_atomic(&self.file, &encode(&next)?)?;
         state.snapshot.settings = next;
         Ok(state.snapshot.clone())
@@ -314,10 +412,25 @@ fn parse_settings(bytes: &[u8]) -> DiskSettings {
     {
         return DiskSettings::Newer(version);
     }
+    let game_discarded = value
+        .get("game")
+        .is_some_and(|game| GameSettings::deserialize(game).is_err());
     match serde_json::from_value::<Settings>(value) {
-        Ok(settings) => DiskSettings::Valid(settings.normalized()),
+        Ok(settings) => DiskSettings::Valid {
+            settings: settings.normalized(),
+            game_discarded,
+        },
         Err(_) => corrupt(),
     }
+}
+
+/// A malformed `game` section reads as empty (logged) instead of failing the whole file.
+fn lenient_game<'de, D: Deserializer<'de>>(deserializer: D) -> Result<GameSettings, D::Error> {
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(GameSettings::deserialize(value).unwrap_or_else(|error| {
+        log::warn!("ignoring the unreadable game section of the settings: {error}");
+        GameSettings::default()
+    }))
 }
 
 fn encode(settings: &Settings) -> Result<Vec<u8>, SettingsError> {

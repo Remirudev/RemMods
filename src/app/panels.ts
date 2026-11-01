@@ -2,8 +2,8 @@ import { IconBookmarks, IconPackages, IconSettings } from '@tabler/icons-react'
 import { lazy } from 'react'
 import type { PanelDefinition, PanelId } from './types'
 
-const ModsPanel = lazy(async () => ({
-  default: (await import('../features/mods/ModsPanel')).ModsPanel,
+const ModsGate = lazy(async () => ({
+  default: (await import('./ModsGate')).ModsGate,
 }))
 
 const ProfilesPanel = lazy(async () => ({
@@ -21,15 +21,18 @@ export const DEFAULT_PANEL: PanelId = 'mods'
 export const panelRegistry: Record<PanelId, PanelDefinition> = {
   mods: {
     icon: IconPackages,
-    component: ModsPanel,
+    component: ModsGate,
+    layout: 'fill',
   },
   profiles: {
     icon: IconBookmarks,
     component: ProfilesPanel,
+    layout: 'scroll',
   },
   settings: {
     icon: IconSettings,
     component: SettingsPanel,
+    layout: 'scroll',
   },
 }
 

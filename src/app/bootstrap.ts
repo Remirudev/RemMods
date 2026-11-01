@@ -14,14 +14,17 @@ async function loadOrNull<T>(command: string, load: () => Promise<T>): Promise<T
   }
 }
 
-// Loaded before the first render, so the first frame already has the saved colour scheme and the
-// title bar the window was created with. A failure leaves the queries to retry on mount.
+// Loaded before the first render, so the first frame already has the saved colour scheme, the
+// title bar the window was created with and the game folder (no "looking for TEKKEN 8" flash).
+// A failure leaves the queries to retry on mount.
 export async function preloadAppData(queryClient: QueryClient): Promise<PreloadedAppData> {
-  const [settings, platformInfo] = await Promise.all([
+  const [settings, platformInfo, gameStatus] = await Promise.all([
     loadOrNull('settings_get', () => ipc.settingsGet()),
     loadOrNull('platform_info', () => ipc.platformInfo()),
+    loadOrNull('game_status', () => ipc.gameStatus()),
   ])
   if (settings) queryClient.setQueryData(queryKeys.settings, settings)
   if (platformInfo) queryClient.setQueryData(queryKeys.platformInfo, platformInfo)
-  return { settings, platformInfo }
+  if (gameStatus) queryClient.setQueryData(queryKeys.gameStatus, gameStatus)
+  return { settings, platformInfo, gameStatus }
 }

@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "source": "LIVE capture 2026-11-01T08:55:19Z, game running (gamescope launch options); $HOME anonymised, pressure-vessel option lists trimmed, personal processes replaced by synthetic decoys",
+  "expect": {
+    "running": true,
+    "signal": "steamReaper",
+    "pid": 16404,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 120,
+      "ppid": 2,
+      "comm": "oom_reaper",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16333,
+      "ppid": 7327,
+      "comm": "gamescope-wl",
+      "cmdline": [
+        "gamescope",
+        "-W",
+        "3840",
+        "-H",
+        "2160",
+        "-r",
+        "240",
+        "-f",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_32/steam-launch-wrapper",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "AppId=1778820",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point",
+        "--verb=waitforexitandrun",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16402,
+      "ppid": 16333,
+      "comm": "gamescopereaper",
+      "cmdline": [
+        "gamescopereaper",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_32/steam-launch-wrapper",
+        "--",
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "AppId=1778820",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point",
+        "--verb=waitforexitandrun",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16404,
+      "ppid": 16402,
+      "comm": "reaper",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "AppId=1778820",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point",
+        "--verb=waitforexitandrun",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16405,
+      "ppid": 16404,
+      "comm": "srt-bwrap",
+      "cmdline": [
+        "/home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap",
+        "--args",
+        "26",
+        "/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16505,
+      "ppid": 16405,
+      "comm": "pv-adverb",
+      "cmdline": [
+        "/usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16538,
+      "ppid": 16505,
+      "comm": "python3",
+      "cmdline": [
+        "python3",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "waitforexitandrun",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16540,
+      "ppid": 16538,
+      "comm": "steam.exe",
+      "cmdline": [
+        "c:\\windows\\system32\\steam.exe",
+        "/home/user/.local/share/Steam/steamapps/common/TEKKEN 8/TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 218,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16542,
+      "ppid": 16505,
+      "comm": "wineserver",
+      "cmdline": [
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/files/lib/wine/../../bin/wineserver"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16619,
+      "ppid": 16505,
+      "comm": "xalia.exe",
+      "cmdline": [
+        "\\\\?\\S:\\steamapps\\common\\Proton - Experimental\\files\\share\\wine/../xalia/xalia.exe"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16625,
+      "ppid": 16505,
+      "comm": "TEKKEN 8.exe",
+      "cmdline": [
+        "S:\\steamapps\\common\\TEKKEN 8\\TEKKEN 8.exe",
+        "-sm5"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16630,
+      "ppid": 16505,
+      "comm": "GameThread",
+      "cmdline": [
+        "S:\\steamapps\\common\\TEKKEN 8\\Polaris\\Binaries\\Win64\\Polaris-Win64-Shipping.exe",
+        "Polaris",
+        "-sm5"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16876,
+      "ppid": 16505,
+      "comm": "cmd.exe",
+      "cmdline": [
+        "C:\\windows\\system32\\cmd.exe",
+        "/s/c",
+        "S:\\steamapps\\common\\TEKKEN",
+        "8\\Polaris\\Binaries\\Win64\\PolarisTkdataModLoader\\do_update.bat"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 16896,
+      "ppid": 7327,
+      "comm": "gameoverlayui",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/gameoverlayui",
+        "-pid",
+        "16630",
+        "-steampid",
+        "7327",
+        "-manuallyclearframes",
+        "0",
+        "-gameid",
+        "1778820"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 900,
+      "ppid": 1,
+      "comm": "python3",
+      "cmdline": [
+        "/usr/bin/python3",
+        "-m",
+        "unrelated.daemon"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null,
+      "note": "SYNTHETIC decoy"
+    }
+  ]
+}

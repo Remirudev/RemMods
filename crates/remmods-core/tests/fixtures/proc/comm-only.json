@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: names only, empty command lines",
+  "expect": {
+    "running": true,
+    "signal": "gameExecutable",
+    "pid": 300,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 300,
+      "ppid": 1,
+      "comm": "TEKKEN 8.exe",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    },
+    {
+      "pid": 301,
+      "ppid": 1,
+      "comm": "Polaris-Win64-S",
+      "cmdline": [],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    }
+  ]
+}

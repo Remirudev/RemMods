@@ -2,13 +2,18 @@ import type { MantineColorSchemeManager } from '@mantine/core'
 import type { IconSettings } from '@tabler/icons-react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react'
-import type { PlatformInfo, Settings } from '../lib/ipc/types'
+import type { GameStatus, PlatformInfo, Settings } from '../lib/ipc/types'
 
 export type PanelId = 'mods' | 'profiles' | 'settings'
+
+// 'scroll' panels scroll as a whole; 'fill' panels get the full height and scroll inside (the mod
+// table keeps its header and filters in view).
+export type PanelLayout = 'scroll' | 'fill'
 
 export interface PanelDefinition {
   icon: typeof IconSettings
   component: LazyExoticComponent<ComponentType>
+  layout: PanelLayout
 }
 
 export interface ActivePanelState {
@@ -20,6 +25,7 @@ export interface ActivePanelState {
 export interface PreloadedAppData {
   settings: Settings | null
   platformInfo: PlatformInfo | null
+  gameStatus: GameStatus | null
 }
 
 export interface ProvidersProps {

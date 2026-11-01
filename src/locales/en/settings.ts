@@ -28,6 +28,23 @@ export const settings = {
       hint: 'Applies after RemMods restarts.',
     },
   },
+  game: {
+    title: 'Game',
+    description: 'The TEKKEN 8 folder RemMods works with.',
+    labels: {
+      folder: 'Game folder',
+      paks: 'Paks folder',
+      source: 'Found by',
+      build: 'Build',
+      steam: 'Steam',
+    },
+    notSet: 'No game folder set.',
+    missing: '{{path}} no longer contains TEKKEN 8.',
+    change: 'Change folder…',
+    detect: 'Search again',
+    reveal: 'Open Paks folder',
+    other: 'Other installations',
+  },
   diagnostics: {
     title: 'Diagnostics',
     description: 'Details to include when you report a problem.',

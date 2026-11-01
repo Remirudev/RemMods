@@ -15,8 +15,6 @@ export const shell = {
     mods: {
       title: 'Mods',
       description: 'Your installed TEKKEN 8 mods.',
-      emptyTitle: 'No mods yet',
-      emptyDescription: 'Your mods show up here in Phase 1.',
     },
     profiles: {
       title: 'Profiles',
@@ -34,5 +32,8 @@ export const shell = {
     nothingFound: 'No matching commands',
     goTo: 'Go to {{panel}}',
     toggleScheme: 'Toggle light / dark theme',
+    launchGame: 'Launch TEKKEN 8',
+    refreshMods: 'Refresh the mod list',
+    openPaks: 'Open the Paks folder',
   },
 } as const

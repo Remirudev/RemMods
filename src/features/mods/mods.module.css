@@ -1,0 +1,85 @@
+.tableWrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.tableContainer {
+  position: absolute;
+  inset: 0;
+}
+
+.table {
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+}
+
+.table:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.headerCell {
+  height: 40px;
+  padding-block: 0;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.row {
+  height: 40px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.row > td {
+  height: 40px;
+  padding-block: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row[data-active] {
+  background-color: var(--mantine-color-default-hover);
+  box-shadow: inset 2px 0 0 var(--mantine-primary-color-filled);
+}
+
+.alignRight {
+  text-align: right;
+}
+
+.tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabPanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: var(--mantine-spacing-md);
+}
+
+.fileList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.keyCode {
+  unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+}

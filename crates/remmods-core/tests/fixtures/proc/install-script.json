@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC from the Steam console log: the install-script step runs about 2 s before the game; the evaluator path prefix is assumed",
+  "expect": {
+    "running": true,
+    "signal": "steamReaper",
+    "pid": 500,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 500,
+      "ppid": 1,
+      "comm": "reaper",
+      "cmdline": [
+        "/home/user/.local/share/Steam/ubuntu12_32/reaper",
+        "SteamLaunch",
+        "AppId=1778820",
+        "Install=1",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_4/_v2-entry-point",
+        "--verb=run",
+        "--",
+        "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton",
+        "run",
+        "/home/user/.local/share/Steam/legacycompat/iscriptevaluator.exe",
+        "legacycompat\\evaluatorscript_1778820.vdf"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    }
+  ]
+}

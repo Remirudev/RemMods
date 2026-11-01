@@ -2,6 +2,9 @@
 
 mod args;
 mod commands;
+mod events;
+mod focus;
+mod monitor;
 mod os;
 mod smoke;
 pub mod specta;
@@ -9,17 +12,20 @@ mod state;
 mod window;
 
 use std::fmt::Display;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
+use std::sync::Arc;
 
 use log::LevelFilter;
-use remmods_core::{AppPaths, Core, platform, safe_fs};
+use remmods_core::game::GameOptions;
+use remmods_core::{AppPaths, Core, CoreOptions, platform, safe_fs};
 use tauri::plugin::{Plugin, TauriPlugin};
 use tauri::{App, AppHandle, Manager, RunEvent, Wry};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 use tauri_plugin_window_state::StateFlags;
 
 use crate::args::LaunchArgs;
+use crate::smoke::SmokeFixture;
 use crate::state::{AppState, SmokeState};
 
 const LOG_FILE_NAME: &str = "remmods";
@@ -29,6 +35,7 @@ const LOG_FILES_KEPT: usize = 5;
 pub fn run() {
     let args = LaunchArgs::parse(std::env::args_os().skip(1));
     let smoke = args.smoke;
+    let fixture = smoke_fixture(&args);
     let smoke_root = smoke.then(|| {
         safe_fs::create_smoke_root().unwrap_or_else(|error| {
             fail_fast("Could not create the smoke test folder", &error, smoke)
@@ -39,6 +46,7 @@ pub fn run() {
         None => AppPaths::for_user()
             .unwrap_or_else(|error| fail_fast("Could not find your user folders", &error, smoke)),
     };
+    let smoke_state = smoke_root.map(|root| SmokeState::new(root, fixture));
     if let Err(error) = safe_fs::ensure_dir(&paths.log_dir) {
         fail_fast("Could not open the RemMods data folder", &error, smoke);
     }
@@ -56,12 +64,14 @@ pub fn run() {
     if !smoke {
         builder = builder.plugin(window_state_plugin());
     }
+    // No dialog:* or fs:* permission is granted: the folder picker runs from Rust only.
     let app = builder
+        .plugin(tauri_plugin_dialog::init())
         .plugin(opener_plugin())
         .invoke_handler(bindings.invoke_handler())
         .setup(move |app| {
             bindings.mount_events(app);
-            on_setup(app, &args, paths, smoke_root);
+            on_setup(app, &args, paths, smoke_state);
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -71,12 +81,15 @@ pub fn run() {
 
 /// Runs after the plugins are set up, so the log plugin already records what core logs while it
 /// opens (settings recovery, backup paths, read errors).
-fn on_setup(app: &mut App, args: &LaunchArgs, paths: AppPaths, smoke_root: Option<PathBuf>) {
+fn on_setup(app: &mut App, args: &LaunchArgs, paths: AppPaths, smoke: Option<SmokeState>) {
     log_launch(app, args);
-    let core = Core::open(paths).unwrap_or_else(|error| {
+    let core = Core::open_with(paths, core_options(args)).unwrap_or_else(|error| {
         fail_fast("Could not open the RemMods data folder", &error, args.smoke)
     });
-    app.manage(AppState::new(core, smoke_root));
+    let core = Arc::new(core);
+    let monitor = monitor::start(app.handle().clone(), Arc::clone(&core))
+        .unwrap_or_else(|error| fail_fast("Could not start the game monitor", &error, args.smoke));
+    app.manage(AppState::new(core, monitor, smoke));
     os::webview::ensure_runtime(args.smoke);
 
     let handle = app.handle();
@@ -115,20 +128,51 @@ fn log_launch(app: &App, args: &LaunchArgs) {
         "RemMods {version} starting on {:?}{mode}",
         platform::os_kind()
     );
-    if let Some(paks) = &args.paks {
-        log::info!("--paks {} accepted (unused until Phase 2)", paks.display());
+    match (&args.paks, args.smoke) {
+        (Some(paks), true) => log::info!("smoke fixture Paks: {}", paks.display()),
+        (Some(paks), false) => log::warn!("--paks {} ignored without --smoke", paks.display()),
+        (None, _) => {}
     }
     if !args.ignored.is_empty() {
         log::debug!("ignored arguments: {:?}", args.ignored);
     }
 }
 
+/// `--smoke --paks P` runs only against a generated fixture (`P/remmods-smoke-fixture`).
+fn smoke_fixture(args: &LaunchArgs) -> Option<SmokeFixture> {
+    let paks = args.paks.as_deref().filter(|_| args.smoke)?;
+    let fixture = smoke::load_fixture(paks).unwrap_or_else(|error| {
+        fail_fast(
+            "--paks needs a folder marked remmods-smoke-fixture",
+            &error,
+            true,
+        )
+    });
+    Some(fixture)
+}
+
+/// The smoke run never reads the machine's Steam roots: no detection, and the fixture (if any)
+/// is the fixed game folder.
+fn core_options(args: &LaunchArgs) -> CoreOptions {
+    if !args.smoke {
+        return CoreOptions::default();
+    }
+    CoreOptions {
+        game: GameOptions {
+            steam_detection: false,
+            fixed_location: args.paks.clone(),
+            steam_hints: None,
+        },
+    }
+}
+
 fn on_run_event(app: &AppHandle, event: RunEvent) {
     if let RunEvent::Exit = event {
-        if let Some(state) = app.try_state::<AppState>()
-            && let Some(smoke_state) = state.smoke.as_ref()
-        {
-            smoke::on_exit(smoke_state);
+        if let Some(state) = app.try_state::<AppState>() {
+            state.monitor.stop();
+            if let Some(smoke_state) = state.smoke.as_ref() {
+                smoke::on_exit(smoke_state);
+            }
         }
         log::logger().flush();
     }

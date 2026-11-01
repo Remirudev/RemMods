@@ -12,8 +12,9 @@ confirmation.
 
 ## Status
 
-**Phase 0 (scaffold)**: the app shell with its custom title bar, settings, logging, the `--smoke`
-self-test and the CI gates. This version does not read or change your game files yet. The full plan,
+**Phase 1 (read-only)**: RemMods finds the game (Steam detection or a picked folder), scans `Mods`,
+`~mods` and `LogicMods`, shows every mod with its state and conflicts, shows whether the game is
+running, and launches it through Steam. It does not change your mod files yet. The full plan,
 including the phases and their exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
 
 ## Platforms
@@ -36,7 +37,7 @@ You need:
 - **Linux libraries** for Tauri:
   - Arch / CachyOS: `sudo pacman -S --needed base-devel webkit2gtk-4.1 librsvg openssl`
   - Ubuntu / Debian: `sudo apt install build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev
-    librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libssl-dev`
+    librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwayland-dev libssl-dev`
 - **Windows**: the Microsoft C++ Build Tools ("Desktop development with C++") and WebView2, which
   Windows 10 22H2 and 11 already include. Run the scripts in `scripts/` from Git Bash.
 
@@ -55,7 +56,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 npm run bindings      # regenerates src/lib/ipc/bindings.ts; commit it when it changes
-scripts/check-cfg.sh && scripts/check-native.sh
+scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 ```
 
 Build the app and run its self-test (needs a display; exits 0 when every check passes):
@@ -63,6 +64,14 @@ Build the app and run its self-test (needs a display; exits 0 when every check p
 ```sh
 npm run tauri -- build --debug --no-bundle
 ./target/debug/remmods --smoke
+```
+
+The smoke test can also scan a fixture game folder. The script writes one (it refuses a non-empty
+target) and prints the Paks path:
+
+```sh
+python3 -I scripts/make-fixtures.py smoke /tmp/remmods-fixture
+./target/debug/remmods --smoke --paks "/tmp/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
 ```
 
 `npm run tauri -- build --no-bundle` builds the optimised (LTO) app in `target/release/`. Installers

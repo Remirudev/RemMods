@@ -1,13 +1,19 @@
 //! `--smoke`: the real UI runs its checks and reports through `smoke_report`; a watchdog fails
-//! the run if no report arrives (e.g. the page navigated away or never loaded).
+//! the run if no report arrives (e.g. the page navigated away or never loaded). With
+//! `--paks <fixture Paks>` the last scan is also compared with the fixture's marker file.
 
+use std::collections::BTreeSet;
+use std::fmt::Debug;
 use std::io::Write;
+use std::path::Path;
 use std::process;
 use std::thread;
 use std::time::Duration;
 
-use remmods_core::safe_fs;
-use remmods_ipc::{SmokeCheck, SmokeReport};
+use remmods_core::game::GameLocation;
+use remmods_core::{Core, platform, safe_fs};
+use remmods_ipc::{ModsSnapshot, SmokeCheck, SmokeReport};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 use crate::state::{AppState, SmokeState};
@@ -19,8 +25,70 @@ const EXIT_PASSED: i32 = 0;
 const EXIT_FAILED: i32 = 1;
 const EXIT_TIMEOUT: i32 = 2;
 
-pub fn finish(app: &AppHandle, smoke: &SmokeState, report: SmokeReport) {
-    let report = with_navigation_check(report, smoke);
+/// Written into the fixture's Paks folder by `scripts/make-fixtures.py`.
+const FIXTURE_MARKER: &str = "remmods-smoke-fixture";
+const FIXTURE_NAME: &str = "remmods-smoke";
+const FIXTURE_VERSION: u32 = 1;
+const FIXTURE_MAX_BYTES: u64 = 64 * 1024;
+/// Differences listed in the `scanFixture` detail; the rest are only counted.
+const SHOWN_DIFFERENCES: usize = 5;
+
+/// The marker's expectations: rows, archives, Unmanaged entries, leftovers and the build id.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SmokeFixture {
+    version: u32,
+    fixture: String,
+    rows: Vec<FixtureRow>,
+    archives: Vec<String>,
+    unmanaged: Vec<FixtureUnmanaged>,
+    leftovers: Vec<String>,
+    build_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FixtureRow {
+    key: String,
+    state: String,
+    conflicts: usize,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FixtureUnmanaged {
+    rel_path: String,
+    kind: String,
+}
+
+/// Reads `<paks>/remmods-smoke-fixture`, which must be a regular file holding a version 1 marker:
+/// `--smoke --paks` only ever runs against a generated fixture, never a real game folder.
+pub fn load_fixture(paks: &Path) -> Result<SmokeFixture, String> {
+    let marker = platform::fs_path(&paks.join(FIXTURE_MARKER))
+        .map_err(|error| format!("{}: {error}", paks.display()))?;
+    let failed = |error: &dyn std::fmt::Display| format!("{}: {error}", marker.display());
+    let metadata = std::fs::symlink_metadata(&marker).map_err(|error| failed(&error))?;
+    if !metadata.is_file() {
+        return Err(failed(&"not a regular file"));
+    }
+    if metadata.len() > FIXTURE_MAX_BYTES {
+        return Err(failed(&"larger than a marker"));
+    }
+    let bytes = std::fs::read(&marker).map_err(|error| failed(&error))?;
+    let fixture: SmokeFixture = serde_json::from_slice(&bytes).map_err(|error| failed(&error))?;
+    if fixture.version != FIXTURE_VERSION || fixture.fixture != FIXTURE_NAME {
+        return Err(failed(&format!(
+            "not a version {FIXTURE_VERSION} \"{FIXTURE_NAME}\" marker"
+        )));
+    }
+    Ok(fixture)
+}
+
+pub fn finish(app: &AppHandle, core: &Core, smoke: &SmokeState, report: SmokeReport) {
+    let mut report = with_navigation_check(report, smoke);
+    if let Some(fixture) = &smoke.fixture {
+        report.checks.push(scan_fixture_check(core, fixture));
+    }
     let passed = report.passed();
     if !smoke.finish(passed) {
         return;
@@ -56,6 +124,126 @@ fn with_navigation_check(mut report: SmokeReport, smoke: &SmokeState) -> SmokeRe
         detail: Some(format!("{blocked} blocked by the navigation filter")),
     });
     report
+}
+
+/// The frontend opened the mods table, so a snapshot must exist and match the marker as sets.
+fn scan_fixture_check(core: &Core, fixture: &SmokeFixture) -> SmokeCheck {
+    let differences = match core.mods_last() {
+        Some(snapshot) => {
+            let build_id = installed_build(core);
+            fixture_differences(
+                fixture,
+                &ModsSnapshot::from(&*snapshot),
+                build_id.as_deref(),
+            )
+        }
+        None => vec!["no scan ran".to_owned()],
+    };
+    let detail = if differences.is_empty() {
+        "scan matches the fixture marker".to_owned()
+    } else {
+        summarize(&differences)
+    };
+    SmokeCheck {
+        name: "scanFixture".into(),
+        ok: differences.is_empty(),
+        detail: Some(detail),
+    }
+}
+
+fn installed_build(core: &Core) -> Option<String> {
+    match core.game_status().location {
+        GameLocation::Ready(install) => install.build_id,
+        GameLocation::NotSet | GameLocation::Missing { .. } => None,
+    }
+}
+
+fn fixture_differences(
+    fixture: &SmokeFixture,
+    snapshot: &ModsSnapshot,
+    build_id: Option<&str>,
+) -> Vec<String> {
+    let mut differences = Vec::new();
+    let expected_rows = fixture
+        .rows
+        .iter()
+        .map(|row| (row.key.clone(), row.state.clone(), row.conflicts));
+    let actual_rows = snapshot.rows.iter().map(|row| {
+        let state = wire_name(&row.state);
+        (row.key.clone(), state, row.conflicts_with.len())
+    });
+    compare_sets("row", expected_rows, actual_rows, &mut differences);
+    compare_sets(
+        "archive",
+        fixture.archives.iter().cloned(),
+        snapshot.archives.iter().map(|entry| entry.rel_path.clone()),
+        &mut differences,
+    );
+    compare_sets(
+        "unmanaged",
+        fixture
+            .unmanaged
+            .iter()
+            .map(|entry| (entry.rel_path.clone(), entry.kind.clone())),
+        snapshot
+            .unmanaged
+            .iter()
+            .map(|entry| (entry.rel_path.clone(), wire_name(&entry.kind))),
+        &mut differences,
+    );
+    compare_sets(
+        "leftover",
+        fixture.leftovers.iter().cloned(),
+        snapshot
+            .leftovers
+            .iter()
+            .map(|entry| entry.rel_path.clone()),
+        &mut differences,
+    );
+    if build_id != Some(fixture.build_id.as_str()) {
+        differences.push(format!(
+            "build id {build_id:?} instead of {:?}",
+            fixture.build_id
+        ));
+    }
+    differences
+}
+
+fn compare_sets<T: Ord + Debug>(
+    what: &str,
+    expected: impl Iterator<Item = T>,
+    actual: impl Iterator<Item = T>,
+    differences: &mut Vec<String>,
+) {
+    let expected: BTreeSet<T> = expected.collect();
+    let actual: BTreeSet<T> = actual.collect();
+    for missing in expected.difference(&actual) {
+        differences.push(format!("missing {what} {missing:?}"));
+    }
+    for unexpected in actual.difference(&expected) {
+        differences.push(format!("unexpected {what} {unexpected:?}"));
+    }
+}
+
+/// The IPC spelling of a unit enum (`noPakFiles`, `paksFile`), as the marker writes it.
+fn wire_name<T: Serialize + Debug>(value: &T) -> String {
+    match serde_json::to_value(value) {
+        Ok(serde_json::Value::String(name)) => name,
+        _ => format!("{value:?}"),
+    }
+}
+
+fn summarize(differences: &[String]) -> String {
+    let shown = differences
+        .iter()
+        .take(SHOWN_DIFFERENCES)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join("; ");
+    match differences.len().saturating_sub(SHOWN_DIFFERENCES) {
+        0 => shown,
+        more => format!("{shown}; and {more} more"),
+    }
 }
 
 pub fn start_watchdog(app: AppHandle) -> std::io::Result<()> {

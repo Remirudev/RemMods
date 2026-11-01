@@ -4,10 +4,12 @@ use std::io;
 use std::path::Path;
 
 use remmods_core::CoreError;
+use remmods_core::game::{FolderProblem as CoreFolderProblem, GameError};
+use remmods_core::mods::ModsError;
 use remmods_core::platform;
 use remmods_core::safe_fs::FsError;
 use remmods_core::settings::SettingsError;
-use remmods_ipc::{AppError, OsErrorClass};
+use remmods_ipc::{AppError, FolderProblem, OsErrorClass, RevealProblem};
 use serde_json::{Value, json};
 
 fn to_json(error: &AppError) -> Value {
@@ -152,4 +154,118 @@ fn serialized_errors_carry_no_os_details() {
 
     assert!(!text.contains("settings.json"));
     assert_eq!(text, r#"{"kind":"io","op":"write","class":"notFound"}"#);
+}
+
+#[test]
+fn p1_kinds_round_trip() {
+    let cases = [
+        (AppError::Stale, json!({ "kind": "stale" })),
+        (AppError::GameNotSet, json!({ "kind": "gameNotSet" })),
+        (
+            AppError::InvalidGameFolder {
+                reason: FolderProblem::NotFound,
+            },
+            json!({ "kind": "invalidGameFolder", "reason": "notFound" }),
+        ),
+        (AppError::LaunchFailed, json!({ "kind": "launchFailed" })),
+        (
+            AppError::RevealFailed {
+                reason: RevealProblem::UnsupportedName,
+            },
+            json!({ "kind": "revealFailed", "reason": "unsupportedName" }),
+        ),
+        (
+            AppError::RevealFailed {
+                reason: RevealProblem::Failed,
+            },
+            json!({ "kind": "revealFailed", "reason": "failed" }),
+        ),
+    ];
+    for (error, expected) in cases {
+        assert_eq!(to_json(&error), expected);
+        let parsed: AppError = serde_json::from_value(expected).expect("deserialize");
+        assert_eq!(parsed, error);
+    }
+}
+
+#[test]
+fn game_errors_map_to_their_kinds() {
+    let cases = [
+        (GameError::NotSet, AppError::GameNotSet),
+        (GameError::StaleCandidate, AppError::Stale),
+        (
+            GameError::InvalidPath,
+            AppError::InvalidInput {
+                field: "path".into(),
+            },
+        ),
+    ];
+    for (error, expected) in cases {
+        assert_eq!(AppError::from(CoreError::Game(error)), expected);
+    }
+}
+
+#[test]
+fn invalid_folders_keep_their_reason() {
+    let cases = [
+        (CoreFolderProblem::NotFound, FolderProblem::NotFound),
+        (CoreFolderProblem::Ambiguous, FolderProblem::Ambiguous),
+        (CoreFolderProblem::NotUnicode, FolderProblem::NotUnicode),
+        (CoreFolderProblem::Unreadable, FolderProblem::Unreadable),
+    ];
+    for (problem, reason) in cases {
+        assert_eq!(
+            AppError::from(CoreError::Game(GameError::InvalidFolder(problem))),
+            AppError::InvalidGameFolder { reason }
+        );
+    }
+}
+
+#[test]
+fn mods_errors_map_to_their_kinds() {
+    let scan_failed = FsError::io(
+        "scan",
+        Path::new("Paks"),
+        io::Error::from(io::ErrorKind::NotFound),
+    );
+    let cases = [
+        (
+            ModsError::Fs(scan_failed),
+            AppError::Io {
+                op: "scan".into(),
+                class: OsErrorClass::NotFound,
+            },
+        ),
+        (ModsError::Fs(FsError::Busy), AppError::Busy),
+        (ModsError::Stale, AppError::Stale),
+        (
+            ModsError::BadRef,
+            AppError::InvalidInput {
+                field: "modRef".into(),
+            },
+        ),
+        (
+            ModsError::NotShellSafe,
+            AppError::RevealFailed {
+                reason: RevealProblem::UnsupportedName,
+            },
+        ),
+    ];
+    for (error, expected) in cases {
+        assert_eq!(AppError::from(CoreError::Mods(error)), expected);
+    }
+}
+
+#[test]
+fn new_kinds_carry_no_paths() {
+    let error = AppError::from(CoreError::Game(GameError::InvalidFolder(
+        CoreFolderProblem::Unreadable,
+    )));
+
+    let text = serde_json::to_string(&error).expect("serialize");
+
+    assert_eq!(
+        text,
+        r#"{"kind":"invalidGameFolder","reason":"unreadable"}"#
+    );
 }

@@ -1,0 +1,82 @@
+import type { game as en } from '../en/game'
+import type { LocaleShape } from '../types'
+
+export const game: LocaleShape<typeof en> = {
+  detecting: 'TEKKEN 8 wird gesucht …',
+  running: {
+    running: 'TEKKEN 8 läuft',
+    notRunning: 'TEKKEN 8 läuft nicht',
+    unknown: 'Spielstatus unbekannt',
+    short: { running: 'Läuft', notRunning: 'Läuft nicht', unknown: 'Unbekannt' },
+  },
+  launch: {
+    button: 'TEKKEN 8 starten',
+    starting: 'Wird gestartet …',
+    running: 'Läuft',
+    hint: 'Startet das Spiel über Steam.',
+    otherInstall: 'Steam startet seine eigene TEKKEN-8-Installation, nicht diesen Ordner.',
+  },
+  update: {
+    title: 'TEKKEN 8 wurde aktualisiert',
+    body: 'Das Spiel wurde von Build {{from}} auf Build {{to}} aktualisiert. Mods für den alten Build können das Spiel abstürzen lassen oder falsch aussehen.',
+    acknowledge: 'Verstanden',
+  },
+  originalApp: {
+    title: 'Ein anderer Mod-Manager läuft',
+    body: 'Ein Programm namens ModManager.exe läuft, vermutlich TekkenModManager. Aktualisiere die Liste, nachdem du dort Mods geändert hast.',
+  },
+  sources: { steam: 'Über Steam gefunden', manual: 'Von dir gewählt', fixture: 'Testdaten' },
+  steamKinds: {
+    native: 'Steam',
+    flatpak: 'Steam (Flatpak)',
+    snap: 'Steam (Snap)',
+    windows: 'Steam',
+  },
+  tracking: {
+    available: 'Build {{build}}',
+    noManifest: 'Updateprüfung nicht verfügbar (kein Steam-Manifest)',
+    unreadable: 'Updateprüfung nicht verfügbar (Manifest nicht lesbar)',
+  },
+  candidate: {
+    use: 'Diesen Ordner verwenden',
+    inUse: 'In Verwendung',
+    incomplete: 'Nicht vollständig installiert',
+    build: 'Build {{build}}',
+    buildUnknown: 'Build unbekannt',
+  },
+  notes: {
+    title: 'Was RemMods geprüft hat',
+    line: 'Zeile {{line}}',
+    empty: 'Nichts zu melden.',
+    codes: {
+      steamRoot: 'Steam gefunden in {{path}}',
+      noSteam: 'Keine Steam-Installation gefunden',
+      vdfError: '{{path}} konnte nicht gelesen werden',
+      libraryMissing: 'Steam-Bibliothek {{path}} fehlt',
+      libraryNotAbsolute: 'Steam-Bibliothek {{path}} ist kein absoluter Pfad',
+      manifestError: '{{path}} konnte nicht gelesen werden',
+      installIncomplete: 'TEKKEN 8 in {{path}} ist nicht vollständig installiert',
+      gameFolderInvalid: '{{path}} enthält die Spieldateien nicht',
+      pathNotUnicode: '{{path}} enthält Zeichen, die RemMods nicht speichern kann',
+      registryUnreadable: 'Der Registry-Wert {{path}} konnte nicht gelesen werden',
+    },
+    details: {
+      unexpectedEof: 'die Datei endet zu früh',
+      unterminatedString: 'ein Text in Anführungszeichen ist nicht geschlossen',
+      expectedOpenBrace: 'ein „{“ fehlt',
+      unexpectedCloseBrace: 'ein „}“ ist zu viel',
+      emptyKey: 'ein Eintrag hat keinen Namen',
+      tooDeep: 'sie ist zu tief verschachtelt',
+      notUtf8: 'sie ist kein UTF-8-Text',
+      tooLarge: 'sie ist größer als 1 MiB',
+      wrongRoot: 'sie ist nicht die erwartete Art von Steam-Datei',
+      ioError: 'sie konnte nicht geöffnet werden',
+      missingKey: 'ein nötiger Eintrag fehlt',
+      wrongAppId: 'sie gehört zu einem anderen Spiel',
+      unsafeInstallDir: 'ihr Installationsordner ist kein einfacher Ordnername',
+      badBuildId: 'ihre Build-Nummer ist keine Zahl',
+      badNumber: 'eine Zahl darin ist ungültig',
+      notUnicode: 'der Wert ist kein gültiger Unicode-Text',
+    },
+  },
+}
