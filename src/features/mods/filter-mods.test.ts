@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest'
+import type { ModKind, ModRow } from '../../lib/ipc/types'
+import { makeModRow } from '../../test/fixtures'
+import { EMPTY_FILTER, filterMods, isFilterActive } from './filter-mods'
+import type { ModFilter } from './types'
+
+const KIND_LABELS: Record<ModKind, string> = {
+  standard: 'Mods',
+  legacy: '~mods',
+  logic: 'LogicMods',
+  loose: 'Loose',
+}
+const kindLabel = (kind: ModKind) => KIND_LABELS[kind]
+const info = makeModRow('x').info
+
+const ROWS: ModRow[] = [
+  makeModRow('Alpha Skin', { info: { ...info, category: 'Costume', author: 'Rem' } }),
+  makeModRow('Beta', { state: 'partial', kind: 'legacy', key: 'beta-key' }),
+  makeModRow('Gamma', { state: 'disabled' }),
+  makeModRow('Delta', { state: 'noPakFiles' }),
+  makeModRow('Epsilon', { state: 'unknown' }),
+  makeModRow('Logic Loaded', {
+    state: 'disabled',
+    kind: 'logic',
+    logicPrefixed: true,
+    payload: { livePak: 1, offPak: 0, liveCompanion: 0, offCompanion: 0 },
+  }),
+  makeModRow('Conflicted', {
+    conflictsWith: [{ modRef: 'm:x', key: 'x', name: 'X', paks: ['a.pak'] }],
+  }),
+  makeModRow('Troubled', { issues: [{ kind: 'linkedMod' }] }),
+]
+
+function names(filter: Partial<ModFilter>, locale = 'en'): string[] {
+  return filterMods(ROWS, { ...EMPTY_FILTER, ...filter }, kindLabel, locale).map((row) => row.name)
+}
+
+describe('filterMods', () => {
+  it('returns every row for the empty filter', () => {
+    expect(names({})).toHaveLength(ROWS.length)
+  })
+
+  it('matches the text in name, key, category, author and kind label', () => {
+    expect(names({ text: 'alpha' })).toEqual(['Alpha Skin'])
+    expect(names({ text: 'beta-key' })).toEqual(['Beta'])
+    expect(names({ text: 'costume' })).toEqual(['Alpha Skin'])
+    expect(names({ text: ' REM ' })).toEqual(['Alpha Skin'])
+    expect(names({ text: '~mods' })).toEqual(['Beta'])
+    expect(names({ text: 'logicmods' })).toEqual(['Logic Loaded'])
+  })
+
+  it('lowercases with the given locale', () => {
+    const rows = [makeModRow('Istanbul'), makeModRow('Izmir')]
+    const filter = { ...EMPTY_FILTER, text: 'ıstanbul' }
+    expect(filterMods(rows, filter, kindLabel, 'tr').map((row) => row.name)).toEqual(['Istanbul'])
+    expect(filterMods(rows, filter, kindLabel, 'en')).toEqual([])
+  })
+
+  it('filters by every state, including noPakFiles and unknown', () => {
+    expect(names({ state: 'enabled' })).toContain('Alpha Skin')
+    expect(names({ state: 'partial' })).toEqual(['Beta'])
+    expect(names({ state: 'noPakFiles' })).toEqual(['Delta'])
+    expect(names({ state: 'unknown' })).toEqual(['Epsilon'])
+  })
+
+  it('keeps a prefixed folder with live paks out of the disabled filter', () => {
+    expect(names({ state: 'disabled' })).toEqual(['Gamma'])
+    expect(names({ state: 'disabledLoaded' })).toEqual(['Logic Loaded'])
+  })
+
+  it('filters by kinds, conflicts and issues', () => {
+    expect(names({ kinds: ['legacy', 'logic'] })).toEqual(['Beta', 'Logic Loaded'])
+    expect(names({ conflictsOnly: true })).toEqual(['Conflicted'])
+    expect(names({ issuesOnly: true })).toEqual(['Troubled'])
+  })
+
+  it('combines the criteria', () => {
+    expect(names({ text: 'con', conflictsOnly: true })).toEqual(['Conflicted'])
+    expect(names({ text: 'zzz' })).toEqual([])
+  })
+})
+
+describe('isFilterActive', () => {
+  it('is false for the empty filter and for whitespace only', () => {
+    expect(isFilterActive(EMPTY_FILTER)).toBe(false)
+    expect(isFilterActive({ ...EMPTY_FILTER, text: '   ' })).toBe(false)
+  })
+
+  it('is true for any criterion', () => {
+    expect(isFilterActive({ ...EMPTY_FILTER, text: 'a' })).toBe(true)
+    expect(isFilterActive({ ...EMPTY_FILTER, state: 'enabled' })).toBe(true)
+    expect(isFilterActive({ ...EMPTY_FILTER, kinds: ['logic'] })).toBe(true)
+    expect(isFilterActive({ ...EMPTY_FILTER, conflictsOnly: true })).toBe(true)
+    expect(isFilterActive({ ...EMPTY_FILTER, issuesOnly: true })).toBe(true)
+  })
+})

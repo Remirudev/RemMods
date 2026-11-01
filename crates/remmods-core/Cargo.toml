@@ -21,6 +21,9 @@ chrono.workspace = true
 dirs.workspace = true
 atomic-write-file.workspace = true
 dunce.workspace = true
+same-file.workspace = true
+unicase.workspace = true
+unicode-normalization.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 rustix.workspace = true
@@ -30,6 +33,7 @@ windows-sys.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true

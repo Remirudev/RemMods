@@ -4,6 +4,7 @@ import { PanelHeader } from '../../shared/components/PanelHeader'
 import { AboutSection } from './AboutSection'
 import { AppearanceSection } from './AppearanceSection'
 import { DiagnosticsSection } from './DiagnosticsSection'
+import { GameSection } from './GameSection'
 import { SettingsAlerts } from './SettingsAlerts'
 
 export function SettingsPanel() {
@@ -17,6 +18,7 @@ export function SettingsPanel() {
       />
       <SettingsAlerts />
       <AppearanceSection />
+      <GameSection />
       <DiagnosticsSection />
       <AboutSection />
     </Stack>

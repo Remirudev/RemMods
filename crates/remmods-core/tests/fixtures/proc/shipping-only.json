@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: only the shipping exe, named GameThread by Wine",
+  "expect": {
+    "running": true,
+    "signal": "gameExecutable",
+    "pid": 210,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 210,
+      "ppid": 1,
+      "comm": "GameThread",
+      "cmdline": [
+        "S:\\steamapps\\common\\TEKKEN 8\\Polaris\\Binaries\\Win64\\Polaris-Win64-Shipping.exe",
+        "Polaris",
+        "-sm5"
+      ],
+      "nulPadding": 216,
+      "cmdlineHex": null
+    }
+  ]
+}

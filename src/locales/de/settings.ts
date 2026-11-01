@@ -31,6 +31,23 @@ export const settings: LocaleShape<typeof en> = {
       hint: 'Wird nach einem Neustart von RemMods übernommen.',
     },
   },
+  game: {
+    title: 'Spiel',
+    description: 'Der TEKKEN-8-Ordner, mit dem RemMods arbeitet.',
+    labels: {
+      folder: 'Spielordner',
+      paks: 'Paks-Ordner',
+      source: 'Gefunden durch',
+      build: 'Build',
+      steam: 'Steam',
+    },
+    notSet: 'Kein Spielordner festgelegt.',
+    missing: '{{path}} enthält TEKKEN 8 nicht mehr.',
+    change: 'Ordner ändern …',
+    detect: 'Erneut suchen',
+    reveal: 'Paks-Ordner öffnen',
+    other: 'Weitere Installationen',
+  },
   diagnostics: {
     title: 'Diagnose',
     description: 'Angaben, die bei einer Fehlermeldung helfen.',

@@ -6,7 +6,7 @@ import { createQueryClient } from '../lib/query/client'
 import { queryKeys } from '../shared/query-keys'
 import { buildTheme } from '../shared/theme/build-theme'
 import { cssVariablesResolver } from '../shared/theme/css-variables'
-import { TEST_PLATFORM_INFO, TEST_SETTINGS } from './fixtures'
+import { makeGameStatus, TEST_PLATFORM_INFO, TEST_SETTINGS } from './fixtures'
 import type { RenderedWithProviders, RenderOptions } from './types'
 
 const theme = buildTheme()
@@ -25,6 +25,8 @@ export function renderWithProviders(
   const platformInfo = withDefault(options.platformInfo, TEST_PLATFORM_INFO)
   if (settings) queryClient.setQueryData(queryKeys.settings, settings)
   if (platformInfo) queryClient.setQueryData(queryKeys.platformInfo, platformInfo)
+  const gameStatus = withDefault(options.gameStatus, makeGameStatus())
+  if (gameStatus) queryClient.setQueryData(queryKeys.gameStatus, gameStatus)
 
   render(
     <QueryClientProvider client={queryClient}>

@@ -57,7 +57,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev build-essential pkg-config libssl-dev
+            libjavascriptcoregtk-4.1-dev libwayland-dev build-essential pkg-config libssl-dev
 
       - name: Install Rust toolchain (rust-toolchain.toml)
         run: |
@@ -93,6 +93,11 @@ jobs:
 
       - name: cargo test
         run: cargo test --workspace --locked
+
+      # PLAN §4's 50 ms warm-scan gate needs an optimised build; the debug run above checks 250 ms.
+      - name: Scan performance (release)
+        if: runner.os == 'Linux'
+        run: cargo test --release --locked -p remmods-core --test platform_linux_mods perf
 
       - name: IPC bindings are committed and current
         run: |
@@ -140,7 +145,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev build-essential pkg-config libssl-dev xvfb dbus-x11
+            libjavascriptcoregtk-4.1-dev libwayland-dev build-essential pkg-config libssl-dev \
+            xvfb dbus-x11
 
       - name: Install Rust toolchain (rust-toolchain.toml)
         run: |
@@ -154,6 +160,11 @@ jobs:
 
       - name: npm ci
         run: npm ci
+
+      - name: Generate the smoke fixture
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then PY=python; else PY=python3; fi
+          "$PY" -I scripts/make-fixtures.py smoke "$RUNNER_TEMP/remmods-fixture"
 
       - name: Build the app (debug, production assets and CSP)
         run: npm run tauri -- build --debug --no-bundle
@@ -175,12 +186,40 @@ jobs:
           TEMP: ${{ runner.temp }}
         run: ./target/debug/remmods.exe --smoke
 
+      # Scans the generated fixture (check scanFixture) and proves the run wrote nothing under Paks.
+      - name: Smoke test with fixture (Xvfb)
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          PAKS="$RUNNER_TEMP/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" ./target/debug/remmods --smoke --paks "$PAKS"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
+          diff -u "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
+
+      - name: Smoke test with fixture
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: |
+          PAKS="$RUNNER_TEMP/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
+          ./target/debug/remmods.exe --smoke --paks "$PAKS"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
+          diff -u "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
+
       - name: Upload smoke logs
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: smoke-logs-${{ matrix.name }}
-          path: ${{ runner.temp }}/remmods-smoke-*/data/logs/
+          path: |
+            ${{ runner.temp }}/remmods-smoke-*/data/logs/
+            ${{ runner.temp }}/paks-*.tsv
           if-no-files-found: ignore
           retention-days: 14
 
@@ -210,6 +249,9 @@ jobs:
 
       - name: cfg placement guard
         run: bash scripts/check-cfg.sh
+
+      - name: IPC command lists agree
+        run: bash scripts/check-commands.sh
 
       - name: Native-code guard (dependency trees)
         run: bash scripts/check-native.sh

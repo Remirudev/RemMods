@@ -4,11 +4,10 @@ use std::thread;
 use std::time::Duration;
 
 use remmods_core::settings::{Appearance, ColorScheme, TitleBarMode};
-use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 
-use crate::os;
-use crate::smoke;
 use crate::state::AppState;
+use crate::{focus, os, smoke};
 
 pub const MAIN_WINDOW: &str = "main";
 
@@ -48,10 +47,44 @@ pub fn create_main_window(
         builder = builder.data_directory(dir);
     }
     let window = builder.build()?;
+    install_event_handler(&window);
     if let Err(error) = window.set_zoom(appearance.ui_scale) {
         log::warn!("applying the saved UI scale failed: {error}");
     }
     Ok(window)
+}
+
+/// The handler runs on the main thread. Focus wakes the game monitor and rescans Paks; the
+/// monitor polls faster while the window is visible and not minimized, focused or not, so a
+/// fullscreen game in front of it still flips "running" within seconds.
+fn install_event_handler(window: &WebviewWindow) {
+    let app = window.app_handle().clone();
+    window.on_window_event(move |event| match event {
+        WindowEvent::Focused(true) => on_focused(&app),
+        WindowEvent::Focused(false) | WindowEvent::Resized(_) => update_monitor_activity(&app),
+        _ => {}
+    });
+}
+
+fn on_focused(app: &AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.monitor.set_active(true);
+        state.monitor.wake();
+    }
+    focus::on_focus_gained(app);
+}
+
+/// KDE Wayland never reports a GTK3 window as minimized, so there it stays active while shown.
+fn update_monitor_activity(app: &AppHandle) {
+    let (Some(state), Some(window)) = (
+        app.try_state::<AppState>(),
+        app.get_webview_window(MAIN_WINDOW),
+    ) else {
+        return;
+    };
+    let visible = window.is_visible().unwrap_or(true);
+    let minimized = window.is_minimized().unwrap_or(false);
+    state.monitor.set_active(visible && !minimized);
 }
 
 /// Shows and focuses the main window the first time it is called; later calls do nothing.
@@ -60,6 +93,7 @@ pub fn show_main_window_once(app: &AppHandle, state: &AppState, reason: &str) {
         return;
     }
     log::info!("showing the main window ({reason})");
+    state.monitor.set_active(true);
     focus_main_window(app);
 }
 

@@ -40,6 +40,7 @@ tauri-plugin-single-instance.workspace = true
 tauri-plugin-log.workspace = true
 tauri-plugin-window-state.workspace = true
 tauri-plugin-opener.workspace = true
+tauri-plugin-dialog.workspace = true
 tauri-specta.workspace = true
 specta.workspace = true
 specta-typescript.workspace = true

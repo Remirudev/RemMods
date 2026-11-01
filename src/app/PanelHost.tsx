@@ -21,18 +21,25 @@ export function PanelHost() {
   return (
     <div className={classes.host}>
       {PANEL_IDS.filter((id) => visited.includes(id)).map((id) => {
-        const Panel = panelRegistry[id].component
+        const { component: Panel, layout } = panelRegistry[id]
+        const body = (
+          <ErrorBoundary area={t(($) => $.panels[id].title)}>
+            <Suspense fallback={PANEL_LOADING}>
+              <Panel />
+            </Suspense>
+          </ErrorBoundary>
+        )
         return (
           <Activity key={id} mode={id === activePanel ? 'visible' : 'hidden'}>
-            <ScrollArea className={classes.pane}>
-              <div className={classes.content}>
-                <ErrorBoundary area={t(($) => $.panels[id].title)}>
-                  <Suspense fallback={PANEL_LOADING}>
-                    <Panel />
-                  </Suspense>
-                </ErrorBoundary>
+            {layout === 'fill' ? (
+              <div className={classes.fill}>
+                <div className={classes.fillContent}>{body}</div>
               </div>
-            </ScrollArea>
+            ) : (
+              <ScrollArea className={classes.pane}>
+                <div className={classes.content}>{body}</div>
+              </ScrollArea>
+            )}
           </Activity>
         )
       })}

@@ -13,3 +13,21 @@
   margin: 0 auto;
   padding: var(--mantine-spacing-xl);
 }
+
+.fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fillContent {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: var(--rmods-panel-max-width);
+  margin: 0 auto;
+  padding: var(--mantine-spacing-xl);
+  display: flex;
+  flex-direction: column;
+}

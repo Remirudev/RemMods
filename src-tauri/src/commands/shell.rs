@@ -75,6 +75,6 @@ pub async fn smoke_report(
     let Some(smoke_state) = state.smoke.as_ref() else {
         return Err(AppError::invalid_input("smoke"));
     };
-    smoke::finish(&app, smoke_state, report);
+    smoke::finish(&app, &state.core, smoke_state, report);
     Ok(())
 }

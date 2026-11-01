@@ -7,6 +7,17 @@ const COMMANDS: &[&str] = &[
     "app_ready",
     "open_logs",
     "smoke_report",
+    "game_status",
+    "game_detect",
+    "game_set_location",
+    "game_pick_location",
+    "game_ack_update",
+    "game_launch",
+    "game_reveal",
+    "mods_list",
+    "mods_refresh",
+    "mods_details",
+    "mods_reveal",
 ];
 
 fn main() {

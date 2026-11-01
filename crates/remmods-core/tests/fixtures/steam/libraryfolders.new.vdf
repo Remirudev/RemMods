@@ -1,0 +1,30 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"@STEAM_ROOT@"
+		"label"		""
+		"contentid"		"5021936482203658117"
+		"totalsize"		"0"
+		"update_clean_bytes_tally"		"2147850366"
+		"time_last_update_verified"		"1793352281"
+		"apps"
+		{
+			"228980"		"482355431"
+			"1070560"		"223012461"
+		}
+	}
+	"1"
+	{
+		"path"		"@LIB1@"
+		"label"		"Games"
+		"contentid"		"7720431158276210444"
+		"totalsize"		"2000381018112"
+		"update_clean_bytes_tally"		"0"
+		"time_last_update_verified"		"1793352281"
+		"apps"
+		{
+			"1778820"		"139210798921"
+		}
+	}
+}

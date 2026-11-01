@@ -1,10 +1,14 @@
 import { ipc } from '../../lib/ipc'
-import { describeForLog } from '../../lib/ipc/ipc-error'
-import type { Settings, SmokeCheck } from '../../lib/ipc/types'
+import { describeForLog, isIpcError } from '../../lib/ipc/ipc-error'
+import type { GameStatus, Settings, SmokeCheck } from '../../lib/ipc/types'
 import {
   checkCollectedErrors,
   checkCommand,
+  checkGameStatus,
   checkMantineCss,
+  checkModsListWithoutGame,
+  checkModsTable,
+  checkOnboarding,
   checkPlatformInfo,
   checkRail,
   checkSettings,
@@ -12,7 +16,7 @@ import {
   failedCheck,
   passedCheck,
 } from './smoke-checks'
-import type { Loaded } from './types'
+import type { Loaded, Refusal } from './types'
 
 const RENDER_TIMEOUT_MS = 10_000
 const NAVIGATION_WAIT_MS = 1_000
@@ -30,6 +34,15 @@ async function load<T>(read: () => Promise<T>): Promise<Loaded<T>> {
     return { ok: true, value: await read() }
   } catch (error) {
     return { ok: false, error: describeForLog(error) }
+  }
+}
+
+async function refusalOf(read: () => Promise<unknown>): Promise<Refusal> {
+  try {
+    await read()
+    return { rejected: false }
+  } catch (error) {
+    return { rejected: true, kind: isIpcError(error) ? error.appError.kind : null }
   }
 }
 
@@ -65,6 +78,34 @@ async function checkRemainingCommands(settings: Loaded<Settings>): Promise<Smoke
   ]
 }
 
+// Fixture run: the table renders and the read commands answer. Never launch, pick or reveal.
+async function checkFixtureGame(): Promise<SmokeCheck[]> {
+  await waitForElement('[data-testid="mods-row"]')
+  const snapshot = await load(() => ipc.modsRefresh())
+  const first = snapshot.ok ? snapshot.value.rows[0] : undefined
+  const details = first
+    ? await load(() => ipc.modsDetails(first.modRef))
+    : ({ ok: false, error: 'no first row to read details of' } as const)
+  const detect = await load(() => ipc.gameDetect())
+  const ack = await load(() => ipc.gameAckUpdate())
+  return [
+    checkModsTable(document),
+    checkCommand('modsRefresh', snapshot),
+    checkCommand('modsDetails', details),
+    checkCommand('gameDetect', detect),
+    checkCommand('gameAckUpdate', ack),
+  ]
+}
+
+async function checkGameChecks(status: Loaded<GameStatus>): Promise<SmokeCheck[]> {
+  const statusCheck = checkGameStatus(status)
+  if (!statusCheck.ok || !status.ok) return [statusCheck]
+  if (status.value.location.kind === 'ready') return [statusCheck, ...(await checkFixtureGame())]
+  await waitForElement('[data-testid="onboarding"]')
+  const refusal = await refusalOf(() => ipc.modsList())
+  return [statusCheck, checkOnboarding(document), checkModsListWithoutGame(refusal)]
+}
+
 export function startSmokeErrorCollection(): void {
   if (collecting) return
   collecting = true
@@ -83,9 +124,10 @@ export function startSmokeErrorCollection(): void {
 
 async function collectChecks(): Promise<SmokeCheck[]> {
   await waitForElement('[data-testid="rail"]')
-  const [settings, platformInfo] = await Promise.all([
+  const [settings, platformInfo, gameStatus] = await Promise.all([
     load(() => ipc.settingsGet()),
     load(() => ipc.platformInfo()),
+    load(() => ipc.gameStatus()),
   ])
   const checks = [
     checkTitleBar(document, settings),
@@ -94,6 +136,7 @@ async function collectChecks(): Promise<SmokeCheck[]> {
     checkPlatformInfo(platformInfo),
     checkSettings(settings),
     ...(await checkRemainingCommands(settings)),
+    ...(await checkGameChecks(gameStatus)),
     await checkNavigationRefused(),
   ]
   return [...checks, checkCollectedErrors(collectedErrors)]

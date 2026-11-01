@@ -69,3 +69,23 @@ describe('isAppError', () => {
     expect(isAppError(null)).toBe(false)
   })
 })
+
+describe('isAppError kinds', () => {
+  it('knows the kinds added with the game and mods commands', () => {
+    for (const kind of [
+      'stale',
+      'gameNotSet',
+      'invalidGameFolder',
+      'launchFailed',
+      'revealFailed',
+    ]) {
+      expect(isAppError({ kind }), kind).toBe(true)
+    }
+  })
+
+  it('rejects unknown kinds and inherited property names', () => {
+    expect(isAppError({ kind: 'somethingNew' })).toBe(false)
+    expect(isAppError({ kind: 'constructor' })).toBe(false)
+    expect(isAppError('stale')).toBe(false)
+  })
+})

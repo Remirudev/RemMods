@@ -1,3 +1,5 @@
+use crate::game::GameError;
+use crate::mods::ModsError;
 use crate::safe_fs::FsError;
 use crate::settings::SettingsError;
 
@@ -9,4 +11,8 @@ pub enum CoreError {
     Settings(#[from] SettingsError),
     #[error("no home directory: cannot resolve the config and data folders")]
     MissingHomeDir,
+    #[error(transparent)]
+    Game(#[from] GameError),
+    #[error(transparent)]
+    Mods(#[from] ModsError),
 }

@@ -1,8 +1,14 @@
 use std::io;
+use std::os::unix::process::CommandExt;
+use std::path::Path;
+use std::process::Command;
 
 use rustix::io::Errno;
 
-use super::{OsErrorClass, OsKind, RetryPolicy};
+use super::{
+    OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues, RegistryView,
+    RetryPolicy, SteamHints, read_proc_tree,
+};
 
 pub(super) const OS_KIND: OsKind = OsKind::Linux;
 pub(super) const APP_ORIGIN: &str = "tauri://localhost";
@@ -34,4 +40,43 @@ pub(super) fn replace_retry_policy(_class: OsErrorClass) -> RetryPolicy {
 
 pub(super) fn fatal_message(title: &str, text: &str) {
     eprintln!("{title}: {text}");
+}
+
+pub(super) fn processes() -> io::Result<Vec<ProcessRecord>> {
+    read_proc_tree(Path::new("/proc"))
+}
+
+/// Reading `/proc/<pid>/cmdline` of a process that exits meanwhile fails with ESRCH.
+pub(super) fn is_no_such_process(error: &io::Error) -> bool {
+    Errno::from_io_error(error) == Some(Errno::SRCH)
+}
+
+pub(super) fn steam_hints() -> SteamHints {
+    SteamHints {
+        os: OS_KIND,
+        home: dirs::home_dir(),
+        data_dir: dirs::data_dir(),
+        registry: RegistrySteamValues::default(),
+        program_files_x86: None,
+        program_files: None,
+    }
+}
+
+pub(super) fn registry_string(
+    _hive: RegistryHive,
+    _subkey: &str,
+    _value: &str,
+    _view: RegistryView,
+) -> io::Result<Option<String>> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+/// The child gets its own session, so closing RemMods (or its terminal) does not take the
+/// launched program down with it.
+pub(super) fn prepare_detached(command: &mut Command) {
+    // SAFETY: the hook runs in the forked child before exec and only calls setsid(2), which is
+    // async-signal-safe and touches no memory shared with the parent.
+    unsafe {
+        command.pre_exec(|| rustix::process::setsid().map(drop).map_err(io::Error::from));
+    }
 }

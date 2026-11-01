@@ -1,19 +1,27 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use remmods_core::Core;
+
+use crate::monitor::MonitorHandle;
+use crate::smoke::SmokeFixture;
 
 pub struct AppState {
     pub core: Arc<Core>,
     pub smoke: Option<SmokeState>,
     /// Set once the main window has been shown (by `app_ready` or the 3 s fallback).
     pub shown: AtomicBool,
+    pub monitor: MonitorHandle,
+    pub last_focus_rescan: Mutex<Option<Instant>>,
 }
 
 pub struct SmokeState {
     /// Temp folder holding config, data, logs and webview data of this `--smoke` run.
     pub root: PathBuf,
+    /// Expectations of the `--paks` fixture, checked after the frontend's report.
+    pub fixture: Option<SmokeFixture>,
     outcome: AtomicU8,
     blocked_navigations: AtomicU32,
 }
@@ -23,19 +31,22 @@ const PASSED: u8 = 1;
 const FAILED: u8 = 2;
 
 impl AppState {
-    pub fn new(core: Core, smoke_root: Option<PathBuf>) -> Self {
+    pub fn new(core: Arc<Core>, monitor: MonitorHandle, smoke: Option<SmokeState>) -> Self {
         Self {
-            core: Arc::new(core),
-            smoke: smoke_root.map(SmokeState::new),
+            core,
+            smoke,
             shown: AtomicBool::new(false),
+            monitor,
+            last_focus_rescan: Mutex::new(None),
         }
     }
 }
 
 impl SmokeState {
-    fn new(root: PathBuf) -> Self {
+    pub fn new(root: PathBuf, fixture: Option<SmokeFixture>) -> Self {
         Self {
             root,
+            fixture,
             outcome: AtomicU8::new(RUNNING),
             blocked_navigations: AtomicU32::new(0),
         }

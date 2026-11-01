@@ -6,6 +6,7 @@ import { ResizeHandles } from './title-bar/ResizeHandles'
 import { TitleBar } from './title-bar/TitleBar'
 import { useTitleBarMode } from './title-bar/use-title-bar-mode'
 import { useAppReady } from './use-app-ready'
+import { useBackendEvents } from './use-backend-events'
 import { useUiScaleHotkeys } from './use-ui-scale-hotkeys'
 
 const TITLE_BAR = { height: 36 }
@@ -17,6 +18,7 @@ const RAIL = { width: 72, breakpoint: 0 }
 export function App() {
   const customTitleBar = useTitleBarMode() === 'custom'
   useAppReady()
+  useBackendEvents()
   useUiScaleHotkeys()
 
   return (

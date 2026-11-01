@@ -18,8 +18,6 @@ export const shell: LocaleShape<typeof en> = {
     mods: {
       title: 'Mods',
       description: 'Deine installierten TEKKEN-8-Mods.',
-      emptyTitle: 'Noch keine Mods',
-      emptyDescription: 'Deine Mods erscheinen hier ab Phase 1.',
     },
     profiles: {
       title: 'Profile',
@@ -38,5 +36,8 @@ export const shell: LocaleShape<typeof en> = {
     nothingFound: 'Keine passenden Befehle',
     goTo: 'Zu {{panel}} wechseln',
     toggleScheme: 'Zwischen hellem und dunklem Design wechseln',
+    launchGame: 'TEKKEN 8 starten',
+    refreshMods: 'Mod-Liste aktualisieren',
+    openPaks: 'Paks-Ordner öffnen',
   },
 }

@@ -175,6 +175,7 @@ fn core_types_convert_into_dtos() {
                 ui_scale: 0.9,
                 title_bar: core::TitleBarMode::System,
             },
+            game: Default::default(),
         },
         read_only: true,
         recovered: false,

@@ -25,6 +25,10 @@ in the artifacts workflow (from P5). This list is what CI cannot see.
       the HKLM `InstallPath` value (WOW6432Node).
 - [ ] Record the Toolhelp32 process names of the running game.
 - [ ] Launch through `steam://rungameid/1778820` starts the game.
+- [ ] The folder picker (IFileDialog) opens and returns the chosen folder.
+- [ ] Reveal selects the mod in Explorer; "Open Paks folder" opens the Paks folder.
+- [ ] The game is detected through the registry (HKCU `SteamPath`, HKLM `InstallPath`) with the
+      values recorded above.
 
 ## Files while the game runs
 

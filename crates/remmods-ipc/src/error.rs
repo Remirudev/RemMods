@@ -1,8 +1,12 @@
 use remmods_core::CoreError;
+use remmods_core::game::GameError;
+use remmods_core::mods::ModsError;
 use remmods_core::platform;
 use remmods_core::safe_fs::FsError;
 use remmods_core::settings::SettingsError;
 use serde::{Deserialize, Serialize};
+
+use crate::game::{FolderProblem, RevealProblem};
 
 /// Error returned by every command. Carries no English: the UI translates by `kind`, and the raw
 /// OS error only goes to the log.
@@ -14,6 +18,11 @@ pub enum AppError {
     InvalidInput { field: String },
     ReadOnly,
     Internal,
+    Stale,
+    GameNotSet,
+    InvalidGameFolder { reason: FolderProblem },
+    LaunchFailed,
+    RevealFailed { reason: RevealProblem },
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -45,6 +54,8 @@ impl From<CoreError> for AppError {
             CoreError::Fs(error) => fs_error(error),
             CoreError::Settings(error) => settings_error(error),
             CoreError::MissingHomeDir => Self::Internal,
+            CoreError::Game(error) => game_error(error),
+            CoreError::Mods(error) => mods_error(error),
         }
     }
 }
@@ -65,6 +76,28 @@ fn settings_error(error: SettingsError) -> AppError {
         SettingsError::InvalidValue { field } => AppError::invalid_input(field),
         SettingsError::Encode(_) => AppError::Internal,
         SettingsError::Fs(error) => fs_error(error),
+    }
+}
+
+fn game_error(error: GameError) -> AppError {
+    match error {
+        GameError::NotSet => AppError::GameNotSet,
+        GameError::InvalidFolder(problem) => AppError::InvalidGameFolder {
+            reason: problem.into(),
+        },
+        GameError::StaleCandidate => AppError::Stale,
+        GameError::InvalidPath => AppError::invalid_input("path"),
+    }
+}
+
+fn mods_error(error: ModsError) -> AppError {
+    match error {
+        ModsError::Fs(error) => fs_error(error),
+        ModsError::Stale => AppError::Stale,
+        ModsError::BadRef => AppError::invalid_input("modRef"),
+        ModsError::NotShellSafe => AppError::RevealFailed {
+            reason: RevealProblem::UnsupportedName,
+        },
     }
 }
 

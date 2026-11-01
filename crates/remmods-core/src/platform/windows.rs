@@ -1,4 +1,5 @@
 use std::io;
+use std::process::Command;
 use std::ptr;
 use std::time::Duration;
 
@@ -12,6 +13,12 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::{OsErrorClass, OsKind, RetryPolicy};
+
+mod process;
+mod registry;
+
+pub(super) use process::processes;
+pub(super) use registry::{registry_string, steam_hints};
 
 pub(super) const OS_KIND: OsKind = OsKind::Windows;
 pub(super) const APP_ORIGIN: &str = "http://tauri.localhost";
@@ -67,6 +74,14 @@ pub(super) fn fatal_message(title: &str, text: &str) {
         );
     }
 }
+
+/// Procfs-shaped trees only exist in tests here; a vanished entry is plain NotFound.
+pub(super) fn is_no_such_process(_error: &io::Error) -> bool {
+    false
+}
+
+/// A GUI process has no console or session to leave.
+pub(super) fn prepare_detached(_command: &mut Command) {}
 
 fn wide_nul(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()

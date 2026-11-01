@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: a vanished process, invalid UTF-8, mixed separators and case",
+  "expect": {
+    "running": true,
+    "signal": "gameExecutable",
+    "pid": 702,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 700,
+      "ppid": 1,
+      "comm": null,
+      "cmdline": null,
+      "nulPadding": 0,
+      "cmdlineHex": null,
+      "note": "vanished: directory only"
+    },
+    {
+      "pid": 701,
+      "ppid": 1,
+      "comm": "odd",
+      "cmdline": null,
+      "nulPadding": 0,
+      "cmdlineHex": "2f7573722f62696e2f6ffe6464005400"
+    },
+    {
+      "pid": 702,
+      "ppid": 1,
+      "comm": "TEKKEN 8.EXE",
+      "cmdline": [
+        "C:/Games\\TEKKEN 8/TEKKEN 8.EXE"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    }
+  ]
+}

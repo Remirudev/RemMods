@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "source": "SYNTHETIC: the Wine loader kept in argv",
+  "expect": {
+    "running": true,
+    "signal": "gameExecutable",
+    "pid": 310,
+    "originalApp": false
+  },
+  "processes": [
+    {
+      "pid": 310,
+      "ppid": 1,
+      "comm": "wine64-preloader",
+      "cmdline": [
+        "/opt/wine/bin/wine64-preloader",
+        "/opt/wine/bin/wine64",
+        "Z:\\games\\TEKKEN 8\\TEKKEN 8.exe"
+      ],
+      "nulPadding": 0,
+      "cmdlineHex": null
+    }
+  ]
+}

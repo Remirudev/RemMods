@@ -13,7 +13,8 @@
       "!**/.claude",
       "!**/.idea",
       "!**/.vscode",
-      "!**/.mcp.json"
+      "!**/.mcp.json",
+      "!**/tests/fixtures"
     ]
   },
   "formatter": {
