@@ -14,11 +14,14 @@ fn trash_is_unavailable_and_changes_nothing() {
     let fixture = support::fs_fixture();
     support::write_tree(&fixture.paks, &[("Mods/Cool/Cool.pak", b"pak")]);
     let env = support::trash_env(&fixture.root);
+    // Only the Paks tree: the app dirs hold lock files with byte-range locks that Windows refuses
+    // to read while the gate is alive.
+    let before = tree_listing(&fixture.paks);
     let gate = fixture.gate();
     let guard = gate.write(fixture.scope()).expect("write guard");
-    let before = tree_listing(&fixture.root);
 
     let result = guard.trash(&env, &[fixture.path("Mods/Cool")], chrono::Local::now());
+    drop(guard);
 
     match result {
         Err(FsError::TrashUnavailable { reason }) => {
@@ -26,7 +29,7 @@ fn trash_is_unavailable_and_changes_nothing() {
         }
         other => panic!("expected TrashUnavailable, got {other:?}"),
     }
-    assert_eq!(tree_listing(&fixture.root), before);
+    assert_eq!(tree_listing(&fixture.paks), before);
 }
 
 #[test]
