@@ -7,7 +7,7 @@ mod support;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use remmods_core::AppPaths;
@@ -270,7 +270,15 @@ fn a_small_inotify_queue_overflows_into_a_rescan() {
     }
     let (_dir, root) = support::temp_root();
     let (sender, receiver) = mpsc::channel();
+    let (release, gate) = mpsc::channel::<()>();
+    let gate = Mutex::new(Some(gate));
     let _watcher = PaksWatcher::start(&root, move |signal| {
+        // notify calls this on its reader thread; holding the first call stops it from draining
+        // the inotify fd, so the 16-event kernel queue overflows instead of racing the writes.
+        let first = gate.lock().expect("gate").take();
+        if let Some(first) = first {
+            let _ = first.recv_timeout(Duration::from_secs(10));
+        }
         let _ = sender.send(signal);
     })
     .expect("start");
@@ -278,6 +286,7 @@ fn a_small_inotify_queue_overflows_into_a_rescan() {
     for index in 0..300 {
         fs::write(root.join(format!("f{index}.pak")), b"x").expect("write");
     }
+    drop(release);
 
     let deadline = Instant::now() + Duration::from_secs(10);
     let mut rescan = false;

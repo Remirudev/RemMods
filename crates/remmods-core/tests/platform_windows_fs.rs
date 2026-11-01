@@ -44,7 +44,7 @@ fn a_pak_held_without_sharing_fails_the_probe_and_nothing_moves() {
         ],
     );
     let before = fixture.paks_snapshot();
-    let _held = hold(&fixture.path("Mods/Cool/Cool.ucas"), 0);
+    let held = hold(&fixture.path("Mods/Cool/Cool.ucas"), 0);
     let gate = fixture.gate();
     let guard = gate.write(fixture.scope()).expect("write guard");
     let ops = [
@@ -65,6 +65,8 @@ fn a_pak_held_without_sharing_fails_the_probe_and_nothing_moves() {
         ),
         "{result:?}"
     );
+    // The snapshot reads every file, which the exclusive handle would refuse.
+    drop(held);
     assert_eq!(fixture.paks_snapshot(), before);
 }
 
