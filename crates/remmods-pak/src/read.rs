@@ -13,12 +13,24 @@ const HASH_SEED_SIZE: u64 = 4;
 const BLOCK_ENTRY_SIZE: u64 = 12;
 const BLOCK_HASH_SIZE: u64 = 20;
 const MAX_SIGNATURE_HASH_SIZE: i32 = 64;
+/// `FIoStoreTocEntryMetaOld` (v2..=7): 32-byte `FIoChunkHash` + flags byte.
+const CHUNK_META_SIZE_OLD: u64 = 33;
+/// `FIoStoreTocEntryMeta` (v8): 20-byte `FIoHash` + flags byte + 3 padding bytes.
+const CHUNK_META_SIZE_IO_HASH: u64 = 24;
+/// Version `ReplaceIoChunkHashWithIoHash`.
+const IO_HASH_VERSION: u8 = 8;
+
+/// The 20 meaningful bytes of a chunk hash (`FIoHash`; the first 20 of an old `FIoChunkHash`).
+pub type ContentHash = [u8; 20];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TocFile {
     /// Display path (§4.4).
     pub path: String,
     pub chunk_index: u32,
+    /// Hash of the uncompressed chunk from the chunk metas after the index; `None` when the
+    /// metas are missing or truncated or the hash is all zero.
+    pub content_hash: Option<ContentHash>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -65,7 +77,16 @@ pub fn directory_index_offset(header: &TocHeader) -> Result<u64, PakError> {
         .ok_or(PakError::Malformed("offset"))
 }
 
-/// Opens read-only, reads only header, signature size and index (§4.2).
+/// Bytes per chunk meta: 33 up to v7, 24 from v8.
+pub fn chunk_meta_size(version: u8) -> u64 {
+    if version >= IO_HASH_VERSION {
+        CHUNK_META_SIZE_IO_HASH
+    } else {
+        CHUNK_META_SIZE_OLD
+    }
+}
+
+/// Opens read-only, reads only header, signature size, index and chunk metas (§4.2).
 pub fn read_toc(path: &Path) -> Result<TocListing, PakError> {
     let mut file = File::open(path)?;
     let total_len = file.metadata()?.len();
@@ -116,7 +137,13 @@ fn listing_from(
         usize::try_from(header.directory_index_size).map_err(|_| PakError::Malformed("bounds"))?;
     let index_bytes = read_at(offset, index_len)?;
     let index = parse_directory_index(&index_bytes)?;
-    let files = index.files(header.entry_count)?;
+    let mut files = index.files(header.entry_count)?;
+    if let Some(metas) = offset
+        .checked_add(u64::from(header.directory_index_size))
+        .and_then(|start| read_chunk_metas(&header, start, &mut read_at))
+    {
+        attach_hashes(&mut files, &metas, chunk_meta_size(header.version));
+    }
     Ok(TocListing {
         header,
         mount_point: index.mount_point,
@@ -143,4 +170,29 @@ fn skip_signatures(
         .and_then(|o| o.checked_add(hash_size.checked_mul(2)?))
         .and_then(|o| o.checked_add(blocks.checked_mul(BLOCK_HASH_SIZE)?))
         .ok_or(PakError::Malformed("offset"))
+}
+
+/// The chunk-meta table right after the index, or `None` when it does not fit in the file.
+fn read_chunk_metas(
+    header: &TocHeader,
+    start: u64,
+    read_at: &mut impl FnMut(u64, usize) -> Result<Vec<u8>, PakError>,
+) -> Option<Vec<u8>> {
+    let len = u64::from(header.entry_count).checked_mul(chunk_meta_size(header.version))?;
+    read_at(start, usize::try_from(len).ok()?).ok()
+}
+
+fn attach_hashes(files: &mut [TocFile], metas: &[u8], meta_size: u64) {
+    let Ok(meta_size) = usize::try_from(meta_size) else {
+        return;
+    };
+    for file in files {
+        let start = usize::try_from(file.chunk_index)
+            .ok()
+            .and_then(|i| i.checked_mul(meta_size));
+        file.content_hash = start
+            .and_then(|start| metas.get(start..start.checked_add(20)?))
+            .and_then(|bytes| ContentHash::try_from(bytes).ok())
+            .filter(|hash| hash.iter().any(|&b| b != 0));
+    }
 }

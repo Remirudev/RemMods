@@ -252,6 +252,7 @@ impl Walk<'_> {
             self.out.push(TocFile {
                 path: display_path(&raw),
                 chunk_index: entry.user_data,
+                content_hash: None,
             });
             file = entry_slot(entry.next_file, self.file_seen.len())?;
         }

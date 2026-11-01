@@ -46,6 +46,7 @@ fn core_summary() -> core_content::ContentSummary {
         characters: vec!["cmn".into(), "ker".into(), "zbr".into()],
         slots: vec!["bdu".into(), "zzz".into()],
         internal_overlaps: 1,
+        shared_identical: 4,
     }
 }
 
@@ -237,6 +238,7 @@ fn row_has_content_and_content_conflicts() {
 
     assert_eq!(value["content"]["assets"], json!(3));
     assert_eq!(value["content"]["internalOverlaps"], json!(1));
+    assert_eq!(value["content"]["sharedIdentical"], json!(4));
     assert_eq!(
         value["contentConflicts"],
         json!([{
@@ -336,6 +338,7 @@ fn summary_mapping_keeps_counts() {
     );
     assert_eq!(dto.assets, 3);
     assert_eq!(dto.internal_overlaps, 1);
+    assert_eq!(dto.shared_identical, 4);
     let codes: Vec<_> = dto.characters.iter().map(|c| c.code.as_str()).collect();
     assert_eq!(codes, ["cmn", "ker", "zbr"]);
     assert_eq!(

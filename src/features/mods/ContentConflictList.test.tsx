@@ -20,8 +20,8 @@ describe('ContentConflictList', () => {
       />,
     )
 
-    expect(screen.getByText('Shares 3 assets with Beta')).toBeVisible()
-    expect(screen.getByText('Shares 1 asset with Gamma')).toBeVisible()
+    expect(screen.getByText('3 files in a different version than Beta')).toBeVisible()
+    expect(screen.getByText('1 file in a different version than Gamma')).toBeVisible()
     expect(screen.getByText('Smoke/Shared.uasset')).toBeVisible()
     expect(screen.getByText('Smoke/Other.uasset')).toBeVisible()
     expect(

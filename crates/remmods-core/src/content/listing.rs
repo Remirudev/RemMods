@@ -3,11 +3,11 @@
 use std::collections::BTreeMap;
 
 use remmods_pak::hints::hint_for;
-use remmods_pak::{asset_key, file_key};
+use remmods_pak::{ContentHash, asset_key, file_key};
 
 use super::base_index::BaseIndex;
 use super::cache::{ContainerResult, ContentCache};
-use super::conflicts::live_assets;
+use super::conflicts::{identical, live_assets};
 use super::model::{
     AssetEntry, AssetOrigin, BaseIndexState, CONTENTS_MAX_ENTRIES, ModContents, UtocRef,
 };
@@ -28,16 +28,21 @@ fn origin(base: &BaseIndex, path: &str) -> AssetOrigin {
     }
 }
 
-/// The live asset keys of each content-conflict partner, read through the cache.
-fn partner_assets(row: &ModRow, cache: &ContentCache) -> Vec<(ModRef, Vec<String>)> {
+type OwnedPrint = Option<Vec<(String, ContentHash)>>;
+
+/// The live asset keys and fingerprints of each content-conflict partner, read through the cache.
+fn partner_assets(
+    row: &ModRow,
+    cache: &ContentCache,
+) -> Vec<(ModRef, BTreeMap<String, OwnedPrint>)> {
     row.content_conflicts
         .iter()
         .filter_map(|link| {
             let utocs = cache.row_containers(link.other.as_str())?;
             let results = read_all(cache, &utocs);
             let keys = live_assets(&utocs, &results)
-                .into_keys()
-                .map(str::to_owned)
+                .into_iter()
+                .map(|(key, asset)| (key.to_owned(), asset.print.map(<[_]>::to_vec)))
                 .collect();
             Some((link.other.clone(), keys))
         })
@@ -52,6 +57,7 @@ pub(crate) fn mod_contents(
 ) -> ModContents {
     let partners = partner_assets(row, cache);
     let results = read_all(cache, utocs);
+    let own = live_assets(utocs, &results);
     let mut entries = Vec::new();
     let mut shared_cache: BTreeMap<String, Vec<ModRef>> = BTreeMap::new();
     for (utoc, result) in utocs.iter().zip(&results) {
@@ -64,9 +70,13 @@ pub(crate) fn mod_contents(
                 shared_cache
                     .entry(key)
                     .or_insert_with_key(|key| {
+                        let print = own.get(key.as_str()).and_then(|asset| asset.print);
                         partners
                             .iter()
-                            .filter(|(_, keys)| keys.binary_search(key).is_ok())
+                            .filter(|(_, keys)| {
+                                keys.get(key)
+                                    .is_some_and(|other| !identical(print, other.as_deref()))
+                            })
                             .map(|(other, _)| other.clone())
                             .collect()
                     })

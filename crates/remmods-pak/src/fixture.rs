@@ -1,14 +1,15 @@
 //! Test-only `.utoc` writer (SPEC-P2B §4.7). Pure bytes, never touches the file system.
 
-use crate::{INVALID_INDEX, TOC_MAGIC};
+use crate::{ContentHash, INVALID_INDEX, TOC_MAGIC, chunk_meta_size};
 
 const METHOD_NAME_LENGTH: usize = 32;
-const CHUNK_META_SIZE: usize = 33;
 
 #[derive(Clone, Debug)]
 pub struct TocBuilder {
     mount_point: String,
     files: Vec<String>,
+    /// Content hash per entry of `files` (chunk index = position); `None` writes zeros.
+    hashes: Vec<Option<ContentHash>>,
     version: u8,
     flags: u8,
     signed_hash_size: Option<u32>,
@@ -79,11 +80,13 @@ fn push_fstring(out: &mut Vec<u8>, text: &str, utf16: bool) {
 
 impl TocBuilder {
     /// v5, flags 0x09, methods ["Oodle"], perfect-hash seeds = ceil(n/2), overflow 0,
-    /// one compressed block per file, chunk metas of 33 zero bytes, Latin-1 strings.
+    /// one compressed block per file, zero chunk metas (33 bytes, 24 from v8) unless a file
+    /// has a hash, Latin-1 strings.
     pub fn new(mount_point: &str) -> Self {
         Self {
             mount_point: mount_point.to_owned(),
             files: Vec::new(),
+            hashes: Vec::new(),
             version: 5,
             flags: 0x09,
             signed_hash_size: None,
@@ -95,6 +98,14 @@ impl TocBuilder {
     /// `/`-separated, directories created as needed.
     pub fn file(mut self, path_below_mount: &str) -> Self {
         self.files.push(path_below_mount.to_owned());
+        self.hashes.push(None);
+        self
+    }
+
+    /// Like `file`, with this content hash in its chunk meta.
+    pub fn file_with_hash(mut self, path_below_mount: &str, hash: ContentHash) -> Self {
+        self.files.push(path_below_mount.to_owned());
+        self.hashes.push(Some(hash));
         self
     }
 
@@ -271,7 +282,14 @@ impl TocBuilder {
             zeros(&mut out, 2 * hash + self.files.len() * 20);
         }
         out.extend_from_slice(&index);
-        zeros(&mut out, entries * CHUNK_META_SIZE);
+        let meta_size = usize::try_from(chunk_meta_size(self.version)).unwrap_or(0);
+        for chunk in 0..entries {
+            let start = out.len();
+            zeros(&mut out, meta_size);
+            if let Some(Some(hash)) = self.hashes.get(chunk) {
+                out[start..start + hash.len()].copy_from_slice(hash);
+            }
+        }
         out
     }
 }

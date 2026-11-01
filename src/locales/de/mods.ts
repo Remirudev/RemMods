@@ -25,7 +25,7 @@ export const mods: LocaleShape<typeof en> = {
     },
     kinds: 'Typ',
     conflictsOnly: 'Konflikte',
-    contentConflictsOnly: 'Gleiche Assets',
+    contentConflictsOnly: 'Ersetzt gleiche Dateien',
     issuesOnly: 'Probleme',
     clear: 'Filter zurücksetzen',
     count_one: '{{count}} von {{total}} Mod',
@@ -97,9 +97,9 @@ export const mods: LocaleShape<typeof en> = {
     issues_one: '{{count}} Problem',
     issues_other: '{{count}} Probleme',
     ambiguous: 'Mehrdeutig',
-    contentConflicts_one: 'Gleiche Assets · {{count}}',
-    contentConflicts_other: 'Gleiche Assets · {{count}}',
-    contentConflictsTooltip: 'Auch enthalten in: {{names}}',
+    contentConflicts_one: 'Ersetzt gleiche Dateien · {{count}}',
+    contentConflicts_other: 'Ersetzt gleiche Dateien · {{count}}',
+    contentConflictsTooltip: 'Andere Versionen derselben Dateien in: {{names}}',
   },
   table: { label: 'Installierte Mods', noMatch: 'Kein Mod passt zu den Filtern.' },
   empty: {
@@ -162,8 +162,15 @@ export const mods: LocaleShape<typeof en> = {
     origin: { adds: 'Neu', replaces: 'Ersetzt', unknown: 'Unbekannt' },
     baseNote:
       'Ob eine Datei Spielinhalt ersetzt oder hinzufügt, ist unbekannt: Der Index des Spiels ließ sich nicht vollständig lesen.',
-    sharedWith_one: 'Auch in {{count}} Mod',
-    sharedWith_other: 'Auch in {{count}} Mods',
+    sharedWith_one: 'Andere Version in {{count}} anderen Mod',
+    sharedWith_other: 'Andere Versionen in {{count}} anderen Mods',
+    conflictReplaces_one: 'Beide ersetzen diese Spieldatei',
+    conflictReplaces_other: 'Ersetzt diese Spieldatei, wie {{count}} andere Mods',
+    conflictAdds_one: 'Beide fügen diese Datei hinzu, verschiedene Versionen',
+    conflictAdds_other: 'Fügt diese Datei hinzu, wie {{count}} andere Mods, verschiedene Versionen',
+    sharedIdentical_one: '{{count}} Datei teilt diese Mod mit anderen Mods als identische Kopie.',
+    sharedIdentical_other:
+      '{{count}} Dateien teilt diese Mod mit anderen Mods als identische Kopien.',
     internalOverlaps_one: '{{count}} Asset ist in mehreren Containern dieser Mod enthalten.',
     internalOverlaps_other: '{{count}} Assets sind in mehreren Containern dieser Mod enthalten.',
     status: {
@@ -180,9 +187,9 @@ export const mods: LocaleShape<typeof en> = {
     off: 'deaktiviert',
   },
   contentConflicts: {
-    title: 'Gleiche Assets',
-    item_one: 'Teilt {{count}} Asset mit {{name}}',
-    item_other: 'Teilt {{count}} Assets mit {{name}}',
+    title: 'Ersetzt dieselben Dateien',
+    item_one: '{{count}} Datei in einer anderen Version als {{name}}',
+    item_other: '{{count}} Dateien in einer anderen Version als {{name}}',
     winner: 'Welche davon das Spiel zeigt, ist noch nicht bekannt; das wird im Spiel geprüft.',
   },
   slots: {

@@ -45,6 +45,8 @@ pub struct ContentSummary {
     pub slots: Vec<String>,
     /// Asset keys shipped by at least two live Read containers of this row.
     pub internal_overlaps: u32,
+    /// Asset keys this row shares with other enabled rows only as identical copies.
+    pub shared_identical: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -52,7 +54,7 @@ pub struct ContentConflictLink {
     pub other: ModRef,
     pub key: String,
     pub name: String,
-    /// Asset keys both rows ship in live Read containers.
+    /// Asset keys both rows ship in live Read containers with different content (or unknown).
     pub shared: u32,
     /// At most `CONFLICT_SAMPLE` display paths of this row, sorted by asset key.
     pub sample: Vec<String>,
@@ -84,7 +86,8 @@ pub struct AssetEntry {
     pub character: Option<String>,
     /// Raw code.
     pub slot: Option<String>,
-    /// Rows of this row's `content_conflicts` that ship the asset key (live entries only).
+    /// Rows of this row's `content_conflicts` that ship a different version of the asset key
+    /// (live entries only).
     pub shared_with: Vec<ModRef>,
 }
 

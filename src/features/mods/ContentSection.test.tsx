@@ -45,7 +45,7 @@ describe('ContentSection', () => {
     expect(screen.getByText('Kunimitsu')).toBeVisible()
     expect(await screen.findByText('Smoke/Alpha.uasset')).toBeVisible()
     expect(screen.getByText('Replaces')).toBeVisible()
-    expect(screen.getByText('Also in 1 mod')).toBeVisible()
+    expect(screen.getByText('Both replace this game file')).toBeVisible()
   })
 
   it('names an unsupported container with its status text', () => {
@@ -57,6 +57,14 @@ describe('ContentSection', () => {
     expect(screen.getByText(/enc\.utoc/)).toBeVisible()
     expect(screen.getByText(/Unsupported: Encrypted: contents cannot be listed/)).toBeVisible()
     expect(screen.queryByText(/assets? in/)).toBeNull()
+  })
+
+  it('counts files shared only as identical copies', () => {
+    renderSection({ ...READ_CONTENT, sharedIdentical: 6 })
+
+    expect(
+      screen.getByText('6 files are shared with other mods as identical copies.'),
+    ).toBeVisible()
   })
 
   it('says so when the mod has no .utoc files', () => {

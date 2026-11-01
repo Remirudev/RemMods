@@ -74,6 +74,7 @@ pub struct ContentSummary {
     pub characters: Vec<CharacterHint>,
     pub slots: Vec<SlotHint>,
     pub internal_overlaps: u32,
+    pub shared_identical: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -218,6 +219,7 @@ impl From<&core::ContentSummary> for ContentSummary {
                 .map(|code| SlotHint::from_code(code))
                 .collect(),
             internal_overlaps: summary.internal_overlaps,
+            shared_identical: summary.shared_identical,
         }
     }
 }

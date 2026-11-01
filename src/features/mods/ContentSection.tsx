@@ -31,6 +31,11 @@ export function ContentSection({ row }: ContentSectionProps) {
               {t(($) => $.content.internalOverlaps, { count: content.internalOverlaps })}
             </Text>
           )}
+          {content.sharedIdentical > 0 && (
+            <Text size="sm" c="var(--qc-text-2)">
+              {t(($) => $.content.sharedIdentical, { count: content.sharedIdentical })}
+            </Text>
+          )}
         </>
       )}
       {unsupported.length > 0 && <UnsupportedContainers containers={unsupported} />}

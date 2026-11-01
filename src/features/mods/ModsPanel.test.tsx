@@ -143,9 +143,9 @@ describe('ModsPanel', () => {
     renderMods(makeGameStatus(), { snapshot: makeSnapshot([same, makeModRow('Plain')]) })
     await screen.findAllByTestId('mods-row')
 
-    expect(screen.getByText('Same assets · 1')).toBeVisible()
+    expect(screen.getByText('Replaces same files · 1')).toBeVisible()
 
-    await user.click(screen.getByRole('checkbox', { name: 'Same assets' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Replaces same files' }))
     expect(rowNames()).toEqual(['Same'])
   })
 

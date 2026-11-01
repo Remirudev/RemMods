@@ -286,3 +286,32 @@ fn contents_never_write() {
     }
     assert_eq!(listing(&game), before);
 }
+
+#[test]
+fn shared_with_skips_identical_copies() {
+    let a = TocBuilder::new(MOUNT)
+        .file_with_hash("Smoke/Same.uasset", [1; 20])
+        .file_with_hash("Smoke/Other.uasset", [2; 20])
+        .build();
+    let b = TocBuilder::new(MOUNT)
+        .file_with_hash("Smoke/Same.uasset", [1; 20])
+        .file_with_hash("Smoke/Other.uasset", [3; 20])
+        .build();
+    let fixture = ToggleFixture::new(&[
+        ("Mods/A/A.pak", DATA),
+        ("Mods/A/A.utoc", &a),
+        ("Mods/B/B.pak", DATA),
+        ("Mods/B/B.utoc", &b),
+    ]);
+    let b_ref = fixture.row("Standard:B").mod_ref;
+    let found = contents(&fixture, "Standard:A");
+    assert!(
+        entry(&found, "Polaris/Content/Smoke/Same.uasset")
+            .shared_with
+            .is_empty()
+    );
+    assert_eq!(
+        entry(&found, "Polaris/Content/Smoke/Other.uasset").shared_with,
+        [b_ref]
+    );
+}

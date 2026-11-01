@@ -148,8 +148,9 @@ renamed; the copies are removed afterwards.
    `python3 -I scripts/utoc-list.py "<Paks>/Mods" | grep '<mod folder>'`.
    Result:
 3. Exit check B (same asset, same files): copy one installed costume mod into `Mods/P2bA/` and
-   `Mods/P2bB/`, renaming the pak trio to `P2bA_P.*` and `P2bB_P.*`. RemMods shows "Same assets" on
-   both rows and no pak-name conflict. Remove the copies.
+   `Mods/P2bB/`, renaming the pak trio to `P2bA_P.*` and `P2bB_P.*`. Identical copies are not a
+   content conflict: neither row shows "Replaces same files", the details drawer counts the files
+   as shared identical copies, and there is no pak-name conflict. Remove the copies.
    Result:
 4. Exit check C (which one wins, same asset in different paks): two mods that ship the same asset
    with a visible difference (for example `Qipao finemod`'s `Qipao_P` and

@@ -322,3 +322,92 @@ fn pak_name_conflicts_unchanged() {
     );
     assert!(row(&content, "Standard:Zeta").conflicts_with.is_empty());
 }
+
+fn hashed(files: &[(&str, u8)]) -> Vec<u8> {
+    files
+        .iter()
+        .fold(TocBuilder::new(MOUNT), |builder, &(path, byte)| {
+            builder.file_with_hash(path, [byte; 20])
+        })
+        .build()
+}
+
+#[test]
+fn identical_copies_never_conflict() {
+    let a = hashed(&[
+        ("Cmn/Common.uasset", 1),
+        ("Cmn/Common.ubulk", 2),
+        ("A/Own.uasset", 3),
+    ]);
+    let b = hashed(&[
+        ("Cmn/Common.uasset", 1),
+        ("Cmn/Common.ubulk", 2),
+        ("B/Own.uasset", 4),
+    ]);
+    let content = scanned(&[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+    ]);
+    for key in ["Standard:Aye", "Standard:Bee"] {
+        assert!(linked(&content, key).is_empty(), "{key}");
+        assert_eq!(row(&content, key).content.shared_identical, 1, "{key}");
+    }
+}
+
+#[test]
+fn different_versions_conflict_and_identical_ones_are_counted() {
+    let a = hashed(&[("Cmn/Common.uasset", 1), ("Ker/Upper.uasset", 5)]);
+    let b = hashed(&[("Cmn/Common.uasset", 1), ("Ker/Upper.uasset", 6)]);
+    let c = hashed(&[("Ker/Upper.uasset", 5)]);
+    let content = scanned(&[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+        ("Mods/Cee/Cee.pak", DATA),
+        ("Mods/Cee/Cee.utoc", &c),
+    ]);
+    assert_eq!(linked(&content, "Standard:Aye"), link_to("Standard:Bee", 1));
+    assert_eq!(
+        linked(&content, "Standard:Bee"),
+        [
+            ("Standard:Aye".to_owned(), 1),
+            ("Standard:Cee".to_owned(), 1)
+        ]
+    );
+    assert_eq!(linked(&content, "Standard:Cee"), link_to("Standard:Bee", 1));
+    assert_eq!(
+        row(&content, "Standard:Aye").content_conflicts[0].sample,
+        ["Polaris/Content/Ker/Upper.uasset"]
+    );
+    assert_eq!(row(&content, "Standard:Aye").content.shared_identical, 1);
+    assert_eq!(row(&content, "Standard:Cee").content.shared_identical, 0);
+}
+
+#[test]
+fn a_differing_bulk_file_makes_the_asset_differ() {
+    let a = hashed(&[("Ker/Upper.uasset", 1), ("Ker/Upper.ubulk", 2)]);
+    let b = hashed(&[("Ker/Upper.uasset", 1), ("Ker/Upper.ubulk", 3)]);
+    let content = scanned(&[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+    ]);
+    assert_eq!(linked(&content, "Standard:Aye"), link_to("Standard:Bee", 1));
+}
+
+#[test]
+fn unknown_hashes_count_as_different() {
+    let a = hashed(&[("Ker/Upper.uasset", 1)]);
+    let b = toc(MOUNT, &["Ker/Upper.uasset"]);
+    let content = scanned(&[
+        ("Mods/Aye/Aye.pak", DATA),
+        ("Mods/Aye/Aye.utoc", &a),
+        ("Mods/Bee/Bee.pak", DATA),
+        ("Mods/Bee/Bee.utoc", &b),
+    ]);
+    assert_eq!(linked(&content, "Standard:Aye"), link_to("Standard:Bee", 1));
+}

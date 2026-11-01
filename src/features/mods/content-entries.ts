@@ -4,6 +4,17 @@ import { characterLabel, slotLabel } from './content-hints'
 
 export const ENTRY_RENDER_LIMIT = 300
 
+export function sharedLabel(
+  origin: AssetOrigin,
+  count: number,
+  t: TFunction<'mods'>,
+): string | null {
+  if (count === 0) return null
+  if (origin === 'replaces') return t(($) => $.content.conflictReplaces, { count })
+  if (origin === 'adds') return t(($) => $.content.conflictAdds, { count })
+  return t(($) => $.content.sharedWith, { count })
+}
+
 export function originLabelKey(origin: AssetOrigin): AssetOrigin {
   switch (origin) {
     case 'adds':

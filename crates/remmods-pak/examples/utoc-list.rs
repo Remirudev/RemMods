@@ -1,10 +1,10 @@
-//! `utoc-list <dir>`: read-only listing of every `.utoc`/`.utoc-x` below `<dir>` (SPEC-P2B §4.7),
+//! `utoc-list [--hashes] <dir>`: read-only listing of every `.utoc`/`.utoc-x` below `<dir>` (SPEC-P2B §4.7),
 //! cross-checked against `scripts/utoc-list.py`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use remmods_pak::{PakError, read_toc};
+use remmods_pak::{PakError, TocFile, read_toc};
 
 fn is_container(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
@@ -47,11 +47,27 @@ fn collect(dir: &Path, rel: &str, out: &mut Vec<(String, PathBuf)>) {
     }
 }
 
+/// `<rel>\t<path>`, plus `\t<hex hash>` (or `\t-` when unknown) with `--hashes`.
+fn line(rel: &str, file: &TocFile, hashes: bool) -> String {
+    if !hashes {
+        return format!("{rel}\t{}", file.path);
+    }
+    let hash = file.content_hash.map_or_else(
+        || "-".to_owned(),
+        |hash| hash.iter().map(|b| format!("{b:02x}")).collect(),
+    );
+    format!("{rel}\t{}\t{hash}", file.path)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let [dir] = args.as_slice() else {
-        eprintln!("usage: utoc-list <dir>");
-        std::process::exit(2);
+    let (hashes, dir) = match args.as_slice() {
+        [flag, dir] if flag == "--hashes" => (true, dir),
+        [dir] => (false, dir),
+        _ => {
+            eprintln!("usage: utoc-list [--hashes] <dir>");
+            std::process::exit(2);
+        }
     };
     let root = Path::new(dir);
     if !root.is_dir() {
@@ -67,7 +83,7 @@ fn main() {
                 listing
                     .files
                     .into_iter()
-                    .map(|file| format!("{rel}\t{}", file.path)),
+                    .map(|file| line(&rel, &file, hashes)),
             ),
             Err(error) => lines.push(format!("{rel}\t!{}", status(&error))),
         }

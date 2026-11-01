@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { i18n } from '../../lib/i18n'
 import type { AssetEntry } from '../../lib/ipc/types'
-import { filterEntries, originLabelKey } from './content-entries'
+import { filterEntries, originLabelKey, sharedLabel } from './content-entries'
 
 const t = i18n.getFixedT('en', 'mods')
 
@@ -53,5 +53,14 @@ describe('originLabelKey', () => {
     expect(originLabelKey('adds')).toBe('adds')
     expect(originLabelKey('replaces')).toBe('replaces')
     expect(originLabelKey('unknown')).toBe('unknown')
+  })
+})
+
+describe('sharedLabel', () => {
+  it('names what a differing shared file does', () => {
+    expect(sharedLabel('replaces', 0, t)).toBeNull()
+    expect(sharedLabel('replaces', 1, t)).toBe('Both replace this game file')
+    expect(sharedLabel('adds', 1, t)).toBe('Both add this file, different versions')
+    expect(sharedLabel('unknown', 2, t)).toBe('Different versions in 2 other mods')
   })
 })

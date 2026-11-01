@@ -7,10 +7,13 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::SystemTime;
 
 use remmods_pak::hints::hint_for;
-use remmods_pak::{PakError, TocListing, asset_key, read_toc};
+use remmods_pak::{ContentHash, PakError, TocListing, asset_key, file_key, read_toc};
 
 use super::model::{ContainerStatus, UtocRef};
 use crate::platform;
+
+/// The (file key, content hash) of each file of one asset, sorted; `None` when a hash is unknown.
+pub(crate) type Fingerprint = Option<Vec<(String, ContentHash)>>;
 
 /// A listing plus what every scan derives from it, computed once per read.
 #[derive(Debug)]
@@ -18,25 +21,43 @@ pub(crate) struct Container {
     pub listing: TocListing,
     /// (asset key, index of its smallest display path in `listing.files`), sorted, unique.
     pub assets: Vec<(String, usize)>,
+    /// Parallel to `assets`.
+    pub prints: Vec<Fingerprint>,
     pub characters: BTreeSet<String>,
     pub slots: BTreeSet<String>,
 }
 
 impl Container {
     fn new(listing: TocListing) -> Self {
-        let mut assets: BTreeMap<String, usize> = BTreeMap::new();
+        let mut assets: BTreeMap<String, (usize, Fingerprint)> = BTreeMap::new();
         let mut characters = BTreeSet::new();
         let mut slots = BTreeSet::new();
         for (index, file) in listing.files.iter().enumerate() {
             // Files are sorted by display path, so the first index per key is the smallest path.
-            assets.entry(asset_key(&file.path)).or_insert(index);
+            let (_, print) = assets
+                .entry(asset_key(&file.path))
+                .or_insert_with(|| (index, Some(Vec::new())));
+            match (print.as_mut(), file.content_hash) {
+                (Some(files), Some(hash)) => files.push((file_key(&file.path), hash)),
+                _ => *print = None,
+            }
             let hint = hint_for(&file.path);
             characters.extend(hint.character);
             slots.extend(hint.slot);
         }
+        let (assets, prints) = assets
+            .into_iter()
+            .map(|(key, (index, mut print))| {
+                if let Some(files) = print.as_mut() {
+                    files.sort_unstable();
+                }
+                ((key, index), print)
+            })
+            .unzip();
         Self {
             listing,
-            assets: assets.into_iter().collect(),
+            assets,
+            prints,
             characters,
             slots,
         }

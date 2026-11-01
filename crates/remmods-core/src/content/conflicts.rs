@@ -1,6 +1,9 @@
-//! Content conflicts: rows shipping the same asset key in live Read containers (§5.3 rule 3).
+//! Content conflicts: rows shipping the same asset key in live Read containers in different
+//! versions (§5.3 rule 3). Identical copies (same content hashes) are not conflicts.
 
 use std::collections::{BTreeMap, HashMap};
+
+use remmods_pak::ContentHash;
 
 use super::cache::ContainerResult;
 use super::model::{CONFLICT_SAMPLE, ContentConflictLink, UtocRef};
@@ -9,12 +12,28 @@ use crate::mods::ModState;
 use crate::mods::rows::RowDraft;
 use crate::safe_fs::names::order_key;
 
-/// Asset key → this row's smallest display path, over live Read containers.
+/// One asset of a row: its smallest display path and its fingerprint (`None` = unknown).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct LiveAsset<'a> {
+    pub path: &'a str,
+    pub print: Option<&'a [(String, ContentHash)]>,
+}
+
+/// `true` only when both fingerprints are known and equal; unknown counts as different.
+pub(crate) fn identical(
+    a: Option<&[(String, ContentHash)]>,
+    b: Option<&[(String, ContentHash)]>,
+) -> bool {
+    matches!((a, b), (Some(a), Some(b)) if a == b)
+}
+
+/// Asset key → this row's smallest display path and fingerprint, over live Read containers.
+/// Two containers of the row with different versions of an asset make its fingerprint unknown.
 pub(crate) fn live_assets<'a>(
     utocs: &[UtocRef],
     results: &'a [ContainerResult],
-) -> BTreeMap<&'a str, &'a str> {
-    let mut assets: BTreeMap<&str, &str> = BTreeMap::new();
+) -> BTreeMap<&'a str, LiveAsset<'a>> {
+    let mut assets: BTreeMap<&str, LiveAsset<'a>> = BTreeMap::new();
     for (utoc, result) in utocs.iter().zip(results) {
         let Ok(container) = result.as_ref() else {
             continue;
@@ -22,16 +41,22 @@ pub(crate) fn live_assets<'a>(
         if !utoc.live {
             continue;
         }
-        for (key, index) in &container.assets {
-            let path = container.path_of(*index);
+        for ((key, index), print) in container.assets.iter().zip(&container.prints) {
+            let asset = LiveAsset {
+                path: container.path_of(*index),
+                print: print.as_deref(),
+            };
             assets
                 .entry(key.as_str())
                 .and_modify(|existing| {
-                    if path < *existing {
-                        *existing = path;
+                    if !identical(existing.print, asset.print) {
+                        existing.print = None;
+                    }
+                    if asset.path < existing.path {
+                        existing.path = asset.path;
                     }
                 })
-                .or_insert(path);
+                .or_insert(asset);
         }
     }
     assets
@@ -40,7 +65,7 @@ pub(crate) fn live_assets<'a>(
 type SortKey = ((String, Vec<u8>), Vec<u8>, String);
 
 pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<ContainerResult>]) {
-    let live: Vec<BTreeMap<&str, &str>> = drafts
+    let live: Vec<BTreeMap<&str, LiveAsset<'_>>> = drafts
         .iter()
         .zip(results)
         .map(|(draft, results)| {
@@ -57,22 +82,32 @@ pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<Con
             owners.entry(key).or_default().push(index);
         }
     }
-    let mut shared: BTreeMap<(usize, usize), Vec<&str>> = BTreeMap::new();
+    let mut differing: BTreeMap<(usize, usize), Vec<&str>> = BTreeMap::new();
+    let mut identical_only = vec![0usize; drafts.len()];
     for (key, rows) in owners.iter().filter(|(_, rows)| rows.len() > 1) {
         for &this in rows {
+            let print = live[this].get(key).and_then(|asset| asset.print);
+            let mut conflicting = false;
             for &other in rows.iter().filter(|&&other| other != this) {
-                shared.entry((this, other)).or_default().push(key);
+                let other_print = live[other].get(key).and_then(|asset| asset.print);
+                if !identical(print, other_print) {
+                    conflicting = true;
+                    differing.entry((this, other)).or_default().push(key);
+                }
+            }
+            if !conflicting {
+                identical_only[this] += 1;
             }
         }
     }
     let mut links: Vec<Vec<(SortKey, ContentConflictLink)>> = vec![Vec::new(); drafts.len()];
-    for ((this, other), mut keys) in shared {
+    for ((this, other), mut keys) in differing {
         keys.sort_unstable();
         let other_draft = &drafts[other];
         let sample = keys
             .iter()
             .take(CONFLICT_SAMPLE)
-            .filter_map(|key| live[this].get(key).map(|path| (*path).to_owned()))
+            .filter_map(|key| live[this].get(key).map(|asset| asset.path.to_owned()))
             .collect();
         let link = ContentConflictLink {
             other: other_draft.row.mod_ref.clone(),
@@ -88,8 +123,9 @@ pub(crate) fn link_content_conflicts(drafts: &mut [RowDraft], results: &[Vec<Con
         );
         links[this].push((sort_key, link));
     }
-    for (draft, mut found) in drafts.iter_mut().zip(links) {
+    for ((draft, mut found), identical) in drafts.iter_mut().zip(links).zip(identical_only) {
         found.sort_by(|a, b| a.0.cmp(&b.0));
         draft.row.content_conflicts = found.into_iter().map(|(_, link)| link).collect();
+        draft.row.content.shared_identical = count(identical);
     }
 }

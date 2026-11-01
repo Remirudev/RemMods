@@ -2,7 +2,7 @@ import { Badge, Button, Group, ScrollArea, Stack, Text, TextInput } from '@manti
 import { IconSearch } from '@tabler/icons-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ENTRY_RENDER_LIMIT, filterEntries, originLabelKey } from './content-entries'
+import { ENTRY_RENDER_LIMIT, filterEntries, originLabelKey, sharedLabel } from './content-entries'
 import { characterLabel, slotLabel } from './content-hints'
 import classes from './mods.module.css'
 import type { ContentListProps } from './types'
@@ -28,6 +28,7 @@ export function ContentList({ entries }: ContentListProps) {
         <ul className={classes.fileList}>
           {visible.map((entry) => {
             const origin = originLabelKey(entry.origin)
+            const shared = sharedLabel(entry.origin, entry.sharedWith.length, t)
             const hints = [
               entry.character ? characterLabel(entry.character, t) : null,
               entry.slot ? slotLabel(entry.slot, t) : null,
@@ -39,12 +40,11 @@ export function ContentList({ entries }: ContentListProps) {
                     <Text size="sm" ff="monospace" style={{ overflowWrap: 'anywhere' }}>
                       <bdi>{entry.path}</bdi>
                     </Text>
-                    {(hints.length > 0 || entry.sharedWith.length > 0) && (
+                    {(hints.length > 0 || shared !== null) && (
                       <Text size="xs" c="var(--qc-text-2)">
                         <bdi>{hints.join(' · ')}</bdi>
-                        {hints.length > 0 && entry.sharedWith.length > 0 && ' · '}
-                        {entry.sharedWith.length > 0 &&
-                          t(($) => $.content.sharedWith, { count: entry.sharedWith.length })}
+                        {hints.length > 0 && shared !== null && ' · '}
+                        {shared}
                       </Text>
                     )}
                   </Stack>

@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Independent lister of IoStore .utoc/.utoc-x files (docs: local/SPEC-P2B.md §4). Standard library only.
 
-Usage: python3 -I scripts/utoc-list.py <dir>
+Usage: python3 -I scripts/utoc-list.py [--hashes] <dir>
 
 Finds every regular file below <dir> whose name ends in .utoc or .utoc-x (ASCII case-insensitive),
 never descending into symlinked folders. Prints one line per file entry, "<rel>\\t<display path>",
 or one line "<rel>\\t!<status>" for a container that cannot be listed (notIoStore,
 unsupportedVersion, encrypted, noIndex, malformed, tooLarge, unreadable). <rel> is the path below
-<dir> with "/" separators. Lines are sorted by UTF-8 bytes, LF line endings. This is the Python
-side of scripts/utoc-compare.sh; it is written from the format description, not from the Rust
-reader, so the two cross-check each other.
+<dir> with "/" separators. With --hashes each file line gets a third column: the 20-byte content
+hash of its chunk in lowercase hex (the chunk metas after the directory index: TocEntryCount
+entries of 33 bytes up to version 7, 24 bytes from version 8, hash first), or "-" when the metas
+do not fit in the file or the hash is all zero. Lines are sorted by UTF-8 bytes, LF line
+endings. This is the Python side of scripts/utoc-compare.sh; it is written from the format
+description, not from the Rust reader, so the two cross-check each other.
 
 Read-only: files are only opened with open(path, "rb"). Exit 0 after printing, 2 on bad arguments.
 """
@@ -27,6 +30,7 @@ INVALID = 0xFFFFFFFF
 FLAG_ENCRYPTED = 0x02
 FLAG_SIGNED = 0x04
 FLAG_INDEXED = 0x08
+HASH_BYTES = 20
 
 
 class Status(Exception):
@@ -155,7 +159,8 @@ def display_path(raw):
     return raw.lstrip("/")
 
 
-def walk(mount, dirs, files, strings, entry_count):
+def walk(mount, dirs, files, strings, entry_count, metas):
+    """Sorted (display path, hash text) pairs."""
     if "\\" in mount:
         raise malformed()
     if not dirs:
@@ -205,7 +210,7 @@ def walk(mount, dirs, files, strings, entry_count):
             name, next_file, user_data = files[current]
             if user_data >= entry_count:
                 raise malformed()
-            out.append(display_path(join(prefix, name, "")))
+            out.append((display_path(join(prefix, name, "")), hash_of(metas, user_data)))
             current = link(next_file, len(files))
         child = link(first_child, len(dirs))
         while child is not None:
@@ -215,11 +220,11 @@ def walk(mount, dirs, files, strings, entry_count):
             child_name, _child, sibling, _first = dirs[child]
             stack.append((child, join(prefix, child_name, "/")))
             child = link(sibling, len(dirs))
-    return sorted(out, key=lambda path: path.encode("utf-8"))
+    return sorted(out, key=lambda item: item[0].encode("utf-8"))
 
 
 def list_container(path):
-    """Returns the sorted display paths of one container; raises Status."""
+    """Returns the sorted (display path, hash text) pairs of one container; raises Status."""
     with open(path, "rb") as handle:
         total = os.fstat(handle.fileno()).st_size
         header = parse_header(handle.read(HEADER_SIZE))
@@ -238,8 +243,32 @@ def list_container(path):
         data = handle.read(header["index_size"])
         if len(data) != header["index_size"]:
             raise malformed()
+        metas = read_metas(handle, header, offset + header["index_size"], total)
     mount, dirs, files, strings = parse_index(data)
-    return walk(mount, dirs, files, strings, header["entries"])
+    return walk(mount, dirs, files, strings, header["entries"], metas)
+
+
+def read_metas(handle, header, start, total):
+    """The chunk-meta table and its entry size, or None when it does not fit in the file."""
+    size = 24 if header["version"] >= 8 else 33
+    length = header["entries"] * size
+    if start + length > total:
+        return None
+    handle.seek(start)
+    data = handle.read(length)
+    if len(data) != length:
+        return None
+    return data, size
+
+
+def hash_of(metas, chunk):
+    if metas is None:
+        return "-"
+    data, size = metas
+    digest = data[chunk * size : chunk * size + HASH_BYTES]
+    if len(digest) != HASH_BYTES or digest == bytes(HASH_BYTES):
+        return "-"
+    return digest.hex()
 
 
 def is_container(name):
@@ -269,10 +298,14 @@ def encode(text):
 
 
 def main(argv):
-    if len(argv) != 2 or argv[1] in ("-h", "--help"):
-        print(__doc__.strip(), file=sys.stderr if len(argv) != 2 else sys.stdout)
-        return 2 if len(argv) != 2 else 0
-    root = argv[1]
+    args = argv[1:]
+    hashes = bool(args) and args[0] == "--hashes"
+    if hashes:
+        args = args[1:]
+    if len(args) != 1 or args[0] in ("-h", "--help"):
+        print(__doc__.strip(), file=sys.stderr if len(args) != 1 else sys.stdout)
+        return 2 if len(args) != 1 else 0
+    root = args[0]
     if not os.path.isdir(root):
         print(f"utoc-list: not a directory: {root}", file=sys.stderr)
         return 2
@@ -287,7 +320,9 @@ def main(argv):
         except OSError:
             lines.append(f"{rel}\t!unreadable")
         else:
-            lines.extend(f"{rel}\t{p}" for p in paths)
+            for path_text, hash_text in paths:
+                suffix = f"\t{hash_text}" if hashes else ""
+                lines.append(f"{rel}\t{path_text}{suffix}")
     lines.sort(key=encode)
     out = sys.stdout.buffer
     for line in lines:

@@ -150,6 +150,7 @@ export type ContentSummary = {
 	characters: CharacterHint[],
 	slots: SlotHint[],
 	internalOverlaps: number,
+	sharedIdentical: number,
 };
 
 export type DetectionNote = {
