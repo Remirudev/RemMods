@@ -21,7 +21,8 @@ use windows::Win32::System::Com::{
 };
 use windows::Win32::System::SystemServices::SFGAO_FILESYSTEM;
 use windows::Win32::UI::Shell::{
-    COPYENGINE_E_ACCESS_DENIED_SRC, COPYENGINE_E_REQUIRES_ELEVATION,
+    COPYENGINE_E_ACCESS_DENIED_DEST, COPYENGINE_E_ACCESS_DENIED_SRC,
+    COPYENGINE_E_REQUIRES_ELEVATION, COPYENGINE_E_SHARING_VIOLATION_DEST,
     COPYENGINE_E_SHARING_VIOLATION_SRC, FOF_ALLOWUNDO, FOF_NO_UI, FOFX_EARLYFAILURE,
     FOFX_RECYCLEONDELETE, FileOperation, IFileOperation, IFileOperationProgressSink,
     IFileOperationProgressSink_Impl, IShellItem, SHCreateItemFromParsingName, SIGDN_FILESYSPATH,
@@ -300,17 +301,20 @@ fn decide(
 }
 
 /// HRESULTs `platform::classify` understands: Win32 codes become raw OS errors, the copy engine's
-/// sharing and access codes become 32 and 5.
+/// sharing and access codes become 32 and 5. A recycle reports a file held open inside the item
+/// as a destination sharing violation (windows-2025 CI), so both sides map alike.
 fn hresult_io(hr: HRESULT) -> io::Error {
     let code = hr.0.cast_unsigned();
     if code & WIN32_FACILITY_MASK == WIN32_FACILITY {
         return io::Error::from_raw_os_error((code & 0xFFFF).cast_signed());
     }
     match hr {
-        COPYENGINE_E_SHARING_VIOLATION_SRC => {
+        COPYENGINE_E_SHARING_VIOLATION_SRC | COPYENGINE_E_SHARING_VIOLATION_DEST => {
             io::Error::from_raw_os_error(ERROR_SHARING_VIOLATION.cast_signed())
         }
-        COPYENGINE_E_ACCESS_DENIED_SRC | COPYENGINE_E_REQUIRES_ELEVATION => {
+        COPYENGINE_E_ACCESS_DENIED_SRC
+        | COPYENGINE_E_ACCESS_DENIED_DEST
+        | COPYENGINE_E_REQUIRES_ELEVATION => {
             io::Error::from_raw_os_error(ERROR_ACCESS_DENIED.cast_signed())
         }
         E_ABORT => io::Error::from(io::ErrorKind::Interrupted),
@@ -517,7 +521,9 @@ mod tests {
                 OsErrorClass::NotFound,
             ),
             (COPYENGINE_E_SHARING_VIOLATION_SRC, OsErrorClass::InUse),
+            (COPYENGINE_E_SHARING_VIOLATION_DEST, OsErrorClass::InUse),
             (COPYENGINE_E_ACCESS_DENIED_SRC, OsErrorClass::AccessDenied),
+            (COPYENGINE_E_ACCESS_DENIED_DEST, OsErrorClass::AccessDenied),
             (COPYENGINE_E_REQUIRES_ELEVATION, OsErrorClass::AccessDenied),
         ];
         for (hr, class) in cases {
