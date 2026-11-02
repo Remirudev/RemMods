@@ -1,13 +1,15 @@
-import { Table, UnstyledButton } from '@mantine/core'
-import { IconArrowDown, IconArrowsSort, IconArrowUp } from '@tabler/icons-react'
+import { Table } from '@mantine/core'
 import { type SortingState, useTable } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModRow } from '../../lib/ipc/types'
+import { useColumnLayoutStore } from './column-layout-store'
+import { ModHeaderCell } from './ModHeaderCell'
 import { canManage, rowSubject } from './manage-model'
 import { bulkCount, spaceAction } from './mod-actions'
-import { buildModColumns, modTableFeatures } from './mod-table-model'
+import { modTableFeatures } from './mod-table-features'
+import { buildModColumns } from './mod-table-model'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
 import { applyClick, extendTo } from './selection'
@@ -39,6 +41,8 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
     [t, locale, onToggle, onManage],
   )
   const [sorting, setSorting] = useState<SortingState>(INITIAL_SORTING)
+  const columnSizing = useColumnLayoutStore((state) => state.sizing)
+  const columnVisibility = useColumnLayoutStore((state) => state.visibility)
   const viewportRef = useRef<HTMLDivElement>(null)
   const activeIndex = useModsUiStore((state) => state.activeIndex)
   const setActiveIndex = useModsUiStore((state) => state.setActiveIndex)
@@ -54,18 +58,28 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
     columns,
     data: rows as ModRow[],
     getRowId,
-    state: { sorting },
+    state: { sorting, columnSizing, columnVisibility },
     onSortingChange: setSorting,
     enableSortingRemoval: false,
     enableMultiSort: false,
   })
   const sortedRows = table.getRowModel().rows
+  // Without a stored width Name takes the free space, so the table spans the pane; once it has
+  // one, every column is exact and the table is as wide as their sum (scrolling sideways if wider).
+  const nameFills = columnSizing.name === undefined
+  const totalWidth = table.getTotalSize()
 
   // The collator changes with the language, so the same sort state has to run again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `locale` is the trigger, not a read value.
   useEffect(() => {
     setSorting((current) => [...current])
   }, [locale])
+
+  // Rows sorted by a column that is no longer shown would look unsorted, so Name takes over.
+  const sortedBy = sorting[0]?.id
+  useEffect(() => {
+    if (sortedBy !== undefined && columnVisibility[sortedBy] === false) setSorting(INITIAL_SORTING)
+  }, [sortedBy, columnVisibility])
 
   const virtualizer = useVirtualizer({
     count: sortedRows.length,
@@ -80,7 +94,7 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
   const last = items[items.length - 1]
   const topSpace = first?.start ?? 0
   const bottomSpace = last ? virtualizer.getTotalSize() - last.end : 0
-  const columnCount = columns.length
+  const columnCount = table.getVisibleLeafColumns().length
   const activeRendered = items.some((item) => item.index === activeIndex)
   const ids = useMemo(() => sortedRows.map((row) => row.id), [sortedRows])
 
@@ -182,7 +196,7 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
   return (
     <div className={classes.tableWrapper}>
       <Table.ScrollContainer
-        minWidth={900}
+        minWidth={totalWidth}
         h="100%"
         className={classes.tableContainer}
         scrollAreaProps={{ viewportRef }}
@@ -192,6 +206,7 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
           layout="fixed"
           highlightOnHover
           className={classes.table}
+          style={nameFills ? undefined : { width: totalWidth }}
           role="grid"
           tabIndex={0}
           aria-multiselectable="true"
@@ -203,39 +218,13 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
           <Table.Thead>
             {table.getHeaderGroups().map((group) => (
               <Table.Tr key={group.id}>
-                {group.headers.map((header) => {
-                  const sorted = header.column.getIsSorted()
-                  const meta = header.column.columnDef.meta
-                  return (
-                    <Table.Th
-                      key={header.id}
-                      className={classes.headerCell}
-                      style={{ width: meta?.width }}
-                      aria-sort={
-                        sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'
-                      }
-                      ta={meta?.align === 'right' ? 'right' : undefined}
-                    >
-                      {header.column.getCanSort() ? (
-                        <UnstyledButton
-                          className={classes.sortButton}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          <table.FlexRender header={header} />
-                          {sorted === 'asc' ? (
-                            <IconArrowUp size={14} stroke={1.8} />
-                          ) : sorted === 'desc' ? (
-                            <IconArrowDown size={14} stroke={1.8} />
-                          ) : (
-                            <IconArrowsSort size={14} stroke={1.8} opacity={0.5} />
-                          )}
-                        </UnstyledButton>
-                      ) : (
-                        <table.FlexRender header={header} />
-                      )}
-                    </Table.Th>
-                  )
-                })}
+                {group.headers.map((header) => (
+                  <ModHeaderCell
+                    key={header.id}
+                    header={header}
+                    fills={nameFills && header.column.id === 'name'}
+                  />
+                ))}
               </Table.Tr>
             ))}
           </Table.Thead>
@@ -255,7 +244,7 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
                   mod={{ active: item.index === activeIndex, selected: selected.has(row.id) }}
                   onClick={(event) => onRowClick(item.index, event)}
                 >
-                  {row.getAllCells().map((cell) => (
+                  {row.getVisibleCells().map((cell) => (
                     <Table.Td
                       key={cell.id}
                       ta={cell.column.columnDef.meta?.align === 'right' ? 'right' : undefined}

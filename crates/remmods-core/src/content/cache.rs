@@ -9,6 +9,7 @@ use std::time::SystemTime;
 use remmods_pak::hints::hint_for;
 use remmods_pak::{ContentHash, PakError, TocListing, asset_key, file_key, read_toc};
 
+use super::conflicts::is_outfit_slot;
 use super::model::{ContainerStatus, UtocRef};
 use crate::platform;
 
@@ -23,41 +24,47 @@ pub(crate) struct Container {
     pub assets: Vec<(String, usize)>,
     /// Parallel to `assets`.
     pub prints: Vec<Fingerprint>,
+    /// Parallel to `assets`: a file of the asset is upper-body or full-body clothing.
+    pub outfits: Vec<bool>,
     pub characters: BTreeSet<String>,
     pub slots: BTreeSet<String>,
 }
 
 impl Container {
     fn new(listing: TocListing) -> Self {
-        let mut assets: BTreeMap<String, (usize, Fingerprint)> = BTreeMap::new();
+        let mut assets: BTreeMap<String, (usize, Fingerprint, bool)> = BTreeMap::new();
         let mut characters = BTreeSet::new();
         let mut slots = BTreeSet::new();
         for (index, file) in listing.files.iter().enumerate() {
+            let hint = hint_for(&file.path);
             // Files are sorted by display path, so the first index per key is the smallest path.
-            let (_, print) = assets
+            let (_, print, outfit) = assets
                 .entry(asset_key(&file.path))
-                .or_insert_with(|| (index, Some(Vec::new())));
+                .or_insert_with(|| (index, Some(Vec::new()), false));
             match (print.as_mut(), file.content_hash) {
                 (Some(files), Some(hash)) => files.push((file_key(&file.path), hash)),
                 _ => *print = None,
             }
-            let hint = hint_for(&file.path);
+            *outfit |= hint.slot.as_deref().is_some_and(is_outfit_slot);
             characters.extend(hint.character);
             slots.extend(hint.slot);
         }
-        let (assets, prints) = assets
-            .into_iter()
-            .map(|(key, (index, mut print))| {
-                if let Some(files) = print.as_mut() {
-                    files.sort_unstable();
-                }
-                ((key, index), print)
-            })
-            .unzip();
+        let mut keys = Vec::with_capacity(assets.len());
+        let mut prints = Vec::with_capacity(assets.len());
+        let mut outfits = Vec::with_capacity(assets.len());
+        for (key, (index, mut print, outfit)) in assets {
+            if let Some(files) = print.as_mut() {
+                files.sort_unstable();
+            }
+            keys.push((key, index));
+            prints.push(print);
+            outfits.push(outfit);
+        }
         Self {
             listing,
-            assets,
+            assets: keys,
             prints,
+            outfits,
             characters,
             slots,
         }

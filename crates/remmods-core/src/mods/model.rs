@@ -140,7 +140,8 @@ pub struct ModRow {
     pub conflicts_with: Vec<ConflictLink>,
     /// What the row's `.utoc` indexes list (P2b).
     pub content: ContentSummary,
-    /// Rows shipping the same assets in live containers; independent of `conflicts_with`.
+    /// Rows shipping the same assets in live containers, whatever the slot (`outfit` marks the
+    /// links the badge counts); independent of `conflicts_with`.
     pub content_conflicts: Vec<ContentConflictLink>,
     pub ambiguous: bool,
     /// In `ModIssue` declaration order.

@@ -60,7 +60,11 @@ pub struct ContentConflictLink {
     /// Base-game asset keys both rows ship in live Read containers with different content (or
     /// unknown).
     pub shared: u32,
-    /// At most `CONFLICT_SAMPLE` display paths of this row, sorted by asset key.
+    /// Of `shared`: upper-body or full-body clothing. Only links with at least one count toward
+    /// the row's "replaces same files" badge and filter; the details list every link.
+    pub outfit: u32,
+    /// At most `CONFLICT_SAMPLE` display paths of this row: upper-body and full-body clothing
+    /// first, then by asset key.
     pub sample: Vec<String>,
 }
 

@@ -44,6 +44,14 @@ function rowNames(): string[] {
   return screen.getAllByTestId('mods-row').map((row) => row.querySelector('bdi')?.textContent ?? '')
 }
 
+function rowNamed(name: string): HTMLElement {
+  const row = screen
+    .getAllByTestId('mods-row')
+    .find((candidate) => candidate.querySelector('bdi')?.textContent === name)
+  if (!row) throw new Error(`no row ${name}`)
+  return row
+}
+
 describe('ModsPanel', () => {
   let restoreLayout: () => void
 
@@ -135,17 +143,23 @@ describe('ModsPanel', () => {
     expect(rowNames()).toHaveLength(3)
   })
 
-  it('shows the same-assets badge and filters by it', async () => {
+  it('counts only shared upper-body or full-body clothing in the same-files column and filter', async () => {
     const user = userEvent.setup()
-    const same = makeModRow('Same', {
-      contentConflicts: [{ modRef: 'm:other', key: 'other', name: 'Other', shared: 2, sample: [] }],
+    const link = { modRef: 'm:other', key: 'other', name: 'Other', shared: 2, sample: [] }
+    const same = makeModRow('Same', { contentConflicts: [{ ...link, outfit: 1 }] })
+    const shoes = makeModRow('Shoes', { contentConflicts: [{ ...link, outfit: 0 }] })
+    renderMods(makeGameStatus(), {
+      snapshot: makeSnapshot([same, shoes, makeModRow('Plain')]),
     })
-    renderMods(makeGameStatus(), { snapshot: makeSnapshot([same, makeModRow('Plain')]) })
     await screen.findAllByTestId('mods-row')
 
-    expect(screen.getByText('Replaces same files · 1')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Same files' })).toBeVisible()
+    expect(screen.getAllByText('1 mod')).toHaveLength(1)
+    expect(within(rowNamed('Same')).getByText('1 mod')).toBeVisible()
 
-    await user.click(screen.getByRole('checkbox', { name: 'Replaces same files' }))
+    const filter = screen.getByRole('checkbox', { name: 'Replaces same files' })
+    expect(filter).toHaveAccessibleDescription(/only upper-body and full-body clothing/)
+    await user.click(filter)
     expect(rowNames()).toEqual(['Same'])
   })
 

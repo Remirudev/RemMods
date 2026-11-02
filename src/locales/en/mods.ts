@@ -29,6 +29,8 @@ export const mods = {
     kinds: 'Type',
     conflictsOnly: 'Conflicts',
     contentConflictsOnly: 'Replaces same files',
+    contentConflictsHint:
+      'Counts only upper-body and full-body clothing that another enabled mod replaces too. Shoes, lower-body pieces and other shared files are listed in the details.',
     issuesOnly: 'Issues',
     clear: 'Clear filters',
     count_one: '{{count}} of {{total}} mod',
@@ -43,8 +45,10 @@ export const mods = {
     category: 'Category',
     size: 'Size',
     conflicts: 'Conflicts',
+    contentConflicts: 'Same files',
     issues: 'Issues',
   },
+  columnsMenu: { button: 'Columns', title: 'Show columns', reset: 'Reset columns' },
   states: {
     enabled: 'Enabled',
     partial: 'Partial',
@@ -172,11 +176,16 @@ export const mods = {
     issues_one: '{{count}} issue',
     issues_other: '{{count}} issues',
     ambiguous: 'Ambiguous',
-    contentConflicts_one: 'Replaces same files · {{count}}',
-    contentConflicts_other: 'Replaces same files · {{count}}',
-    contentConflictsTooltip: 'Other versions of the same files in: {{names}}',
+    contentConflicts_one: '{{count}} mod',
+    contentConflicts_other: '{{count}} mods',
+    contentConflictsTooltip:
+      'Other versions of the same upper-body or full-body clothing in: {{names}}',
   },
-  table: { label: 'Installed mods', noMatch: 'No mod matches the filters.' },
+  table: {
+    label: 'Installed mods',
+    noMatch: 'No mod matches the filters.',
+    resizeColumn: 'Resize the {{column}} column',
+  },
   empty: {
     title: 'No mods found',
     description: 'Mods, ~mods and LogicMods are empty or missing in {{paks}}.',
@@ -274,6 +283,9 @@ export const mods = {
     title: 'Replaces the same files',
     item_one: '{{count}} file in a different version than {{name}}',
     item_other: '{{count}} files in a different version than {{name}}',
+    outfit: 'Upper-body or full-body clothing: {{files}}',
+    countRule:
+      'In the mod list, “Same files” counts only mods that replace the same upper-body or full-body clothing.',
     winner: 'Which one the game shows is not known yet; it is checked in-game.',
   },
   slots: {

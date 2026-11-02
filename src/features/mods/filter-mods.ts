@@ -1,4 +1,5 @@
 import type { ModRow } from '../../lib/ipc/types'
+import { outfitConflicts } from './content-conflicts'
 import { displayState } from './display-state'
 import type { KindLabel, ModFilter } from './types'
 
@@ -45,7 +46,7 @@ export function filterMods(
       (filter.state === 'all' || displayState(row) === filter.state) &&
       (filter.kinds.length === 0 || filter.kinds.includes(row.kind)) &&
       (!filter.conflictsOnly || row.conflictsWith.length > 0) &&
-      (!filter.contentConflictsOnly || row.contentConflicts.length > 0) &&
+      (!filter.contentConflictsOnly || outfitConflicts(row).length > 0) &&
       (!filter.issuesOnly || row.issues.length > 0) &&
       (needle === '' || matchesText(row, needle, kindLabel, locale)),
   )

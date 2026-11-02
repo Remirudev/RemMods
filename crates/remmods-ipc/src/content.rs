@@ -87,6 +87,10 @@ pub struct ContentConflictLink {
     pub key: String,
     pub name: String,
     pub shared: u32,
+    /// Of `shared`: upper-body or full-body clothing. Only links with one count toward the
+    /// "replaces same files" badge and filter; the details list every link.
+    pub outfit: u32,
+    /// A few of this row's paths: upper-body and full-body clothing first.
     pub sample: Vec<String>,
 }
 
@@ -235,6 +239,7 @@ impl From<&core::ContentConflictLink> for ContentConflictLink {
             key: link.key.clone(),
             name: link.name.clone(),
             shared: link.shared,
+            outfit: link.outfit,
             sample: link.sample.clone(),
         }
     }

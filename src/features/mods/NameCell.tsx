@@ -1,6 +1,5 @@
 import { Badge, Group, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
-import { ContentConflictBadge } from './ContentConflictBadge'
 import type { ModRowCellProps } from './types'
 
 export function NameCell({ row }: ModRowCellProps) {
@@ -12,11 +11,10 @@ export function NameCell({ row }: ModRowCellProps) {
         <bdi>{row.name}</bdi>
       </Text>
       {row.ambiguous && (
-        <Badge color="red" variant="light" size="sm">
+        <Badge color="red" variant="light" size="sm" style={{ flexShrink: 0 }}>
           {t(($) => $.badges.ambiguous)}
         </Badge>
       )}
-      <ContentConflictBadge row={row} />
     </Group>
   )
 }

@@ -30,7 +30,14 @@ const ROWS: ModRow[] = [
   }),
   makeModRow('Troubled', { issues: [{ kind: 'linkedMod' }] }),
   makeModRow('Same Stuff', {
-    contentConflicts: [{ modRef: 'm:x', key: 'x', name: 'X', shared: 2, sample: ['a/b.uasset'] }],
+    contentConflicts: [
+      { modRef: 'm:x', key: 'x', name: 'X', shared: 2, outfit: 1, sample: ['a/b.uasset'] },
+    ],
+  }),
+  makeModRow('Shared Shoes', {
+    contentConflicts: [
+      { modRef: 'm:y', key: 'y', name: 'Y', shared: 6, outfit: 0, sample: ['a/sho.uasset'] },
+    ],
   }),
   makeModRow('Samurai', {
     content: {
@@ -86,7 +93,7 @@ describe('filterMods', () => {
     expect(names({ issuesOnly: true })).toEqual(['Troubled'])
   })
 
-  it('filters by content conflicts', () => {
+  it('filters by content conflicts over upper-body or full-body clothing only', () => {
     expect(names({ contentConflictsOnly: true })).toEqual(['Same Stuff'])
   })
 

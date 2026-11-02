@@ -1,7 +1,19 @@
-import { Button, Checkbox, Group, MultiSelect, Select, Text, TextInput } from '@mantine/core'
+import {
+  Button,
+  Checkbox,
+  Group,
+  MultiSelect,
+  Select,
+  Text,
+  TextInput,
+  Tooltip,
+  VisuallyHidden,
+} from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModKind } from '../../lib/ipc/types'
+import { ColumnsMenu } from './ColumnsMenu'
 import { isFilterActive } from './filter-mods'
 import { useModsUiStore } from './mods-ui-store'
 import type { ModFiltersProps, StateFilter } from './types'
@@ -19,6 +31,8 @@ const KIND_OPTIONS: readonly ModKind[] = ['standard', 'legacy', 'logic', 'loose'
 
 export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
   const { t } = useTranslation('mods')
+  const contentHintId = useId()
+  const contentHint = t(($) => $.filters.contentConflictsHint)
   const filter = useModsUiStore((state) => state.filter)
   const {
     setText,
@@ -68,11 +82,22 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
           checked={filter.conflictsOnly}
           onChange={(event) => setConflictsOnly(event.currentTarget.checked)}
         />
-        <Checkbox
-          label={t(($) => $.filters.contentConflictsOnly)}
-          checked={filter.contentConflictsOnly}
-          onChange={(event) => setContentConflictsOnly(event.currentTarget.checked)}
-        />
+        <Tooltip
+          label={contentHint}
+          multiline
+          maw={320}
+          events={{ hover: true, focus: true, touch: false }}
+        >
+          <div>
+            <Checkbox
+              label={t(($) => $.filters.contentConflictsOnly)}
+              checked={filter.contentConflictsOnly}
+              onChange={(event) => setContentConflictsOnly(event.currentTarget.checked)}
+              aria-describedby={contentHintId}
+            />
+            <VisuallyHidden id={contentHintId}>{contentHint}</VisuallyHidden>
+          </div>
+        </Tooltip>
         <Checkbox
           label={t(($) => $.filters.issuesOnly)}
           checked={filter.issuesOnly}
@@ -88,6 +113,7 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
             {t(($) => $.filters.clear)}
           </Button>
         )}
+        <ColumnsMenu />
       </Group>
     </Group>
   )

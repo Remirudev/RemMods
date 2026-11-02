@@ -32,6 +32,8 @@ export const mods: LocaleShape<typeof en> = {
     kinds: 'Typ',
     conflictsOnly: 'Konflikte',
     contentConflictsOnly: 'Ersetzt gleiche Dateien',
+    contentConflictsHint:
+      'Zählt nur Oberkörper- und Ganzkörper-Kleidung, die ein anderer aktiver Mod ebenfalls ersetzt. Schuhe, Unterkörper-Teile und andere gemeinsame Dateien stehen in den Details.',
     issuesOnly: 'Probleme',
     clear: 'Filter zurücksetzen',
     count_one: '{{count}} von {{total}} Mod',
@@ -46,8 +48,10 @@ export const mods: LocaleShape<typeof en> = {
     category: 'Kategorie',
     size: 'Größe',
     conflicts: 'Konflikte',
+    contentConflicts: 'Gleiche Dateien',
     issues: 'Probleme',
   },
+  columnsMenu: { button: 'Spalten', title: 'Spalten anzeigen', reset: 'Spalten zurücksetzen' },
   states: {
     enabled: 'Aktiv',
     partial: 'Teilweise',
@@ -181,11 +185,16 @@ export const mods: LocaleShape<typeof en> = {
     issues_one: '{{count}} Problem',
     issues_other: '{{count}} Probleme',
     ambiguous: 'Mehrdeutig',
-    contentConflicts_one: 'Ersetzt gleiche Dateien · {{count}}',
-    contentConflicts_other: 'Ersetzt gleiche Dateien · {{count}}',
-    contentConflictsTooltip: 'Andere Versionen derselben Dateien in: {{names}}',
+    contentConflicts_one: '{{count}} Mod',
+    contentConflicts_other: '{{count}} Mods',
+    contentConflictsTooltip:
+      'Andere Versionen derselben Oberkörper- oder Ganzkörper-Kleidung in: {{names}}',
   },
-  table: { label: 'Installierte Mods', noMatch: 'Kein Mod passt zu den Filtern.' },
+  table: {
+    label: 'Installierte Mods',
+    noMatch: 'Kein Mod passt zu den Filtern.',
+    resizeColumn: 'Breite der Spalte „{{column}}“ ändern',
+  },
   empty: {
     title: 'Keine Mods gefunden',
     description: 'Mods, ~mods und LogicMods sind in {{paks}} leer oder fehlen.',
@@ -285,6 +294,9 @@ export const mods: LocaleShape<typeof en> = {
     title: 'Ersetzt dieselben Dateien',
     item_one: '{{count}} Datei in einer anderen Version als {{name}}',
     item_other: '{{count}} Dateien in einer anderen Version als {{name}}',
+    outfit: 'Oberkörper- oder Ganzkörper-Kleidung: {{files}}',
+    countRule:
+      'In der Mod-Liste zählt „Gleiche Dateien“ nur Mods, die dieselbe Oberkörper- oder Ganzkörper-Kleidung ersetzen.',
     winner: 'Welche davon das Spiel zeigt, ist noch nicht bekannt; das wird im Spiel geprüft.',
   },
   slots: {

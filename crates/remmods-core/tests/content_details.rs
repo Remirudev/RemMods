@@ -221,6 +221,28 @@ fn shared_with_lists_enabled_others() {
 }
 
 #[test]
+fn shared_shoes_stay_listed_but_are_no_outfit() {
+    let shoes = "Character/Item/Base_Item/ker/sho/BI_ker_sho_x.uasset";
+    let game_shoes = format!("Polaris/Content/{shoes}");
+    let a = toc(MOUNT, &[shoes, "Smoke/A.uasset"]);
+    let b = toc(MOUNT, &[shoes]);
+    let base = base_toc(&[game_shoes.as_str()]);
+    let fixture = ToggleFixture::new(&[
+        (BASE, &base),
+        ("Mods/A/A.pak", DATA),
+        ("Mods/A/A.utoc", &a),
+        ("Mods/B/B.pak", DATA),
+        ("Mods/B/B.utoc", &b),
+    ]);
+    let found = contents(&fixture, "Standard:A");
+    let b_ref = fixture.row("Standard:B").mod_ref;
+    let links = fixture.row("Standard:A").content_conflicts;
+    assert_eq!(links.len(), 1);
+    assert_eq!((links[0].shared, links[0].outfit), (1, 0));
+    assert_eq!(entry(&found, &game_shoes).shared_with, [b_ref]);
+}
+
+#[test]
 fn off_entries_have_no_shared_with() {
     let shared = toc(MOUNT, &["Smoke/Shared.uasset"]);
     let base = base_toc(&["Polaris/Content/Smoke/Shared.uasset"]);

@@ -2,6 +2,7 @@ import { Stack, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import type { ContentConflictListProps } from './types'
 
+// Every link, whatever the slot; the mod list counts only those with clothing (`outfit`).
 export function ContentConflictList({ conflicts }: ContentConflictListProps) {
   const { t } = useTranslation('mods')
 
@@ -14,6 +15,11 @@ export function ContentConflictList({ conflicts }: ContentConflictListProps) {
               {t(($) => $.contentConflicts.item, { count: conflict.shared, name: conflict.name })}
             </bdi>
           </Text>
+          {conflict.outfit > 0 && (
+            <Text size="xs" c="orange">
+              {t(($) => $.contentConflicts.outfit, { files: conflict.outfit })}
+            </Text>
+          )}
           {conflict.sample.map((path) => (
             <Text
               key={path}
@@ -27,6 +33,9 @@ export function ContentConflictList({ conflicts }: ContentConflictListProps) {
           ))}
         </Stack>
       ))}
+      <Text size="sm" c="var(--qc-text-2)">
+        {t(($) => $.contentConflicts.countRule)}
+      </Text>
       <Text size="sm" c="var(--qc-text-2)">
         {t(($) => $.contentConflicts.winner)}
       </Text>

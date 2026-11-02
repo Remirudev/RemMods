@@ -1,3 +1,4 @@
+import type { Header } from '@tanstack/react-table'
 import type { ReactNode, RefObject } from 'react'
 import type {
   ArchiveEntry,
@@ -37,6 +38,9 @@ import type {
   UpdateNotice,
   UpdateTracking,
 } from '../../lib/ipc/types'
+import type { modTableFeatures } from './mod-table-features'
+
+export type ModTableHeader = Header<typeof modTableFeatures, ModRow, unknown>
 
 // PLAN §7: a prefixed LogicMods folder whose paks are still live is "disabled by name only".
 export type ModDisplayState = ModState | 'disabledLoaded'
@@ -49,7 +53,33 @@ export type ModColumnId =
   | 'category'
   | 'size'
   | 'conflicts'
+  | 'contentConflicts'
   | 'issues'
+
+// Name always stays visible, like the switch and the row menu, which are not data columns.
+export type HideableColumnId = Exclude<ModColumnId, 'name'>
+
+export interface ColumnSizeLimits {
+  size: number
+  minSize: number
+  maxSize: number
+}
+
+// The shapes TanStack Table takes as `columnSizing` and `columnVisibility`. A column missing from
+// `sizing` has its default width; for Name that means it fills the free space.
+export interface ColumnLayout {
+  sizing: Record<string, number>
+  visibility: Record<string, boolean>
+}
+
+export interface ColumnLayoutState extends ColumnLayout {
+  // Not saved: a drag calls it on every move and `saveLayout` once at the end.
+  setWidth: (id: ModColumnId, width: number) => void
+  saveLayout: () => void
+  resetWidth: (id: ModColumnId) => void
+  setColumnVisible: (id: HideableColumnId, visible: boolean) => void
+  resetLayout: () => void
+}
 
 export type ModInfoField = keyof ModInfo['defaulted']
 
@@ -143,8 +173,27 @@ export interface ModTableMeta {
 }
 
 export interface ModColumnMeta {
-  width?: number
   align?: 'left' | 'right'
+  // Data columns only; the switch and the row menu keep their width.
+  resizable?: boolean
+}
+
+export interface ModHeaderCellProps {
+  header: ModTableHeader
+  // Name without a stored width fills the free space, so its drag starts from what is drawn.
+  fills: boolean
+}
+
+export interface ColumnResizeHandleProps {
+  label: string
+  width: number
+  minWidth: number
+  maxWidth: number
+  // The width a drag or key press starts from.
+  measure: () => number
+  onResize: (width: number) => void
+  onCommit: () => void
+  onReset: () => void
 }
 
 export interface ModsPanelProps {

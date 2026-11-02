@@ -1,10 +1,15 @@
 //! Content conflicts: rows replacing the same base-game asset in live Read containers with
 //! different versions (§5.3 rule 3). Identical copies (same content hashes) are not conflicts, and
 //! mod files absent from the base game are only counted (`shared_other_versions`).
+//!
+//! Every link is kept for the details, but only upper-body and full-body clothing makes a link
+//! count toward the row's badge (`ContentConflictLink::outfit`): many outfit mods ship the same
+//! hidden shoes or lower-body pieces, which would otherwise flag them all against each other.
 
 use std::collections::{BTreeMap, HashMap};
 
 use remmods_pak::ContentHash;
+use remmods_pak::hints::{Slot, slot};
 
 use super::base_index::BaseIndex;
 use super::cache::ContainerResult;
@@ -15,11 +20,18 @@ use crate::mods::ModState;
 use crate::mods::rows::RowDraft;
 use crate::safe_fs::names::order_key;
 
-/// One asset of a row: its smallest display path and its fingerprint (`None` = unknown).
+/// One asset of a row: its smallest display path, its fingerprint (`None` = unknown) and whether
+/// any of the row's containers names it upper-body or full-body clothing.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct LiveAsset<'a> {
     pub path: &'a str,
     pub print: Option<&'a [(String, ContentHash)]>,
+    pub outfit: bool,
+}
+
+/// `true` for the raw slot codes of upper-body (`bdu`) and full-body (`bdf`) clothing.
+pub(crate) fn is_outfit_slot(code: &str) -> bool {
+    matches!(slot(code), Some(Slot::Upper | Slot::FullBody))
 }
 
 /// `true` only when both fingerprints are known and equal; unknown counts as different.
@@ -44,10 +56,12 @@ pub(crate) fn live_assets<'a>(
         if !utoc.live {
             continue;
         }
-        for ((key, index), print) in container.assets.iter().zip(&container.prints) {
+        let per_asset = container.prints.iter().zip(&container.outfits);
+        for ((key, index), (print, &outfit)) in container.assets.iter().zip(per_asset) {
             let asset = LiveAsset {
                 path: container.path_of(*index),
                 print: print.as_deref(),
+                outfit,
             };
             assets
                 .entry(key.as_str())
@@ -58,6 +72,7 @@ pub(crate) fn live_assets<'a>(
                     if asset.path < existing.path {
                         existing.path = asset.path;
                     }
+                    existing.outfit |= asset.outfit;
                 })
                 .or_insert(asset);
         }
@@ -92,11 +107,16 @@ pub(crate) fn link_content_conflicts(
             owners.entry(key).or_default().push(index);
         }
     }
-    let mut differing: BTreeMap<(usize, usize), Vec<&str>> = BTreeMap::new();
+    // Per row pair: (asset key, upper-body or full-body clothing).
+    let mut differing: BTreeMap<(usize, usize), Vec<(&str, bool)>> = BTreeMap::new();
     let mut identical_only = vec![0usize; drafts.len()];
     let mut other_versions = vec![0usize; drafts.len()];
     for (key, rows) in owners.iter().filter(|(_, rows)| rows.len() > 1) {
         let replaces_game_file = base.is_some_and(|base| base.contains_asset(key));
+        // One answer per key, so a pair counts it the same from both sides.
+        let outfit = rows
+            .iter()
+            .any(|&row| live[row].get(key).is_some_and(|asset| asset.outfit));
         for &this in rows {
             let print = live[this].get(key).and_then(|asset| asset.print);
             let mut conflicting = false;
@@ -105,7 +125,10 @@ pub(crate) fn link_content_conflicts(
                 if !identical(print, other_print) {
                     conflicting = true;
                     if replaces_game_file {
-                        differing.entry((this, other)).or_default().push(key);
+                        differing
+                            .entry((this, other))
+                            .or_default()
+                            .push((key, outfit));
                     }
                 }
             }
@@ -118,18 +141,21 @@ pub(crate) fn link_content_conflicts(
     }
     let mut links: Vec<Vec<(SortKey, ContentConflictLink)>> = vec![Vec::new(); drafts.len()];
     for ((this, other), mut keys) in differing {
-        keys.sort_unstable();
+        // Clothing first, so the sample shows what makes the link count toward the badge.
+        keys.sort_unstable_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+        let outfit = keys.iter().filter(|(_, outfit)| *outfit).count();
         let other_draft = &drafts[other];
         let sample = keys
             .iter()
             .take(CONFLICT_SAMPLE)
-            .filter_map(|key| live[this].get(key).map(|asset| asset.path.to_owned()))
+            .filter_map(|(key, _)| live[this].get(key).map(|asset| asset.path.to_owned()))
             .collect();
         let link = ContentConflictLink {
             other: other_draft.row.mod_ref.clone(),
             key: other_draft.row.key.clone(),
             name: other_draft.row.name.clone(),
             shared: count(keys.len()),
+            outfit: count(outfit),
             sample,
         };
         let sort_key = (

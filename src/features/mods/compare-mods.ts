@@ -1,4 +1,5 @@
 import type { ModKind, ModRow } from '../../lib/ipc/types'
+import { outfitConflicts } from './content-conflicts'
 import { displayState } from './display-state'
 import type { ModColumnId, ModDisplayState } from './types'
 
@@ -47,6 +48,8 @@ function compareColumn(a: ModRow, b: ModRow, column: ModColumnId, collator: Intl
       return (a.sizeBytes ?? -1) - (b.sizeBytes ?? -1)
     case 'conflicts':
       return a.conflictsWith.length - b.conflictsWith.length
+    case 'contentConflicts':
+      return outfitConflicts(a).length - outfitConflicts(b).length
     case 'issues':
       return a.issues.length - b.issues.length
   }

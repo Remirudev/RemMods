@@ -23,6 +23,7 @@
 .headerCell {
   height: 40px;
   padding-block: 0;
+  white-space: nowrap;
 }
 
 .sortButton {
@@ -30,8 +31,56 @@
   align-items: center;
   gap: 4px;
   max-width: 100%;
+  min-width: 0;
   font: inherit;
   color: inherit;
+}
+
+.headerLabel {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sortIcon {
+  flex: none;
+}
+
+/* The cell is position: sticky (sticky header), which also anchors the handle. */
+.resizeHandle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 1;
+  width: 8px;
+  cursor: col-resize;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  inset-block: 25%;
+  inset-inline-end: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--table-border-color);
+  opacity: 0;
+}
+
+.headerCell:hover .resizeHandle::after {
+  opacity: 1;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle:focus-visible::after,
+.resizeHandle[data-dragging]::after {
+  inset-block: 0;
+  background-color: var(--mantine-primary-color-filled);
+  opacity: 1;
 }
 
 .row {
@@ -56,6 +105,12 @@
 
 .row[data-selected] {
   background-color: var(--mantine-color-default-hover);
+}
+
+/* Set on <html> during a column drag, so the resize cursor stays over rows and buttons. */
+:root[data-column-resizing],
+:root[data-column-resizing] * {
+  cursor: col-resize;
 }
 
 .alignRight {

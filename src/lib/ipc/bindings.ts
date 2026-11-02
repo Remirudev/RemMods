@@ -323,6 +323,12 @@ export type ContentConflictLink = {
 	key: string,
 	name: string,
 	shared: number,
+	/**
+	 *  Of `shared`: upper-body or full-body clothing. Only links with one count toward the
+	 *  "replaces same files" badge and filter; the details list every link.
+	 */
+	outfit: number,
+	/**  A few of this row's paths: upper-body and full-body clothing first. */
 	sample: string[],
 };
 

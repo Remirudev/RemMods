@@ -64,6 +64,16 @@ describe('compareMods', () => {
     expect(compareMods(none, some, 'issues', collator)).toBeLessThan(0)
   })
 
+  it('counts only content conflicts over upper-body or full-body clothing', () => {
+    const link = { modRef: 'm:x', key: 'x', name: 'X', shared: 3, sample: [] }
+    const top = makeModRow('a', { contentConflicts: [{ ...link, outfit: 1 }] })
+    const shoesOnly = makeModRow('b', { contentConflicts: [{ ...link, outfit: 0 }] })
+    const none = makeModRow('z')
+    expect(compareMods(shoesOnly, top, 'contentConflicts', collator)).toBeLessThan(0)
+    // A tie, so the names decide.
+    expect(compareMods(shoesOnly, none, 'contentConflicts', collator)).toBeLessThan(0)
+  })
+
   it('breaks ties by name and then by ModRef', () => {
     const a = makeModRow('Same', { modRef: 'm:1' })
     const b = makeModRow('Same', { modRef: 'm:2' })

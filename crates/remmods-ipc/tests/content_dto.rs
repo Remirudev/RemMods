@@ -57,6 +57,7 @@ fn core_link() -> core_content::ContentConflictLink {
         key: "Standard:Y".into(),
         name: "Y".into(),
         shared: 2,
+        outfit: 1,
         sample: vec!["Game/A.uasset".into(), "Game/B.uasset".into()],
     }
 }
@@ -253,6 +254,7 @@ fn row_has_content_and_content_conflicts() {
             "key": "Standard:Y",
             "name": "Y",
             "shared": 2,
+            "outfit": 1,
             "sample": ["Game/A.uasset", "Game/B.uasset"]
         }])
     );
@@ -263,6 +265,7 @@ fn row_has_content_and_content_conflicts() {
             key: "Standard:Y".into(),
             name: "Y".into(),
             shared: 2,
+            outfit: 1,
             sample: vec!["Game/A.uasset".into(), "Game/B.uasset".into()],
         }]
     );
