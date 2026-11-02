@@ -88,7 +88,7 @@ pub enum EntryState {
     Disabled,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ProfileSource {
     User,
@@ -96,15 +96,77 @@ pub enum ProfileSource {
     Snapshot {
         of: String,
     },
-    /// Imported from the original app's profiles.json, matched by its `Id`.
+    /// Imported from another mod manager's profiles.json, matched by its `Id`.
     #[serde(rename_all = "camelCase")]
-    Tmm {
+    OtherManager {
         id: String,
         #[serde(default)]
         is_default: bool,
     },
     /// Imported from a RemMods export.
     Import,
+}
+
+impl<'de> Deserialize<'de> for ProfileSource {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(match StoredSource::deserialize(deserializer)? {
+            StoredSource::Current(CurrentSource::User) => Self::User,
+            StoredSource::Current(CurrentSource::Snapshot { of }) => Self::Snapshot { of },
+            StoredSource::Current(CurrentSource::OtherManager { id, is_default }) => {
+                Self::OtherManager { id, is_default }
+            }
+            StoredSource::Current(CurrentSource::Import) => Self::Import,
+            StoredSource::EarlierImport(earlier) => {
+                if CURRENT_KINDS.contains(&earlier.kind.as_str()) {
+                    return Err(serde::de::Error::custom("malformed profile source"));
+                }
+                if earlier.id.trim().is_empty() {
+                    return Err(serde::de::Error::custom("profile source without an id"));
+                }
+                Self::OtherManager {
+                    id: earlier.id,
+                    is_default: earlier.is_default,
+                }
+            }
+        })
+    }
+}
+
+/// Kind names `CurrentSource` reads; a source carrying one of them that fails to parse is damaged,
+/// not an earlier import, and is dropped (the store backs the file up first).
+const CURRENT_KINDS: [&str; 4] = ["user", "snapshot", "otherManager", "import"];
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum StoredSource {
+    Current(CurrentSource),
+    EarlierImport(EarlierImport),
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum CurrentSource {
+    User,
+    Snapshot {
+        of: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    OtherManager {
+        id: String,
+        #[serde(default)]
+        is_default: bool,
+    },
+    Import,
+}
+
+/// A profile imported from another mod manager by an earlier build, stored under another kind name.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EarlierImport {
+    kind: String,
+    id: String,
+    #[serde(default)]
+    is_default: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

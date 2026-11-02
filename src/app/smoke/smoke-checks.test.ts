@@ -206,11 +206,10 @@ describe('release checks', () => {
     expect(checkGraphics({ ok: false, error: 'boom' }, linux).detail).toBe('boom')
   })
 
-  it('checkNotices looks for the licence, the cargo-about header and the font licence', () => {
+  it('checkNotices looks for the cargo-about header and the font licence', () => {
     expect(checkNotices({ ok: true, value: TEST_NOTICES }).ok).toBe(true)
     const lowerFont = { ...TEST_NOTICES, npm: 'fonts: sil open font license 1.1' }
     expect(checkNotices({ ok: true, value: lowerFont }).ok).toBe(true)
-    expect(checkNotices({ ok: true, value: { ...TEST_NOTICES, license: 'Apache' } }).ok).toBe(false)
     expect(checkNotices({ ok: true, value: { ...TEST_NOTICES, rust: 'notices' } }).ok).toBe(false)
     expect(checkNotices({ ok: true, value: { ...TEST_NOTICES, npm: 'react' } }).ok).toBe(false)
     expect(checkNotices({ ok: false, error: 'missing' }).ok).toBe(false)

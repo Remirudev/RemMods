@@ -26,7 +26,7 @@ pub enum ProfileSource {
         of: String,
     },
     #[serde(rename_all = "camelCase")]
-    Tmm {
+    OtherManager {
         id: String,
         is_default: bool,
     },
@@ -209,7 +209,7 @@ pub enum ImportProblem {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum TransferRequest {
-    ImportTmm {
+    ImportOtherManager {
         title: String,
     },
     Import {
@@ -261,7 +261,7 @@ impl From<&core::ProfileSource> for ProfileSource {
         match source {
             core::ProfileSource::User => Self::User,
             core::ProfileSource::Snapshot { of } => Self::Snapshot { of: of.clone() },
-            core::ProfileSource::Tmm { id, is_default } => Self::Tmm {
+            core::ProfileSource::OtherManager { id, is_default } => Self::OtherManager {
                 id: id.clone(),
                 is_default: *is_default,
             },

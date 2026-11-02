@@ -27,7 +27,7 @@ pub use model::{
     SteamKind, UpdateNotice, UpdateTracking,
 };
 pub use process::{
-    COMM_MAX_BYTES, GAME_EXECUTABLES, GameMatch, GameSignal, ORIGINAL_APP_EXECUTABLE,
+    COMM_MAX_BYTES, GAME_EXECUTABLES, GameMatch, GameSignal, OTHER_MANAGER_EXECUTABLE,
     ProcessVerdict, classify, game_matches,
 };
 pub use running::{NOT_RUNNING_AFTER, NOT_RUNNING_AFTER_SCANS, RunningTracker};

@@ -27,7 +27,7 @@ use remmods_core::app_update::{self, InstallKind};
 use remmods_core::game::GameOptions;
 use remmods_core::graphics::GraphicsMode;
 use remmods_core::platform::TrashEnv;
-use remmods_core::{AppPaths, Core, CoreOptions, paths, platform, safe_fs};
+use remmods_core::{AppPaths, Core, CoreOptions, platform, safe_fs};
 use tauri::plugin::{Plugin, TauriPlugin};
 use tauri::{App, AppHandle, Manager, RunEvent, Wry};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
@@ -205,7 +205,6 @@ fn core_options(args: &LaunchArgs) -> CoreOptions {
     if !args.smoke {
         return CoreOptions {
             trash: TrashEnv::from_env(),
-            tmm_dir: paths::tmm_profiles_dir(),
             ..CoreOptions::default()
         };
     }

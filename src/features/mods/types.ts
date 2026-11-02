@@ -378,7 +378,7 @@ export interface ConfirmButtonsProps {
 export interface DeleteConfirmBodyProps {
   name: string
   size: number | null
-  originalApp: boolean
+  otherManager: boolean
   onCancel: () => void
   onConfirm: () => void
 }
@@ -476,7 +476,7 @@ export interface TrashUnavailableBodyProps {
   name: string
   size: number | null
   reason: TrashUnavailableReason
-  originalApp: boolean
+  otherManager: boolean
   onCancel: () => void
   onConfirm: () => void
 }
@@ -486,7 +486,7 @@ export interface RenameDialogProps {
   currentName: string
   initialName: string
   siblings: ReadonlySet<string>
-  originalApp?: boolean
+  otherManager?: boolean
   onClose: () => void
   // The modal that hosts the dialog, locked while the rename runs.
   modalId?: string

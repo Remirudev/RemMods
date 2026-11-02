@@ -3,7 +3,6 @@
   "bundle": {
     "targets": ["nsis"],
     "resources": {
-      "../LICENSE": "LICENSE.txt",
       "../THIRD-PARTY-NOTICES": "THIRD-PARTY-NOTICES.txt",
       "../THIRD-PARTY-NOTICES-NPM": "THIRD-PARTY-NOTICES-NPM.txt"
     },

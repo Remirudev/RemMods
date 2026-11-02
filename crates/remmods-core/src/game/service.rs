@@ -94,7 +94,7 @@ impl GameService {
             location: state.location.clone(),
             running: state.tracker.state(),
             session: state.tracker.session(),
-            original_app: state.tracker.original_app(),
+            other_manager: state.tracker.other_manager(),
             update: state.update.clone(),
             candidates: state.candidates.clone(),
             notes,
@@ -469,7 +469,7 @@ fn change_of(state: &GameState) -> GameStatusChange {
     GameStatusChange {
         running: state.tracker.state(),
         session: state.tracker.session(),
-        original_app: state.tracker.original_app(),
+        other_manager: state.tracker.other_manager(),
         update: state.update.clone(),
     }
 }

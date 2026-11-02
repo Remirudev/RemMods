@@ -7,7 +7,7 @@ import { ModDetailsDrawer } from './ModDetailsDrawer'
 import { ModsErrorAlert } from './ModsErrorAlert'
 import { ModsHeader } from './ModsHeader'
 import { ModsTabs } from './ModsTabs'
-import { OriginalAppNotice } from './OriginalAppNotice'
+import { OtherManagerNotice } from './OtherManagerNotice'
 import { useModsSnapshot, useRefreshMods } from './queries'
 import { RootNotices } from './RootNotices'
 import { isScanNotFound } from './scan-error'
@@ -56,7 +56,7 @@ export function ModsPanel({ status, install }: ModsPanelProps) {
         />
         <AutoRefreshBanner />
         {status.update && <UpdateNotice update={status.update} />}
-        {status.originalApp && <OriginalAppNotice />}
+        {status.otherManager && <OtherManagerNotice />}
         {data && <RootNotices roots={data.roots} />}
         {data ? (
           <ModsTabs snapshot={data} paks={install.paks} searchRef={searchRef} />

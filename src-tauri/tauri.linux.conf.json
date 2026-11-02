@@ -7,7 +7,6 @@
         "depends": ["libc6 (>= 2.39)", "libssl3t64 | libssl3", "xdg-utils"],
         "desktopTemplate": "linux/remmods.desktop",
         "files": {
-          "/usr/share/doc/remmods/LICENSE": "../LICENSE",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES": "../THIRD-PARTY-NOTICES",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES-NPM": "../THIRD-PARTY-NOTICES-NPM"
         }
@@ -16,7 +15,6 @@
         "depends": ["libc.so.6(GLIBC_2.39)(64bit)", "libssl.so.3()(64bit)", "xdg-utils"],
         "desktopTemplate": "linux/remmods.desktop",
         "files": {
-          "/usr/share/doc/remmods/LICENSE": "../LICENSE",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES": "../THIRD-PARTY-NOTICES",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES-NPM": "../THIRD-PARTY-NOTICES-NPM"
         }
@@ -24,7 +22,6 @@
       "appimage": {
         "bundleMediaFramework": false,
         "files": {
-          "/usr/share/doc/remmods/LICENSE": "../LICENSE",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES": "../THIRD-PARTY-NOTICES",
           "/usr/share/doc/remmods/THIRD-PARTY-NOTICES-NPM": "../THIRD-PARTY-NOTICES-NPM"
         }

@@ -140,18 +140,14 @@ export const settings: LocaleShape<typeof en> = {
   },
   about: {
     title: 'Über RemMods',
-    description: 'Lizenz und Danksagung.',
-    license: 'RemMods ist freie Software unter der MIT-Lizenz.',
-    credit:
-      'Es ist eine Portierung von TekkenModManager von Unfug, ebenfalls unter MIT-Lizenz. Danke für das Original.',
+    description: 'Quellcode und Hinweise zu Drittanbietern.',
     source: 'Quellcode',
     copyLink: 'Link kopieren',
     linkCopied: 'Link kopiert',
     notices: {
-      open: 'Lizenzen und Hinweise zu Drittanbietern',
-      title: 'Lizenzen und Hinweise zu Drittanbietern',
+      open: 'Hinweise zu Drittanbietern',
+      title: 'Hinweise zu Drittanbietern',
       tabs: {
-        app: 'RemMods',
         rust: 'Rust-Crates',
         npm: 'npm-Pakete und Schriften',
       },

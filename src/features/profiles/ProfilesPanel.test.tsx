@@ -12,28 +12,31 @@ function renderPanel(view: ProfilesView) {
 }
 
 const MAIN = makeProfile('p1', { name: 'Main', mode: 'exclusive' })
-const TMM = makeProfile('p2', {
+const OTHER = makeProfile('p2', {
   name: 'Old setup',
-  source: { kind: 'tmm', id: 'x', isDefault: false },
+  source: { kind: 'otherManager', id: 'x', isDefault: false },
 })
 const SNAPSHOT = makeProfile('s1', { name: '', source: { kind: 'snapshot', of: 'p1' } })
 
 describe('ProfilesPanel', () => {
   it('renders user profiles as cards with mode and source badges', async () => {
-    renderPanel(makeView([makeSummary(MAIN, { missing: 2 }), makeSummary(TMM)]))
+    renderPanel(makeView([makeSummary(MAIN, { missing: 2 }), makeSummary(OTHER)]))
 
     const cards = await screen.findAllByTestId('profile-card')
     expect(cards).toHaveLength(2)
     expect(within(cards[0] as HTMLElement).getByText('Main')).toBeVisible()
     expect(within(cards[0] as HTMLElement).getByText('Exclusive')).toBeVisible()
     expect(within(cards[0] as HTMLElement).getByText(/2 missing/)).toBeVisible()
-    expect(within(cards[1] as HTMLElement).getByText('From TekkenModManager')).toBeVisible()
+    expect(within(cards[1] as HTMLElement).getByText('From another mod manager')).toBeVisible()
   })
 
   it('shows the unsaved-changes chip only for the last applied profile that drifted', async () => {
     renderPanel(
       makeView(
-        [makeSummary(MAIN, { matchesCurrent: false }), makeSummary(TMM, { matchesCurrent: false })],
+        [
+          makeSummary(MAIN, { matchesCurrent: false }),
+          makeSummary(OTHER, { matchesCurrent: false }),
+        ],
         { lastApplied: { profileId: 'p1', at: '2026-11-01T11:00:00.000Z' } },
       ),
     )

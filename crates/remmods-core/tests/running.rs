@@ -7,11 +7,11 @@ const POSITIVE: Result<ProcessVerdict, ()> = Ok(ProcessVerdict {
         pid: 1,
         signal: GameSignal::SteamReaper,
     }),
-    original_app: false,
+    other_manager: false,
 });
 const NEGATIVE: Result<ProcessVerdict, ()> = Ok(ProcessVerdict {
     game: None,
-    original_app: false,
+    other_manager: false,
 });
 
 fn at(t0: Instant, millis: u64) -> Instant {
@@ -103,17 +103,17 @@ fn scan_error_is_unknown_and_recovery_starts_a_session() {
 }
 
 #[test]
-fn original_app_flip_alone_is_a_change() {
+fn other_manager_flip_alone_is_a_change() {
     let t0 = Instant::now();
     let mut tracker = RunningTracker::new();
     tracker.observe(NEGATIVE, t0);
-    let with_original = Ok(ProcessVerdict {
+    let with_other = Ok(ProcessVerdict {
         game: None,
-        original_app: true,
+        other_manager: true,
     });
-    assert!(tracker.observe(with_original, at(t0, 1_000)));
-    assert!(tracker.original_app());
-    assert!(!tracker.observe(with_original, at(t0, 2_000)));
+    assert!(tracker.observe(with_other, at(t0, 1_000)));
+    assert!(tracker.other_manager());
+    assert!(!tracker.observe(with_other, at(t0, 2_000)));
     assert!(tracker.observe(NEGATIVE, at(t0, 3_000)));
-    assert!(!tracker.original_app());
+    assert!(!tracker.other_manager());
 }

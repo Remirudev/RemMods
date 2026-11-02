@@ -130,7 +130,7 @@ fn delete_outcome_converts_snapshot_and_leftover() {
 fn rename_request_and_outcome() {
     let json = json!({
         "target": { "modRef": ROW_REF, "key": "Mods/X" },
-        "newName": "Cool Skin",
+        "newName": "Neon Skin",
         "applyWhileRunning": false,
     });
     let request: RenameRequest = from_json(json.clone());
@@ -140,7 +140,7 @@ fn rename_request_and_outcome() {
         core::RenameRequest::from(&request),
         core::RenameRequest {
             target: core_target(),
-            new_name: "Cool Skin".into(),
+            new_name: "Neon Skin".into(),
             apply_while_running: false,
         }
     );
@@ -148,8 +148,8 @@ fn rename_request_and_outcome() {
     let outcome = RenameOutcome::from(&core::RenameOutcome {
         refreshed: refreshed(),
         old_key: "Mods/X".into(),
-        new_key: "Mods/Cool Skin".into(),
-        new_ref: Some(core::ModRef::from_token("1|d|1-2|3-4|Mods/Cool Skin")),
+        new_key: "Mods/Neon Skin".into(),
+        new_ref: Some(core::ModRef::from_token("1|d|1-2|3-4|Mods/Neon Skin")),
         rekey: core::RekeyReport {
             profiles: 2,
             meta: true,
@@ -159,8 +159,8 @@ fn rename_request_and_outcome() {
     });
     let json = to_json(&outcome);
     assert_eq!(json["oldKey"], json!("Mods/X"));
-    assert_eq!(json["newKey"], json!("Mods/Cool Skin"));
-    assert_eq!(json["newRef"], json!("1|d|1-2|3-4|Mods/Cool Skin"));
+    assert_eq!(json["newKey"], json!("Mods/Neon Skin"));
+    assert_eq!(json["newRef"], json!("1|d|1-2|3-4|Mods/Neon Skin"));
     assert_eq!(
         json["rekey"],
         json!({ "profiles": 2, "meta": true, "skippedAmbiguous": false, "failed": false })

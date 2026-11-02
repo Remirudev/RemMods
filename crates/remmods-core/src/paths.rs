@@ -50,12 +50,3 @@ impl AppPaths {
 pub fn display_path(path: &Path) -> String {
     dunce::simplified(path).display().to_string()
 }
-
-/// Windows: `%LOCALAPPDATA%\TekkenModManager` if it is a folder; else None. Read-only.
-pub fn tmm_profiles_dir() -> Option<PathBuf> {
-    if crate::platform::os_kind() != crate::platform::OsKind::Windows {
-        return None;
-    }
-    let dir = dirs::data_local_dir()?.join("TekkenModManager");
-    dir.is_dir().then_some(dir)
-}

@@ -137,11 +137,11 @@ fn profile_sources_are_tagged_by_kind() {
             json!({ "kind": "snapshot", "of": "p0" }),
         ),
         (
-            core::ProfileSource::Tmm {
+            core::ProfileSource::OtherManager {
                 id: "guid".into(),
                 is_default: true,
             },
-            json!({ "kind": "tmm", "id": "guid", "isDefault": true }),
+            json!({ "kind": "otherManager", "id": "guid", "isDefault": true }),
         ),
         (core::ProfileSource::Import, json!({ "kind": "import" })),
     ];
@@ -388,8 +388,8 @@ fn apply_outcome_converts_snapshot_and_skips() {
 fn transfer_request_and_outcome_are_tagged() {
     let cases = [
         (
-            TransferRequest::ImportTmm { title: "T".into() },
-            json!({ "kind": "importTmm", "title": "T" }),
+            TransferRequest::ImportOtherManager { title: "T".into() },
+            json!({ "kind": "importOtherManager", "title": "T" }),
         ),
         (
             TransferRequest::Import { title: "T".into() },

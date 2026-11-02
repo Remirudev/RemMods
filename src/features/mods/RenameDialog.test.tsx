@@ -33,7 +33,7 @@ function renderDialog(handler: IpcHandler = () => OUTCOME) {
       currentName="Alpha"
       initialName="Alpha"
       siblings={new Set([foldName('Taken')])}
-      originalApp={false}
+      otherManager={false}
       onClose={onClose}
     />,
   )

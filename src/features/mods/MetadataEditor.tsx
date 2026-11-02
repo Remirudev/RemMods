@@ -8,7 +8,7 @@ import { isIpcError } from '../../lib/ipc/ipc-error'
 import type { ModInfoEdit } from '../../lib/ipc/types'
 import { FS_SCOPE, routeFsError } from '../../shared/fs-error-route'
 import { storeModsSnapshot } from '../../shared/mods-cache'
-import { originalAppRunning } from './flow-deps'
+import { otherManagerRunning } from './flow-deps'
 import { fieldTooLong, isDirty, toEdit } from './metadata-form'
 import { modInfoText } from './mod-info-text'
 import type { MetadataEditorProps, ModInfoField } from './types'
@@ -55,13 +55,13 @@ export function MetadataEditor({ row, onDone }: MetadataEditorProps) {
 
   const submit = () => {
     setProblem(null)
-    if (!originalAppRunning(client)) {
+    if (!otherManagerRunning(client)) {
       save.mutate()
       return
     }
     modals.openConfirmModal({
       title: t(($) => $.metadata.confirmTitle),
-      children: t(($) => $.confirm.originalAppRunning),
+      children: t(($) => $.confirm.otherManagerRunning),
       labels: { confirm: t(($) => $.metadata.save), cancel: t(($) => $.metadata.cancel) },
       onConfirm: () => save.mutate(),
     })

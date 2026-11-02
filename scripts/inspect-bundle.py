@@ -8,7 +8,7 @@ deb: reads the ar members, the control fields of control.tar.* and the file list
 rpm: reads the header tags (name, version, release, requires, file list, payload compressor) and
 the cpio payload. Prints a summary (or JSON). --expect asserts the release contract: package name
 rem-mods, the glibc/libssl/xdg-utils/webkit/gtk dependencies, /usr/bin/remmods, the desktop file
-(StartupWMClass=remmods, the safe-graphics action), the three notices under /usr/share/doc/remmods
+(StartupWMClass=remmods, the safe-graphics action), the two notices under /usr/share/doc/remmods
 (byte-equal to the repository's files), the four hicolor icons, and a binary patched as this
 package type (no __TAURI_BUNDLE_TYPE_VAR_UNK left, the expected token exactly once more than each
 other one). Exit 1 on any failed expectation. Reads only FILE.
@@ -30,7 +30,7 @@ REPO = Path(__file__).resolve().parent.parent
 PACKAGE_NAME = "rem-mods"
 BINARY = "/usr/bin/remmods"
 DESKTOP = "/usr/share/applications/RemMods.desktop"
-NOTICES = ("LICENSE", "THIRD-PARTY-NOTICES", "THIRD-PARTY-NOTICES-NPM")
+NOTICES = ("THIRD-PARTY-NOTICES", "THIRD-PARTY-NOTICES-NPM")
 ICON_SIZES = ("32x32", "128x128", "256x256@2", "512x512")
 DEB_DEPENDS = ("libc6 (>= 2.39)", "libssl3t64 | libssl3", "xdg-utils", "libwebkit2gtk-4.1-0", "libgtk-3-0")
 RPM_REQUIRES = (

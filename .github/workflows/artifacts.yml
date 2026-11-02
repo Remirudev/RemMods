@@ -31,7 +31,6 @@ on:
       - src-tauri/icons/**
       - THIRD-PARTY-NOTICES
       - THIRD-PARTY-NOTICES-NPM
-      - LICENSE
       - .github/workflows/artifacts.yml
 
 permissions:
@@ -307,7 +306,7 @@ jobs:
         run: |
           pacman -U --noconfirm aur/remmods-bin-*.pkg.tar.zst
           test -f /usr/lib/remmods/install-source
-          test -f /usr/share/licenses/remmods-bin/LICENSE
+          test -f /usr/share/licenses/remmods-bin/THIRD-PARTY-NOTICES
 
       - name: Smoke test (AUR)
         timeout-minutes: 5

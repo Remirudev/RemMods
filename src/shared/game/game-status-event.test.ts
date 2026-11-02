@@ -16,25 +16,25 @@ const STATUS: GameStatus = {
   },
   running: 'unknown',
   session: 0,
-  originalApp: false,
+  otherManager: false,
   update: null,
   candidates: [],
   notes: [],
 }
 
 describe('applyGameStatusEvent', () => {
-  it('replaces the running state, session, original-app flag and update notice', () => {
+  it('replaces the running state, session, other-manager flag and update notice', () => {
     const next = applyGameStatusEvent(STATUS, {
       running: 'running',
       session: 2,
-      originalApp: true,
+      otherManager: true,
       update: { from: '1', to: '25221600' },
     })
     expect(next).toEqual({
       ...STATUS,
       running: 'running',
       session: 2,
-      originalApp: true,
+      otherManager: true,
       update: { from: '1', to: '25221600' },
     })
   })
@@ -43,7 +43,7 @@ describe('applyGameStatusEvent', () => {
     const next = applyGameStatusEvent(STATUS, {
       running: 'notRunning',
       session: 0,
-      originalApp: false,
+      otherManager: false,
       update: null,
     })
     expect(next?.location).toBe(STATUS.location)
@@ -54,7 +54,7 @@ describe('applyGameStatusEvent', () => {
     const next = applyGameStatusEvent(undefined, {
       running: 'running',
       session: 1,
-      originalApp: false,
+      otherManager: false,
       update: null,
     })
     expect(next).toBeUndefined()

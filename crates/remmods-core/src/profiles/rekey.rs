@@ -1,5 +1,5 @@
-//! Moving a renamed mod's key in RemMods' stores (spec §5.10). The original's `profiles.json`
-//! is never touched.
+//! Moving a renamed mod's key in RemMods' own stores (spec §5.10). No other `profiles.json` is ever
+//! touched.
 
 use crate::Core;
 use crate::mods::RekeyReport;

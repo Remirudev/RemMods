@@ -40,7 +40,7 @@ export function RenameDialog({
   currentName,
   initialName,
   siblings,
-  originalApp,
+  otherManager,
   onClose,
   modalId,
 }: RenameDialogProps) {
@@ -108,7 +108,7 @@ export function RenameDialog({
             setCoreIssue(null)
           }}
         />
-        {originalApp && <Text size="sm">{t(($) => $.confirm.originalAppRunning)}</Text>}
+        {otherManager && <Text size="sm">{t(($) => $.confirm.otherManagerRunning)}</Text>}
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose} disabled={rename.isPending}>
             {t(($) => $.rename.cancel)}

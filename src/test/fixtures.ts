@@ -75,7 +75,6 @@ export function makeGraphicsState(overrides: Partial<GraphicsState> = {}): Graph
 }
 
 export const TEST_NOTICES: Notices = {
-  license: 'MIT License\n\nCopyright (c) test',
   rust: 'THIRD-PARTY NOTICES\n\nserde 1.0.0',
   npm: 'react 19.3.0\n\nSIL OPEN FONT LICENSE Version 1.1',
 }
@@ -96,7 +95,7 @@ export function makeGameStatus(overrides: Partial<GameStatus> = {}): GameStatus 
     location: { kind: 'ready', install: TEST_INSTALL },
     running: 'notRunning',
     session: 0,
-    originalApp: false,
+    otherManager: false,
     update: null,
     candidates: [],
     notes: [],

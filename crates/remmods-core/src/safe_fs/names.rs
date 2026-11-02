@@ -312,7 +312,7 @@ pub fn is_reserved_device_name(name: &str) -> bool {
         )
 }
 
-/// The original's IsInstallTempFolder: `_`, then `_tmp_` (case-sensitive), and exactly 32 hex
+/// An unfinished-install folder name: `_`, then `_tmp_` (case-sensitive), and exactly 32 hex
 /// digits after the last `_tmp_`.
 pub fn is_install_temp_name(name: &OsStr) -> bool {
     let bytes = name.as_encoded_bytes();
@@ -332,7 +332,7 @@ pub fn is_install_temp_name(name: &OsStr) -> bool {
         })
 }
 
-/// The original's scan rule: the first 10 bytes equal `.disabled_` ignoring ASCII case.
+/// Scan rule: the first 10 bytes equal `.disabled_` ignoring ASCII case.
 pub fn has_disabled_prefix_ascii(name: &OsStr) -> bool {
     name.as_encoded_bytes()
         .get(..DISABLED_PREFIX.len())

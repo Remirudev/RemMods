@@ -29,10 +29,13 @@ export function TransferMenu({ readOnly }: TransferMenuProps) {
         <Menu.Item
           disabled={readOnly}
           onClick={() =>
-            transfer.mutate({ kind: 'importTmm', title: t(($) => $.transfer.importTmmTitle) })
+            transfer.mutate({
+              kind: 'importOtherManager',
+              title: t(($) => $.transfer.importOtherManagerTitle),
+            })
           }
         >
-          {t(($) => $.transfer.importTmm)}
+          {t(($) => $.transfer.importOtherManager)}
         </Menu.Item>
         <Menu.Item
           disabled={readOnly}

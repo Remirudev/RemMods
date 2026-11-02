@@ -4,7 +4,6 @@ description = "RemMods IPC DTOs and AppError: serde + specta, no Tauri"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
 repository.workspace = true
 publish = false
 

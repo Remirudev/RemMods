@@ -224,8 +224,8 @@ describe('ModsPanel', () => {
     })
   })
 
-  it('warns when the original app is running', async () => {
-    renderMods(makeGameStatus({ originalApp: true }))
+  it('warns when another mod manager is running', async () => {
+    renderMods(makeGameStatus({ otherManager: true }))
 
     expect(await screen.findByText('Another mod manager is running')).toBeVisible()
   })
@@ -301,7 +301,7 @@ describe('ModsPanel', () => {
       await emit('game-status-changed', {
         running: 'running',
         session: 1,
-        originalApp: false,
+        otherManager: false,
         update: null,
       })
     })

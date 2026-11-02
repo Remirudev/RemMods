@@ -148,7 +148,7 @@ GOLDEN_SRCINFO = """pkgbase = remmods-bin
 \tpkgrel = 1
 \turl = https://github.com/Remirudev/RemMods
 \tarch = x86_64
-\tlicense = MIT
+\tlicense = LicenseRef-proprietary
 \tdepends = glibc
 \tdepends = libgcc
 \tdepends = webkit2gtk-4.1
@@ -182,7 +182,7 @@ pkgrel=1
 pkgdesc='Mod manager for TEKKEN 8'
 arch=('x86_64')
 url='https://github.com/Remirudev/RemMods'
-license=('MIT')
+license=('LicenseRef-proprietary')
 depends=('glibc' 'libgcc' 'webkit2gtk-4.1' 'gtk3' 'libsoup3' 'openssl' 'glib2' 'cairo' 'gdk-pixbuf2' 'dbus' 'wayland' 'hicolor-icon-theme' 'xdg-utils')
 provides=('remmods')
 conflicts=('remmods')
@@ -192,7 +192,7 @@ sha256sums=('{sha}')
 
 package() {{
   bsdtar -xf data.tar.gz -C "$pkgdir"
-  install -Dm644 "$pkgdir/usr/share/doc/remmods/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$pkgdir/usr/share/doc/remmods/THIRD-PARTY-NOTICES" "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES"
   install -Dm644 /dev/stdin "$pkgdir/usr/lib/remmods/install-source" <<< 'install-source=aur'
 }}
 """

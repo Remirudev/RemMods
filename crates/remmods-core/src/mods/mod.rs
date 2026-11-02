@@ -39,7 +39,6 @@ pub use bulk::{
     BULK_MAX_TARGETS, BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult,
     BulkTrashRequest, PreparedRow,
 };
-pub use conflicts::{original_conflict_names, original_enabled};
 pub use delete::{DeleteOutcome, DeletePrepared, DeleteRequest, plan_set_aside};
 pub use delete_token::DeleteTokens;
 pub use details::{read_details, resolve_ref, shell_form};
@@ -57,7 +56,7 @@ pub use model::{
     ScanStats, ToggleBlock, UnmanagedEntry, UnmanagedKind,
 };
 pub use modinfo_write::{
-    MODINFO_FIELD_MAX_CHARS, MetadataRequest, ModInfoEdit, modinfo_json, stj_escape,
+    MODINFO_FIELD_MAX_CHARS, MetadataRequest, ModInfoEdit, escape_json_value, modinfo_json,
 };
 pub use modref::{ModRef, ParsedRef, RefKind, paks_identity};
 pub use rename::{RekeyReport, RenameOutcome, RenameRequest, plan_rename};

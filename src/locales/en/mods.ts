@@ -328,7 +328,7 @@ export const mods = {
   issue: {
     ambiguousKey: 'Another row has the same key. Changes to these rows will be blocked.',
     caseCollision:
-      'Differs from {{others}} only in letter case or Unicode form; Windows or the original app may treat them as one name.',
+      'Differs from {{others}} only in letter case or Unicode form; Windows and some mod tools may treat them as one name.',
     caseVariantRoot: 'Lies in {{root}}, which differs only in case from another root folder.',
     nonUnicodeName: 'The name is not valid Unicode and is shown escaped.',
     invalidName: 'The name is not valid on Windows: {{problem}}.',
@@ -376,8 +376,8 @@ export const mods = {
     delete: 'Delete permanently…',
   },
   confirm: {
-    originalAppRunning:
-      'TekkenModManager is running and may not notice this change until you restart it.',
+    otherManagerRunning:
+      'Another mod manager is running and may not notice this change until you restart it.',
   },
   rename: {
     title: 'Rename mod',

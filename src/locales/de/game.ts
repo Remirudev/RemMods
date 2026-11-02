@@ -21,9 +21,9 @@ export const game: LocaleShape<typeof en> = {
     body: 'Das Spiel wurde von Build {{from}} auf Build {{to}} aktualisiert. Mods für den alten Build können das Spiel abstürzen lassen oder falsch aussehen.',
     acknowledge: 'Verstanden',
   },
-  originalApp: {
+  otherManager: {
     title: 'Ein anderer Mod-Manager läuft',
-    body: 'Ein Programm namens ModManager.exe läuft, vermutlich TekkenModManager. Aktualisiere die Liste, nachdem du dort Mods geändert hast.',
+    body: 'Ein Programm namens ModManager.exe läuft, vermutlich ein anderer Mod-Manager. Aktualisiere die Liste, nachdem du dort Mods geändert hast.',
   },
   sources: { steam: 'Über Steam gefunden', manual: 'Von dir gewählt', fixture: 'Testdaten' },
   steamKinds: {

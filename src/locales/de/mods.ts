@@ -341,7 +341,7 @@ export const mods: LocaleShape<typeof en> = {
     ambiguousKey:
       'Eine andere Zeile hat denselben Schlüssel. Änderungen an diesen Zeilen werden blockiert.',
     caseCollision:
-      'Unterscheidet sich von {{others}} nur in Groß-/Kleinschreibung oder Unicode-Form; Windows oder die Original-App behandeln sie womöglich als einen Namen.',
+      'Unterscheidet sich von {{others}} nur in Groß-/Kleinschreibung oder Unicode-Form; Windows und manche Mod-Programme behandeln sie womöglich als einen Namen.',
     caseVariantRoot:
       'Liegt in {{root}}, das sich nur in Groß- und Kleinschreibung von einem anderen Stammordner unterscheidet.',
     nonUnicodeName: 'Der Name ist kein gültiges Unicode und wird maskiert angezeigt.',
@@ -396,8 +396,8 @@ export const mods: LocaleShape<typeof en> = {
     delete: 'Endgültig löschen…',
   },
   confirm: {
-    originalAppRunning:
-      'TekkenModManager läuft und bemerkt diese Änderung womöglich erst nach einem Neustart.',
+    otherManagerRunning:
+      'Ein anderer Mod-Manager läuft und bemerkt diese Änderung womöglich erst nach einem Neustart.',
   },
   rename: {
     title: 'Mod umbenennen',

@@ -2,9 +2,9 @@
 
 A mod manager for TEKKEN 8 on Linux and Windows. It turns pak mods (`Mods`, `~mods`) and LogicMods on
 and off, installs them from archives, keeps profiles of which mods are active, and repairs what other
-tools leave behind. RemMods is a port of [TekkenModManager](https://github.com/UnfugPsy/TekkenModManager)
-by Unfug to Tauri 2, Rust and React. It keeps the original's folder layout, so both apps can manage the
-same game folder.
+tools leave behind. Built with Tauri 2, Rust and React. It follows the usual TEKKEN 8 mod-folder
+conventions (`Mods`, `~mods`, `LogicMods`, `.disabled_` folders, `-x` files, `modinfo.json`), so
+existing mod folders keep working.
 
 RemMods only ever writes inside the three mod folders, its own app folders and the Trash. Steam's
 files are read-only to it. Removing a mod moves it to the Trash; deleting it permanently needs a second
@@ -28,8 +28,8 @@ ship the same assets. It only reads mod files.
 it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it
 permanently after a second confirmation, edit its metadata (`modinfo.json`), and fix leftovers of
 interrupted operations in the Repair tab. Profiles remember which mods are on: save, apply (additive or
-exclusive, with an automatic snapshot first), import the original app's `profiles.json` (only read,
-never written), and export or import RemMods profiles. On Windows the Trash is the Recycle Bin
+exclusive, with an automatic snapshot first), import the `profiles.json` of another mod manager (only
+read, never written), and export or import RemMods profiles. On Windows the Trash is the Recycle Bin
 (CI-tested only, see [Windows](#windows)).
 
 **Phase 3b (in progress)**: select several mods and choose "Move to Trash" (Windows: "Move to Recycle
@@ -122,8 +122,8 @@ line in `SHA256SUMS`:
 Get-FileHash .\RemMods_*_x64-setup.exe -Algorithm SHA256
 ```
 
-Every package carries `LICENSE`, `THIRD-PARTY-NOTICES` (Rust crates) and `THIRD-PARTY-NOTICES-NPM`
-(npm packages and fonts): on Linux in `/usr/share/doc/remmods/`, on Windows as `.txt` files in the
+Every package carries `THIRD-PARTY-NOTICES` (Rust crates) and `THIRD-PARTY-NOTICES-NPM` (npm
+packages and fonts): on Linux in `/usr/share/doc/remmods/`, on Windows as `.txt` files in the
 install folder. Settings → About shows them too.
 
 ## Updates
@@ -314,9 +314,3 @@ The release gate and the workflow rules run in CI's `policy` job; locally:
 `python3 -I scripts/release-check.py` and `python3 -I scripts/check-workflows.py` (needs PyYAML).
 Releases are cut by tagging main (`.github/workflows/release.yml`); the owner's steps, including the
 signing key and the AUR account, are in [docs/release-runbook.md](docs/release-runbook.md).
-
-## Credits and licence
-
-RemMods is MIT-licensed (see [LICENSE](LICENSE)). It is based on
-[TekkenModManager](https://github.com/UnfugPsy/TekkenModManager) by **Unfug**, also MIT; its copyright
-notice is kept in the licence file. Thanks to Unfug for the original app and its on-disk conventions.

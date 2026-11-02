@@ -17,8 +17,8 @@ content view has something to list: Alpha and the loose mod ship the same asset,
 The base `pakchunk0-Windows.utoc` lists that asset too, so the two enabled ones replace a game file
 and conflict (content conflicts count only game files).
 
---profiles  Writes sample files of the original app's profiles.json into <out> (for manual import
-       checks, never into a real app folder): `profiles.json` (a Default profile with
+--profiles  Writes sample files of another mod manager's profiles.json into <out> (for manual
+       import checks, never into a real app folder): `profiles.json` (a Default profile with
        `EnabledMods: null`, an Exclusive-style list with `Standard:`-prefixed keys, one with
        `LogicMods:` keys and one with legacy keys without a colon) and `profiles-bom.json` (the same
        list with a UTF-8 byte order mark). Prints the folder.
@@ -318,7 +318,7 @@ def make_smoke(out):
     return paks
 
 
-TMM_PROFILES = [
+OTHER_MANAGER_PROFILES = [
     {
         "Id": "00000000-0000-4000-8000-000000000001",
         "Name": "Default",
@@ -351,8 +351,8 @@ TMM_PROFILES = [
 
 def make_profiles(out):
     base = prepare_out_dir(out)
-    # JsonSerializer with WriteIndented: two-space indent, LF here so the files are the same on every OS.
-    text = json.dumps(TMM_PROFILES, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"
+    # Two-space indent and LF, so the files are the same on every OS.
+    text = json.dumps(OTHER_MANAGER_PROFILES, indent=2, ensure_ascii=False).encode("utf-8") + b"\n"
     write_new_file(below(base, "profiles.json"), text)
     write_new_file(below(base, "profiles-bom.json"), b"\xef\xbb\xbf" + text)
     return base

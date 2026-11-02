@@ -1,22 +1,24 @@
-//! Import from the original app, export and import of RemMods files (spec §5.9). Paths come
-//! from the shell's native dialogs, never from IPC.
+//! Profile import (RemMods files and another mod manager's `profiles.json`) and export (spec
+//! §5.9). Paths come from the shell's native dialogs, never from IPC.
 
 use std::path::Path;
 
 use super::api::build_view;
-use super::import_tmm::{MergeCounts, merge_tmm, parse_tmm_profiles, read_import_file};
+use super::import_file::{MergeCounts, read_import_file};
+use super::import_other::{merge_other_manager, parse_other_manager_profiles};
 use super::model::now_rfc3339;
 use super::transfer::{ExportReport, ImportReport, export_bytes, merge_import, parse_export};
 use crate::{Core, CoreError};
 
 impl Core {
-    pub fn profiles_import_tmm(&self, file: &Path) -> Result<ImportReport, CoreError> {
+    pub fn profiles_import_other_manager(&self, file: &Path) -> Result<ImportReport, CoreError> {
         let bytes = read_import_file(file)?;
-        let (imported, skipped) = parse_tmm_profiles(&bytes)?;
+        let (imported, skipped) = parse_other_manager_profiles(&bytes)?;
         let counts = {
             let guard = self.ops.write(self.app_scope()?)?;
-            self.profiles
-                .update(&guard, |profiles| Ok(merge_tmm(profiles, imported)))?
+            self.profiles.update(&guard, |profiles| {
+                Ok(merge_other_manager(profiles, imported))
+            })?
         };
         self.import_report(counts, skipped)
     }
@@ -33,7 +35,7 @@ impl Core {
     }
 
     /// Writes the non-snapshot profiles to the file the user picked (never into Paks, the mod
-    /// roots, the app folders or the original app's folder).
+    /// roots or the app folders; never a file named profiles.json).
     pub fn profiles_export(&self, file: &Path) -> Result<ExportReport, CoreError> {
         let loaded = self.profiles.load();
         let bytes = export_bytes(&loaded.file.profiles, &now_rfc3339());
@@ -51,9 +53,6 @@ impl Core {
         let mut forbidden: Vec<&Path> = Vec::new();
         if let Some(input) = &input {
             forbidden.push(&input.paks);
-        }
-        if let Some(tmm_dir) = self.tmm_dir() {
-            forbidden.push(tmm_dir);
         }
         {
             let guard = self.ops.write(scope)?;

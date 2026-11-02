@@ -26,4 +26,5 @@ ignore-dev-dependencies = true
 ignore-transitive-dependencies = false
 # Built-in fixes for crates whose licence files confuse the scanner (chrono, the gtk-rs -sys crates).
 workarounds = ["chrono", "gtk"]
+# Our own unpublished crates are not listed.
 private = { ignore = true }

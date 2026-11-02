@@ -45,9 +45,9 @@ export function ProfileCard({ summary, view }: ProfileCardProps) {
               <Badge variant="light" size="sm">
                 {t(($) => $.mode[profile.mode].label)}
               </Badge>
-              {profile.source.kind === 'tmm' && (
+              {profile.source.kind === 'otherManager' && (
                 <Badge variant="outline" size="sm" color="gray">
-                  {t(($) => $.card.fromTmm)}
+                  {t(($) => $.card.fromOtherManager)}
                 </Badge>
               )}
               {profile.source.kind === 'import' && (

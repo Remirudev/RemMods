@@ -36,8 +36,8 @@ fn every_fixture_classifies_as_expected() {
                 "{name}: pid"
             );
         }
-        if let Some(original_app) = fixture.original_app {
-            assert_eq!(verdict.original_app, original_app, "{name}: originalApp");
+        if let Some(other_manager) = fixture.other_manager {
+            assert_eq!(verdict.other_manager, other_manager, "{name}: otherManager");
         }
     }
 }

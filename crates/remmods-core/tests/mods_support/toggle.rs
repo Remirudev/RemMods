@@ -23,7 +23,7 @@ pub struct ToggleFixture {
     /// Flip to make the injected process list show the game.
     pub running: Arc<AtomicBool>,
     pub core: Core,
-    /// Options every `Core` of this fixture gets (trash env, original app dir).
+    /// Options every `Core` of this fixture gets (marker, trash env).
     pub extras: Extras,
 }
 
@@ -32,7 +32,6 @@ pub struct ToggleFixture {
 pub struct Extras {
     pub marker: Option<String>,
     pub trash: Option<TrashEnv>,
-    pub tmm_dir: Option<PathBuf>,
 }
 
 impl ToggleFixture {
@@ -175,7 +174,6 @@ fn open_core(
             .trash
             .clone()
             .unwrap_or_else(|| CoreOptions::default().trash),
-        tmm_dir: extras.tmm_dir.clone(),
     };
     Core::open_with(paths.clone(), options).expect("open core")
 }

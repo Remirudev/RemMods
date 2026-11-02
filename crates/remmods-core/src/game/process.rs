@@ -1,12 +1,13 @@
-//! Decides from process records whether TEKKEN 8 (or the original mod manager) runs. Pure, so
-//! fake `/proc` fixtures drive it on every OS. Exact rules only: never a substring of the whole
-//! command line, never the `GameThread` name, never `/proc/<pid>/exe` (the Wine preloader).
+//! Decides from process records whether TEKKEN 8 runs and whether another mod manager
+//! (`ModManager.exe`) runs. Pure, so fake `/proc` fixtures drive it on every OS. Exact rules
+//! only: never a substring of the whole command line, never the `GameThread` name, never
+//! `/proc/<pid>/exe` (the Wine preloader).
 
 use super::STEAM_APP_ID;
 use crate::platform::ProcessRecord;
 
 pub const GAME_EXECUTABLES: [&str; 2] = ["TEKKEN 8.exe", "Polaris-Win64-Shipping.exe"];
-pub const ORIGINAL_APP_EXECUTABLE: &str = "ModManager.exe";
+pub const OTHER_MANAGER_EXECUTABLE: &str = "ModManager.exe";
 /// TASK_COMM_LEN 16 minus the NUL: Linux shows `Polaris-Win64-Shipping.exe` as `Polaris-Win64-S`.
 pub const COMM_MAX_BYTES: usize = 15;
 
@@ -31,7 +32,7 @@ pub struct GameMatch {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ProcessVerdict {
     pub game: Option<GameMatch>,
-    pub original_app: bool,
+    pub other_manager: bool,
 }
 
 /// A reaper match is preferred, else the first match by pid.
@@ -42,10 +43,13 @@ pub fn classify(records: &[ProcessRecord]) -> ProcessVerdict {
         .find(|found| found.signal == GameSignal::SteamReaper)
         .or_else(|| matches.first())
         .copied();
-    let original_app = records
+    let other_manager = records
         .iter()
-        .any(|record| names_executable(record, ORIGINAL_APP_EXECUTABLE));
-    ProcessVerdict { game, original_app }
+        .any(|record| names_executable(record, OTHER_MANAGER_EXECUTABLE));
+    ProcessVerdict {
+        game,
+        other_manager,
+    }
 }
 
 /// Every record that shows the game, ordered by pid.

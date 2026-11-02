@@ -57,9 +57,9 @@ function openPlain(title: string, lines: string[], confirm: string, cancel: stri
 }
 
 // Opens the confirm for one step of a flow and resolves true only on an explicit confirm.
-export function askFlowDialog(dialog: FlowDialog, originalApp: boolean): Promise<boolean> {
+export function askFlowDialog(dialog: FlowDialog, otherManager: boolean): Promise<boolean> {
   const t = i18n.getFixedT(null, 'mods')
-  const warning = originalApp ? [t(($) => $.confirm.originalAppRunning)] : []
+  const warning = otherManager ? [t(($) => $.confirm.otherManagerRunning)] : []
   const place = trashPlaceWord()
   switch (dialog.kind) {
     case 'trash':
@@ -93,7 +93,7 @@ export function askFlowDialog(dialog: FlowDialog, originalApp: boolean): Promise
             name={dialog.subject.name}
             size={dialog.size}
             reason={dialog.reason}
-            originalApp={originalApp}
+            otherManager={otherManager}
             onCancel={() => settle(false)}
             onConfirm={() => settle(true)}
           />
@@ -106,7 +106,7 @@ export function askFlowDialog(dialog: FlowDialog, originalApp: boolean): Promise
           <DeleteConfirmBody
             name={dialog.name}
             size={dialog.size}
-            originalApp={originalApp}
+            otherManager={otherManager}
             onCancel={() => settle(false)}
             onConfirm={() => settle(true)}
           />

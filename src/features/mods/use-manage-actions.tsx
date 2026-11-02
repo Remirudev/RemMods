@@ -5,7 +5,7 @@ import { i18n } from '../../lib/i18n'
 import type { ModsSnapshot } from '../../lib/ipc/types'
 import { queryKeys } from '../../shared/query-keys'
 import { deletePermanently, trashWithFallback } from './delete-flow'
-import { buildFlowDeps, originalAppRunning } from './flow-deps'
+import { buildFlowDeps, otherManagerRunning } from './flow-deps'
 import { siblingFolds } from './name-check'
 import { RenameDialog } from './RenameDialog'
 import type { ManageActions, ManageSubject } from './types'
@@ -25,7 +25,7 @@ function openRename(client: QueryClient, subject: ManageSubject, suggestedName?:
         currentName={currentName}
         initialName={suggestedName ?? currentName}
         siblings={siblingFolds(rows, row)}
-        originalApp={originalAppRunning(client)}
+        otherManager={otherManagerRunning(client)}
         onClose={() => modals.close(modalId)}
         modalId={modalId}
       />

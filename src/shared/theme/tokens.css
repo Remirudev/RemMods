@@ -1,7 +1,7 @@
 /* biome-ignore-all lint/complexity/noImportantStyles: the reduced-motion reset has to beat
    component transitions, which only !important can do. */
 /*
- * RemMods "Quiet Canvas" tokens, ported from RemKitForge. Mantine's CSS is imported as
+ * RemMods "Quiet Canvas" tokens, taken from RemKitForge. Mantine's CSS is imported as
  * styles.layer.css, so everything here wins the cascade. The Mantine theme owns the colour scales
  * and the scheme-dependent text roles (css-variables.ts); this file owns motion, glow, the ambient
  * background, scrollbars and the app's own layout tokens.

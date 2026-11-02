@@ -3,11 +3,10 @@
 **Status: later.** There is no Windows PC, VM or tester yet (docs/PLAN.md §15). Until this list has
 run once on a real PC or VM, Windows builds are labelled "beta, CI-tested only" (§1, §14).
 
-Already covered by CI on windows-2025: every core test, the `smoke (windows)` launch of the built app,
-the `interop-diff` job against the original's code (from P3) and a silent NSIS install with `--smoke`
-in the artifacts workflow (in place since P5: the `nsis` job of `.github/workflows/artifacts.yml`
-installs per user with `/S`, checks that `--smoke` reports the install kind `nsis` and uninstalls with
-`/S`). This list is what CI cannot see.
+Already covered by CI on windows-2025: every core test, the `smoke (windows)` launch of the built app
+and a silent NSIS install with `--smoke` in the artifacts workflow (in place since P5: the `nsis` job
+of `.github/workflows/artifacts.yml` installs per user with `/S`, checks that `--smoke` reports the
+install kind `nsis` and uninstalls with `/S`). This list is what CI cannot see.
 
 ## Install and first start
 
@@ -15,9 +14,8 @@ installs per user with `/S`, checks that `--smoke` reports the install kind `nsi
       ("More info", then "Run anyway").
 - [ ] Smart App Control (Windows 11, if the machine has it on): it blocks the unsigned installer with
       no per-app exception, as the README says. Record the exact message (WG-10).
-- [ ] The install folder `%LOCALAPPDATA%\RemMods` holds `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and
-      `THIRD-PARTY-NOTICES-NPM.txt`, and Settings → About → "Licences and third-party notices" shows
-      the three texts.
+- [ ] The install folder `%LOCALAPPDATA%\RemMods` holds `THIRD-PARTY-NOTICES.txt` and
+      `THIRD-PARTY-NOTICES-NPM.txt`, and Settings → About → "Third-party notices" shows both texts.
 - [ ] Without WebView2, RemMods shows a native message with the Evergreen download link instead of
       exiting silently.
 - [ ] Custom title bar: drag, double-click to maximise, minimise / maximise / close, resize from the
@@ -52,11 +50,10 @@ installs per user with `/S`, checks that `--smoke` reports the install kind `nsi
       context menu.
 - [ ] Dropping an archive from Explorer starts an install.
 
-## Coexistence and updates
+## Other tools and updates
 
-- [ ] Coexistence UI check with the original TekkenModManager v1.1.1: the banner shows while
-      `ModManager.exe` runs, and delete / rename / overwrite ask first. (The file-level rules are
-      covered by `interop-diff`.)
+- [ ] Another-mod-manager check: while a `ModManager.exe` runs, the banner shows and delete / rename /
+      overwrite ask first.
 - [ ] Settings → Updates shows "Windows installer". In a release build, "Check for updates" finds a
       newer release and offers "Install and restart"; the confirmation says "RemMods will close to
       install the update. The installer shows its progress and starts RemMods again."

@@ -434,17 +434,17 @@ export type GameStatus = {
 	location: GameLocation,
 	running: RunningState,
 	session: number,
-	originalApp: boolean,
+	otherManager: boolean,
 	update: UpdateNotice | null,
 	candidates: GameCandidate[],
 	notes: DetectionNote[],
 };
 
-/**  `game-status-changed`: the running state, session, original-app flag or update notice changed. */
+/**  `game-status-changed`: the running state, session, other-manager flag or update notice changed. */
 export type GameStatusChanged = {
 	running: RunningState,
 	session: number,
-	originalApp: boolean,
+	otherManager: boolean,
 	update: UpdateNotice | null,
 };
 
@@ -737,9 +737,8 @@ export type NameProblem = "empty" | "dotName" | "tooLong" | "forbiddenChar" | "c
 
 export type NoteCode = "steamRoot" | "noSteam" | "vdfError" | "libraryMissing" | "libraryNotAbsolute" | "manifestError" | "installIncomplete" | "gameFolderInvalid" | "pathNotUnicode" | "registryUnreadable";
 
-/**  The licence and third-party notice texts compiled into the binary (About dialog). */
+/**  The third-party notice texts compiled into the binary (About dialog). */
 export type Notices = {
-	license: string,
 	rust: string,
 	npm: string,
 };
@@ -843,7 +842,7 @@ export type ProfileMode = "additive" | "exclusive";
 export type ProfileSave = { kind: "new"; name: string; description: string; mode: ProfileMode } | { kind: "overwrite"; id: string } | { kind: "edit"; id: string; name: string; description: string; mode: ProfileMode };
 
 /**  Snapshot profiles have an empty name; the UI renders their label from `of`. */
-export type ProfileSource = { kind: "user" } | { kind: "snapshot"; of: string } | { kind: "tmm"; id: string; isDefault: boolean } | { kind: "import" };
+export type ProfileSource = { kind: "user" } | { kind: "snapshot"; of: string } | { kind: "otherManager"; id: string; isDefault: boolean } | { kind: "import" };
 
 export type ProfileSummary = {
 	profile: Profile,
@@ -1027,7 +1026,7 @@ export type ToggleTarget = {
 export type TransferOutcome = { kind: "imported"; report: ImportReport } | { kind: "exported"; report: ExportReport };
 
 /**  The one file-dialog command; the dialog title comes from the UI. */
-export type TransferRequest = { kind: "importTmm"; title: string } | { kind: "import"; title: string } | { kind: "export"; title: string; defaultFileName: string };
+export type TransferRequest = { kind: "importOtherManager"; title: string } | { kind: "import"; title: string } | { kind: "export"; title: string; defaultFileName: string };
 
 export type TrashKind = "home" | "topdirShared" | "topdirUser" | "recycleBin";
 

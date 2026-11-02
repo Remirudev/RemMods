@@ -203,13 +203,16 @@ fn apply_skips_ambiguous_and_blocked() {
 #[test]
 fn imported_empty_default_disables_everything() {
     let fixture = core_with_trash(BASE);
-    let source = fixture.root.join("tmm-profiles.json");
+    let source = fixture.root.join("other-profiles.json");
     std::fs::write(
         &source,
         br#"[{"Id":"7c9e","Name":"Default","Description":null,"EnabledMods":[],"Created":"2025-01-01T00:00:00","LastUsed":null,"IsDefault":true}]"#,
     )
     .expect("write source");
-    let report = fixture.core.profiles_import_tmm(&source).expect("import");
+    let report = fixture
+        .core
+        .profiles_import_other_manager(&source)
+        .expect("import");
     assert_eq!(report.added, 1);
     let id = by_name(&report.view, "Default").id.clone();
     let outcome = apply(&fixture, &id).expect("apply");

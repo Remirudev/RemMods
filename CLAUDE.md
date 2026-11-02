@@ -1,8 +1,8 @@
 # RemMods
 
 Mod manager for TEKKEN 8: Tauri 2 shell, Rust core, React 19 + Mantine 9 UI. Linux first (CachyOS,
-KDE Plasma 6 Wayland is the dev machine), Windows working at all times. Port of Unfug's
-TekkenModManager; folders made by either app keep working in both.
+KDE Plasma 6 Wayland is the dev machine), Windows working at all times. Existing mod folders that
+follow the usual TEKKEN 8 conventions keep working.
 
 The plan is `docs/PLAN.md` (v3.2, the owner's decisions in §15; phases and exit criteria in §13), the review
 trail `docs/REVIEW-LOG.md`. Read the plan section for the area you touch first. Where code and plan
@@ -117,8 +117,8 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   not a cargo feature. JSON is written with
   `write_atomic` under the `AppLock`; a corrupt file is backed up before it is replaced.
 - Writes only inside the three mod roots, RemMods' app folders and the Trash. Steam files are
-  read-only. Removal is a rename; permanent delete needs a second confirmation. RemMods never writes
-  the original's `profiles.json`. One exception: a profile export writes the single `.json` file the
+  read-only. Removal is a rename; permanent delete needs a second confirmation. RemMods writes no
+  `profiles.json` except its own store. One exception: a profile export writes the single `.json` file the
   user picked in the native save dialog (`WriteGuard::write_export`; approved 2026-11-01, SPEC-P3 A3).
   Second exception, self-update (approved 2026-11-02, SPEC-P5 A9): only inside `update_install`,
   after the install-kind allowlist (AppImage with a valid `$APPIMAGE`, or NSIS) and with the OpGate
@@ -161,7 +161,7 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   session; the post-build `--verify-cache` step catches a bundler that downloaded its own tools).
 - Regenerate `THIRD-PARTY-NOTICES` and `THIRD-PARTY-NOTICES-NPM` after every `Cargo.lock` or
   `package-lock.json` change (`bash scripts/notices.sh`, Dependabot PRs included): CI's `policy` and
-  `linux` jobs fail on stale notices. `LICENSE` is shipped and embedded as-is.
+  `linux` jobs fail on stale notices.
 - Workflows name secrets only (environment `release`: `TAURI_SIGNING_PRIVATE_KEY`,
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `AUR_SSH_PRIVATE_KEY`; variables `AUR_KNOWN_HOSTS`,
   `AUR_COMMIT_EMAIL`). Claude never creates, prints or stores keys or passwords, and never pushes

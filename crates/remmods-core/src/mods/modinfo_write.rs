@@ -1,4 +1,4 @@
-//! Writing `modinfo.json` in the bytes the original writes (spec §5.5, PLAN §7).
+//! Writing `modinfo.json` in a fixed, stable byte layout (spec §5.5, PLAN §7).
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -62,14 +62,20 @@ pub fn modinfo_json(info: &ModInfoEdit) -> String {
     let mut out = String::from("{\n");
     for (index, (field, value)) in FIELDS.iter().zip(values).enumerate() {
         let comma = if index + 1 < FIELDS.len() { "," } else { "" };
-        let _ = writeln!(out, "  \"{field}\": \"{}\"{comma}", stj_escape(value));
+        let _ = writeln!(
+            out,
+            "  \"{field}\": \"{}\"{comma}",
+            escape_json_value(value)
+        );
     }
     out.push('}');
     out
 }
 
-/// STJ's default JavaScriptEncoder escaping for one string value (without quotes). Pure.
-pub fn stj_escape(value: &str) -> String {
+/// JSON string escaping for one value (without quotes): `\\`, backspace, tab, newline, form feed
+/// and carriage return as short escapes; `"`, `&`, `'`, `+`, `<`, `>`, `` ` `` and everything else
+/// outside printable ASCII as uppercase `\uXXXX` UTF-16 units. Pure.
+pub fn escape_json_value(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for c in value.chars() {
         match c {

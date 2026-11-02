@@ -137,18 +137,14 @@ export const settings = {
   },
   about: {
     title: 'About',
-    description: 'License and credits.',
-    license: 'RemMods is free software under the MIT license.',
-    credit:
-      'It is a port of TekkenModManager by Unfug, which is MIT-licensed as well. Thank you for the original.',
+    description: 'Source code and third-party notices.',
     source: 'Source code',
     copyLink: 'Copy link',
     linkCopied: 'Link copied',
     notices: {
-      open: 'Licences and third-party notices',
-      title: 'Licences and third-party notices',
+      open: 'Third-party notices',
+      title: 'Third-party notices',
       tabs: {
-        app: 'RemMods',
         rust: 'Rust crates',
         npm: 'npm packages and fonts',
       },

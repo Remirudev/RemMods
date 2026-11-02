@@ -1,55 +1,11 @@
-//! Cross-row passes: ambiguous keys, case collisions and pak conflicts (spec §4.6), plus the
-//! original app's view of conflicts for the P3 interop diff.
+//! Cross-row passes: ambiguous keys, case collisions and pak conflicts (spec §4.6).
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::issues::ModIssue;
-use super::model::{ConflictLink, ModKind, ModRow, ModState, RootKind, ScanContent};
+use super::model::{ConflictLink, ModKind, ModState, RootKind};
 use super::rows::RowDraft;
 use crate::safe_fs::names::{fold_key, order_key};
-
-/// The original's IsEnabled. `None` = the original has no such row (Loose) or would fail (Unknown).
-pub fn original_enabled(row: &ModRow) -> Option<bool> {
-    match (row.kind, row.state) {
-        (ModKind::Loose, _) | (_, ModState::Unknown) => None,
-        (ModKind::Logic, _) => Some(!row.logic_prefixed),
-        (_, ModState::Enabled | ModState::Partial) => Some(true),
-        (_, ModState::Disabled | ModState::NoPakFiles) => Some(false),
-    }
-}
-
-/// v1.1.1 ConflictDetector: ASCII-lowercased names of enabled rows sharing a live `.pak` basename
-/// (compared ASCII case-insensitively, deduplicated per row).
-pub fn original_conflict_names(content: &ScanContent) -> BTreeSet<String> {
-    let mut owners: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for row in &content.rows {
-        if original_enabled(row) != Some(true) || row.payload.live_pak == 0 {
-            continue;
-        }
-        let name = row.name.to_ascii_lowercase();
-        for pak in live_pak_names(row) {
-            owners
-                .entry(pak.to_ascii_lowercase())
-                .or_default()
-                .insert(name.clone());
-        }
-    }
-    owners
-        .into_values()
-        .filter(|names| names.len() > 1)
-        .flatten()
-        .collect()
-}
-
-/// The row's own spelling of every live `.pak` it shares with another row. RemMods' fold key
-/// unifies everything ASCII case-insensitivity does, so every name the original would match is
-/// listed here.
-fn live_pak_names(row: &ModRow) -> BTreeSet<String> {
-    row.conflicts_with
-        .iter()
-        .flat_map(|link| link.paks.iter().cloned())
-        .collect()
-}
 
 /// Rows with byte-identical keys.
 pub(crate) fn mark_ambiguous(drafts: &mut [RowDraft]) {

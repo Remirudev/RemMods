@@ -10,7 +10,7 @@ const DOUBLE_ENTER_GUARD_MS = 1500
 export function DeleteConfirmBody({
   name,
   size,
-  originalApp,
+  otherManager,
   onCancel,
   onConfirm,
 }: DeleteConfirmBodyProps) {
@@ -23,7 +23,7 @@ export function DeleteConfirmBody({
       <Text size="sm" fw={600} c="red">
         {t(($) => $.delete.final.irreversible)}
       </Text>
-      {originalApp && <Text size="sm">{t(($) => $.confirm.originalAppRunning)}</Text>}
+      {otherManager && <Text size="sm">{t(($) => $.confirm.otherManagerRunning)}</Text>}
       <ConfirmButtons
         danger
         delayMs={DOUBLE_ENTER_GUARD_MS}

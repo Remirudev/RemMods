@@ -1,4 +1,4 @@
-import { Button, Group, Paper, Stack, Text } from '@mantine/core'
+import { Button, Group, Paper, Stack } from '@mantine/core'
 import { IconLicense } from '@tabler/icons-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,8 +18,6 @@ export function AboutSection() {
           title={t(($) => $.about.title)}
           description={t(($) => $.about.description)}
         />
-        <Text size="sm">{t(($) => $.about.license)}</Text>
-        <Text size="sm">{t(($) => $.about.credit)}</Text>
         <CopyLinkRow label={t(($) => $.about.source)} url={REPOSITORY_URL} />
         <Group>
           <Button

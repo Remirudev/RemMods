@@ -196,9 +196,8 @@ export function checkGraphics(
 
 export function checkNotices(notices: Loaded<Notices>): SmokeCheck {
   if (!notices.ok) return failedCheck('notices', notices.error)
-  const { license, rust, npm } = notices.value
+  const { rust, npm } = notices.value
   const problems: string[] = []
-  if (!license.includes('MIT License')) problems.push('license without MIT License')
   if (!rust.startsWith('THIRD-PARTY NOTICES')) problems.push('rust notices header missing')
   if (!npm.toLowerCase().includes('sil open font license')) problems.push('npm without SIL OFL')
   return problems.length === 0

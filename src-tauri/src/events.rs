@@ -19,13 +19,13 @@ pub struct ModsChanged {
     pub revision: u32,
 }
 
-/// `game-status-changed`: the running state, session, original-app flag or update notice changed.
+/// `game-status-changed`: the running state, session, other-manager flag or update notice changed.
 #[derive(Serialize, Deserialize, Clone, Debug, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
 pub struct GameStatusChanged {
     pub running: RunningState,
     pub session: u32,
-    pub original_app: bool,
+    pub other_manager: bool,
     pub update: Option<UpdateNotice>,
 }
 
@@ -34,7 +34,7 @@ impl From<GameStatusChange> for GameStatusChanged {
         Self {
             running: change.running.into(),
             session: change.session,
-            original_app: change.original_app,
+            other_manager: change.other_manager,
             update: change.update.as_ref().map(UpdateNotice::from),
         }
     }

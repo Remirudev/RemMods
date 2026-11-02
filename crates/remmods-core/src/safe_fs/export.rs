@@ -7,7 +7,8 @@ use super::gate::WriteGuard;
 use super::scope::{ScopeViolation, has_dot_component, is_within, resolve_existing};
 use super::{FsError, write_atomic};
 
-/// RemMods' own store and the original app's file share this name; an export never replaces it.
+/// No export is ever written under this name: RemMods' own store and other tools' profile lists
+/// use it.
 const PROFILES_FILE: &str = "profiles.json";
 const EXPORT_EXT: &str = "json";
 

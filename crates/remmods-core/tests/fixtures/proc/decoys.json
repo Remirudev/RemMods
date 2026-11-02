@@ -5,7 +5,7 @@
     "running": false,
     "signal": null,
     "pid": null,
-    "originalApp": false
+    "otherManager": false
   },
   "processes": [
     {

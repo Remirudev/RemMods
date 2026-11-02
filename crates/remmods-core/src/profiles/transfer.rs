@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use super::api::ProfilesView;
 use super::error::{ImportProblem, ProfileError};
-use super::import_tmm::{MergeCounts, decode_json};
+use super::import_file::{MergeCounts, decode_json};
 use super::model::{Profile, ProfileSource, ProfilesFile, is_profile_id, new_id, unique_name};
 use super::store::parse_profiles;
 

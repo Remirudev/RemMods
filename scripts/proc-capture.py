@@ -211,7 +211,7 @@ def capture(label):
         "version": 1,
         "source": f"{label}: scripts/proc-capture.py at {taken} on Linux {os.uname().release}; "
         "review and redact by hand before committing",
-        "expect": {"running": None, "signal": None, "pid": None, "originalApp": None},
+        "expect": {"running": None, "signal": None, "pid": None, "otherManager": None},
         "processes": [record(processes[pid], reasons[pid]) for pid in sorted(reasons)],
     }
 

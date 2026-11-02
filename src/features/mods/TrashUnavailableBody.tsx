@@ -10,7 +10,7 @@ export function TrashUnavailableBody({
   name,
   size,
   reason,
-  originalApp,
+  otherManager,
   onCancel,
   onConfirm,
 }: TrashUnavailableBodyProps) {
@@ -24,7 +24,7 @@ export function TrashUnavailableBody({
       <Text size="sm" fw={600} c="red">
         {t(($) => $.delete.final.irreversible)}
       </Text>
-      {originalApp && <Text size="sm">{t(($) => $.confirm.originalAppRunning)}</Text>}
+      {otherManager && <Text size="sm">{t(($) => $.confirm.otherManagerRunning)}</Text>}
       <ConfirmButtons
         danger
         cancelLabel={t(($) => $.delete.cancel)}

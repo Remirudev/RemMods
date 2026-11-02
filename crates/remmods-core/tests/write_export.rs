@@ -58,18 +58,18 @@ fn write_export_refuses_inside_paks_and_app_dirs() {
 fn write_export_refuses_profiles_json_and_forbidden_dir() {
     let fixture = support::fs_fixture();
     let out = fixture.root.join("out");
-    let tmm = fixture.root.join("tmm");
+    let forbidden_dir = fixture.root.join("other-tool");
     fs::create_dir_all(&out).expect("out");
-    fs::create_dir_all(&tmm).expect("tmm");
+    fs::create_dir_all(&forbidden_dir).expect("forbidden dir");
     let paks = fixture.paks.clone();
     assert_refused(
         &fixture,
         &[
             out.join("Profiles.JSON"),
             out.join("profiles.json"),
-            tmm.join("backup.json"),
+            forbidden_dir.join("backup.json"),
         ],
-        &[&paks, &tmm],
+        &[&paks, &forbidden_dir],
     );
 }
 

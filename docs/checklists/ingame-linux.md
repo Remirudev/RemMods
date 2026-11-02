@@ -80,7 +80,7 @@ may change in this phase. Captures are reviewed and redacted by hand before any 
 9. Update notice: with RemMods closed, set `game.lastSeenBuild.buildId` to `"1"` in
    `~/.config/com.remirudev.remmods/settings.json`. Start RemMods: the notice shows 1 to 25221600.
    Click "Got it", restart: no notice.
-10. Original-app notice: `cp /usr/bin/sleep /tmp/ModManager.exe; /tmp/ModManager.exe 60`. The notice
+10. Other-manager notice: `cp /usr/bin/sleep /tmp/ModManager.exe; /tmp/ModManager.exe 60`. The notice
     appears within about 2 s and clears after the process ends. Then `rm /tmp/ModManager.exe`.
 11. KDE Wayland: the custom title bar drags, resizes and maximises; "Change folder…" opens the Plasma
     portal dialog attached to the window. Taskbar icon via `StartupWMClass` and the safe-graphics
@@ -202,24 +202,24 @@ backup of step 1.
    launch, confirm. After each apply an automatic snapshot appears in the profile list (the newest 10
    are kept). This is the P3 exit check "two profiles applied back and forth in-game".
    Result:
-4. Rename one enabled mod (for example `CoolSkin` to `CoolSkin2`): profile A's entry follows (its
+4. Rename one enabled mod (for example `NeonSkin` to `NeonSkin2`): profile A's entry follows (its
    diff shows no change), launch, the mod still loads.
    Result:
-5. Case-only rename (`CoolSkin2` to `coolskin2`); check the folder name on disk with
+5. Case-only rename (`NeonSkin2` to `neonskin2`); check the folder name on disk with
    `ls "<Paks>/Mods"`.
    Result:
 6. Move one mod to the Trash: it leaves the table; launch, it is gone in-game. Restore it from
    Dolphin's Trash; RemMods shows it again after the rescan; launch, it is back.
    Result:
-7. Edit the metadata of one mod; open its `modinfo.json` and compare it with the expected bytes; the
-   original's reading rules (PLAN §7) still parse it (`python3 -I scripts/scan-expect.py` if it
+7. Edit the metadata of one mod; open its `modinfo.json` and compare it with the expected bytes;
+   RemMods' reading rules (PLAN §7) still parse it (`python3 -I scripts/scan-expect.py` if it
    applies).
    Result:
-8. Import a copy of the original app's profiles (`python3 -I scripts/make-fixtures.py --profiles
+8. Import a copy of another mod manager's profiles (`python3 -I scripts/make-fixtures.py --profiles
    local/profiles-fixture`, then pick `profiles.json`): the imported profiles are Exclusive, and the
    diff of the empty Default lists every enabled mod as Disable. Cancel the apply.
    Result:
-9. Repair tab: craft a leftover with `mkdir "<Paks>/Mods/_Test_tmp_0123456789abcdef0123456789abcdef"`
+9. Repair tab: craft a leftover with `mkdir "<Paks>/Mods/_Test_tmp_5f3ccf7c5cff4a1e9b20d6e8c1a7b394"`
    holding a `-x` file (for example `touch .../Old.pak-x`); it shows in Repair. Move it to the Trash.
    Result:
 10. Game closed. `scripts/paks-snapshot.sh > local/paks-p3-after.tsv`, then
@@ -297,7 +297,7 @@ to 9 and 12 are the P5 exit check; steps 10 and 11 follow later releases.
    Result:
 3. Start it (`~/Applications/RemMods_*_amd64.AppImage`). Settings → Updates shows "AppImage" and
    "This build has no update channel (development or test build)."; Diagnostics shows "Installed as"
-   with the value "AppImage"; About → "Licences and third-party notices" shows three tabs. The log agrees:
+   with the value "AppImage"; About → "Third-party notices" shows two tabs. The log agrees:
    `string match '*install kind*' < ~/.local/share/com.remirudev.remmods/logs/remmods.log | tail -n 1`
    ends with `install kind AppImage, updater configured false`. Close RemMods.
    Result:

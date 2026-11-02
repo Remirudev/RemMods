@@ -7,14 +7,13 @@ import { useNotices } from './queries'
 import classes from './settings.module.css'
 import type { NoticesModalProps } from './types'
 
-const TABS: readonly (keyof Notices)[] = ['license', 'rust', 'npm']
+const TABS: readonly (keyof Notices)[] = ['rust', 'npm']
 
 // The texts are compiled into the binary; they are fetched only once the dialog opens.
 export function NoticesModal({ opened, onClose }: NoticesModalProps) {
   const { t } = useTranslation('settings')
   const notices = useNotices(opened)
   const labels: Record<keyof Notices, string> = {
-    license: t(($) => $.about.notices.tabs.app),
     rust: t(($) => $.about.notices.tabs.rust),
     npm: t(($) => $.about.notices.tabs.npm),
   }
@@ -36,7 +35,7 @@ export function NoticesModal({ opened, onClose }: NoticesModalProps) {
         </Alert>
       )}
       {notices.data && (
-        <Tabs defaultValue="license">
+        <Tabs defaultValue="rust">
           <Tabs.List>
             {TABS.map((tab) => (
               <Tabs.Tab key={tab} value={tab}>

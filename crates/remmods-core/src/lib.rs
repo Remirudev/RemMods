@@ -21,7 +21,6 @@ pub use error::CoreError;
 pub use paths::AppPaths;
 
 use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
@@ -47,8 +46,6 @@ pub struct Core {
     pub install: install::InstallService,
     pub trash_env: TrashEnv,
     require_marker: Option<String>,
-    /// The original app's data folder (Windows only); exports never go there.
-    tmm_dir: Option<PathBuf>,
     /// Test hook: one entry per following manage mutation (rename, set-aside, profile apply,
     /// trash; a bulk row takes one each), in order.
     fault: Mutex<VecDeque<Option<FaultPlan>>>,
@@ -64,8 +61,6 @@ pub struct CoreOptions {
     pub require_marker: Option<String>,
     /// Where trashed mods go; the default refuses every trash.
     pub trash: TrashEnv,
-    /// `paths::tmm_profiles_dir()` in the shell.
-    pub tmm_dir: Option<PathBuf>,
 }
 
 impl Default for CoreOptions {
@@ -83,7 +78,6 @@ impl Default for CoreOptions {
                 uid: None,
                 topdirs: TopdirPolicy::Deny,
             },
-            tmm_dir: None,
         }
     }
 }
@@ -110,7 +104,6 @@ impl Core {
             install: install::InstallService::default(),
             trash_env: options.trash,
             require_marker: options.require_marker,
-            tmm_dir: options.tmm_dir,
             fault: Mutex::new(VecDeque::new()),
             fail_final_refresh: AtomicBool::new(false),
             paths,
@@ -148,10 +141,6 @@ impl Core {
 
     pub(crate) fn take_final_refresh_failure(&self) -> bool {
         self.fail_final_refresh.swap(false, Ordering::SeqCst)
-    }
-
-    pub(crate) fn tmm_dir(&self) -> Option<&std::path::Path> {
-        self.tmm_dir.as_deref()
     }
 
     pub fn settings(&self) -> SettingsSnapshot {

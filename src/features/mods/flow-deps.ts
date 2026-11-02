@@ -10,8 +10,8 @@ import { askFlowDialog } from './flow-dialogs'
 import { showFlowNotice } from './flow-notices'
 import type { FlowDeps } from './types'
 
-export function originalAppRunning(client: QueryClient): boolean {
-  return client.getQueryData<GameStatus>(queryKeys.gameStatus)?.originalApp ?? false
+export function otherManagerRunning(client: QueryClient): boolean {
+  return client.getQueryData<GameStatus>(queryKeys.gameStatus)?.otherManager ?? false
 }
 
 // The real dependencies of the trash and delete flows (the flows themselves stay pure).
@@ -22,7 +22,7 @@ export function buildFlowDeps(client: QueryClient): FlowDeps {
       prepare: (target) => ipc.modsDeletePrepare(target),
       remove: (request) => ipc.modsDeletePermanently(request),
     },
-    ask: (dialog) => askFlowDialog(dialog, originalAppRunning(client)),
+    ask: (dialog) => askFlowDialog(dialog, otherManagerRunning(client)),
     askRunning: () => confirmApplyWhileRunning(i18n.getFixedT(null, 'errors')),
     store: (snapshot) => storeModsSnapshot(client, snapshot),
     notice: showFlowNotice,

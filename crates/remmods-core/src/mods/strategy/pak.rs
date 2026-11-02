@@ -1,7 +1,7 @@
 use super::{StateInput, unknown};
 use crate::mods::model::ModState;
 
-/// Mods, ~mods and loose rows: live and `-x` paks decide (the original's ACTIVE, split).
+/// Mods, ~mods and loose rows: live and `-x` paks decide (Enabled, Partial or Disabled).
 pub(crate) fn pak_state(input: StateInput) -> ModState {
     if let Some(state) = unknown(input) {
         return state;

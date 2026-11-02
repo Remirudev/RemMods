@@ -15,7 +15,7 @@ pub struct GameStatus {
     pub location: GameLocation,
     pub running: RunningState,
     pub session: u32,
-    pub original_app: bool,
+    pub other_manager: bool,
     pub update: Option<UpdateNotice>,
     pub candidates: Vec<GameCandidate>,
     pub notes: Vec<DetectionNote>,
@@ -138,7 +138,7 @@ pub enum PickResult {
 pub struct GameStatusChange {
     pub running: RunningState,
     pub session: u32,
-    pub original_app: bool,
+    pub other_manager: bool,
     pub update: Option<UpdateNotice>,
 }
 

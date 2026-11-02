@@ -34,6 +34,10 @@ confidence-threshold = 0.8
 # The list is policy, not an inventory: licences for later phases (bzip2, notify) stay listed.
 unused-allowed-license = "allow"
 
+[licenses.private]
+# Our own crates are unpublished (publish = false) and carry no licence.
+ignore = true
+
 [bans]
 multiple-versions = "warn"
 # Named one by one: cargo-deny takes no globs.

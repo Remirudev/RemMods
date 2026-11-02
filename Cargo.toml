@@ -6,7 +6,6 @@ members = ["crates/remmods-core", "crates/remmods-ipc", "crates/remmods-pak", "s
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
-license = "MIT"
 repository = "https://github.com/Remirudev/RemMods"
 
 [workspace.dependencies]

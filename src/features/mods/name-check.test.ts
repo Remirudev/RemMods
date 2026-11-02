@@ -38,7 +38,7 @@ describe('checkName', () => {
   })
 
   it('accepts ordinary names', () => {
-    for (const name of ['Cool Skin', 'COM0', 'COM10', '日本', 'a.b', '_tmp_short', 'CONSOLE']) {
+    for (const name of ['Neon Skin', 'COM0', 'COM10', '日本', 'a.b', '_tmp_short', 'CONSOLE']) {
       expect(checkName(name, 'Old', NONE), name).toBeNull()
     }
   })
@@ -48,8 +48,8 @@ describe('checkName', () => {
   })
 
   it('reports a sibling that differs only in case or normalisation', () => {
-    const siblings = new Set([foldName('Cool Skin'), foldName('Café')])
-    expect(checkName('cool skin', 'Old', siblings)).toBe('exists')
+    const siblings = new Set([foldName('Neon Skin'), foldName('Café')])
+    expect(checkName('neon skin', 'Old', siblings)).toBe('exists')
     expect(checkName('Cafe', 'Old', siblings)).toBeNull()
     expect(checkName('Café', 'Old', siblings)).toBe('exists')
   })

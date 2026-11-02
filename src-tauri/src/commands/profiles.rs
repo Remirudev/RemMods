@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use remmods_core::profiles as core_profiles;
-use remmods_core::{Core, CoreError, paths};
+use remmods_core::{Core, CoreError};
 use remmods_ipc::{
     AppError, ApplyOutcome, ApplyRequest, ExportReport, ImportReport, ProfileDiff, ProfileSave,
     ProfilesView, TransferOutcome, TransferRequest,
@@ -108,14 +108,7 @@ pub async fn profiles_transfer(
 fn pick(window: &WebviewWindow, request: TransferRequest) -> Option<FilePath> {
     let dialog = window.dialog().file().set_parent(window);
     match request {
-        TransferRequest::ImportTmm { title } => {
-            let mut dialog = dialog.set_title(title).add_filter(JSON_FILTER, &["json"]);
-            if let Some(start) = paths::tmm_profiles_dir() {
-                dialog = dialog.set_directory(start);
-            }
-            dialog.blocking_pick_file()
-        }
-        TransferRequest::Import { title } => dialog
+        TransferRequest::ImportOtherManager { title } | TransferRequest::Import { title } => dialog
             .set_title(title)
             .add_filter(JSON_FILTER, &["json"])
             .blocking_pick_file(),
@@ -136,7 +129,9 @@ fn transfer(
     file: &Path,
 ) -> Result<TransferOutcome, CoreError> {
     match request {
-        TransferRequest::ImportTmm { .. } => core.profiles_import_tmm(file).map(imported),
+        TransferRequest::ImportOtherManager { .. } => {
+            core.profiles_import_other_manager(file).map(imported)
+        }
         TransferRequest::Import { .. } => core.profiles_import(file).map(imported),
         TransferRequest::Export { .. } => {
             core.profiles_export(file)

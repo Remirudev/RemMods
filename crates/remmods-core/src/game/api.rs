@@ -48,7 +48,7 @@ impl Core {
         Ok(self.game.reveal_target()?)
     }
 
-    /// One process scan; `Some` when the running state, session or original app changed.
+    /// One process scan; `Some` when the running state, session or other-manager flag changed.
     pub fn game_poll_running(&self) -> Option<GameStatusChange> {
         self.game.poll_running()
     }
