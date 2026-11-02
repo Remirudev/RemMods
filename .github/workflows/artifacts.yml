@@ -181,8 +181,7 @@ jobs:
             tee "$RUNNER_TEMP/smoke-deb-fixture.out"
           grep -F '"name":"updateChannel","ok":true,"detail":"deb"' "$RUNNER_TEMP/smoke-deb-fixture.out"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
-            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
 
       - name: Remove the deb
         run: sudo apt-get remove -y rem-mods
