@@ -55,6 +55,7 @@ e2e/                   Playwright flows: specs/, mock/ (the stateful mock backen
 scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh and smoke-paks-diff.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh;
                        release: release-check/check-workflows/check-latest-json/make-latest-json/render-pkgbuild/inspect-bundle/npm-notices.py, notices.sh, seed-appimage-tools.sh (CI only)
 packaging/             aur/PKGBUILD.in (remmods-bin), release-notes.md (draft release text, @VERSION@)
+icon.png               the app icon source (1024×1024, transparent); src-tauri/icons/ is generated from it
 cachyos-install.sh     the owner's local install into ~/.local: release build --no-bundle, binary,
                        `install-source=local` marker (Settings shows "Local install"), icons, desktop entry
 about.toml, about.hbs  cargo-about config + template → THIRD-PARTY-NOTICES; npm-notices.py → THIRD-PARTY-NOTICES-NPM
