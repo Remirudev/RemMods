@@ -112,7 +112,7 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   read-only. Removal is a rename; permanent delete needs a second confirmation. RemMods never writes
   the original's `profiles.json`. One exception: a profile export writes the single `.json` file the
   user picked in the native save dialog (`WriteGuard::write_export`; approved 2026-11-01, SPEC-P3 A3).
-  Second exception, self-update (pending owner approval, SPEC-P5 A9): only inside `update_install`,
+  Second exception, self-update (approved 2026-11-02, SPEC-P5 A9): only inside `update_install`,
   after the install-kind allowlist (AppImage with a valid `$APPIMAGE`, or NSIS) and with the OpGate
   sealed, the updater plugin rewrites the file at `$APPIMAGE` (it moves the previous AppImage into a
   private temp folder on the same device and deletes it once the new file is written, so the old
