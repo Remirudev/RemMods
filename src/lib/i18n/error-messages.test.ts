@@ -44,6 +44,14 @@ const ERRORS: AppError[] = [
   { kind: 'importFailed', problem: 'wrongShape' },
   { kind: 'importFailed', problem: 'wrongFormat' },
   { kind: 'importFailed', problem: 'newerVersion' },
+  { kind: 'archiveFailed', reason: 'multiVolume' },
+  { kind: 'archiveFailed', reason: 'encrypted' },
+  { kind: 'archiveFailed', reason: 'memoryLimit' },
+  { kind: 'installBlocked', reason: 'targetChanged' },
+  { kind: 'installBusy' },
+  { kind: 'installCancelled' },
+  { kind: 'noSpace', needed: 3 * 1024 * 1024, available: 1024 },
+  { kind: 'sourceRejected', reason: 'missing' },
 ]
 
 describe('describeAppError', () => {
@@ -56,6 +64,16 @@ describe('describeAppError', () => {
       expect(`${title}${message}`, error.kind).not.toMatch(/\{\{|titles\.|messages\./)
     }
     await i18n.changeLanguage('en')
+  })
+
+  it('names both sizes of a full drive', () => {
+    const message = describeAppError({
+      kind: 'noSpace',
+      needed: 3 * 1024 * 1024,
+      available: 1024,
+    }).message
+    expect(message).toContain('3 MB')
+    expect(message).toContain('1 KB')
   })
 
   it('names the folder problem and the reveal problem', () => {

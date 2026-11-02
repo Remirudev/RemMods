@@ -56,6 +56,9 @@ impl WriteGuard<'_> {
         fault: Option<&FaultPlan>,
     ) -> Result<TrashReport, FsError> {
         let first = check_items(self.scope(), items)?;
+        if let Some(named) = self.first_journaled(items)? {
+            return Err(FsError::AsideJournaled { path: named });
+        }
         let location = match platform::trash_location(env, first) {
             Ok(Ok(location)) => location,
             Ok(Err(reason)) => return Err(FsError::TrashUnavailable { reason }),
@@ -79,6 +82,18 @@ impl WriteGuard<'_> {
 }
 
 /// `[Trash Info]` with `Path=` (already percent-encoded) and the local `DeletionDate`.
+impl WriteGuard<'_> {
+    /// An item that a journal record names (e.g. a live install staging folder).
+    fn first_journaled(&self, items: &[PathBuf]) -> Result<Option<PathBuf>, FsError> {
+        for item in items {
+            if self.is_journaled(item)? {
+                return Ok(Some(item.clone()));
+            }
+        }
+        Ok(None)
+    }
+}
+
 pub fn trashinfo_text(path_field: &str, now: DateTime<Local>) -> String {
     format!(
         "[Trash Info]\nPath={path_field}\nDeletionDate={}\n",

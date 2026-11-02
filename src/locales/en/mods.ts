@@ -225,7 +225,7 @@ export const mods = {
   },
   archives: {
     description:
-      'Archives lying in Paks, Mods, ~mods or LogicMods. The game ignores them; installing them comes in a later version.',
+      'Archives lying in Paks, Mods, ~mods or LogicMods. The game ignores them; install one to unpack it as a mod.',
     empty: 'No archives.',
     reveal: 'Show in file manager',
   },

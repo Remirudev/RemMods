@@ -9,6 +9,9 @@ smoke  A fake Steam library below <out> with TEKKEN 8 installed (appmanifest, bo
        `remmods-smoke-fixture` with the expected rows. Prints the Paks path; run the app with
        `remmods --smoke --paks <that path>`.
 
+The Paks root also holds `install-smoke.zip` (one stored `SmokeInstall` folder with a pak) for the P4
+install smoke; the marker names it under `install`.
+
 Alpha, Loose and Beta also carry small crafted IoStore tables of contents (`.utoc`, TOC v5) so the
 content view has something to list: Alpha and the loose mod ship the same asset, Beta's is disabled.
 The base `pakchunk0-Windows.utoc` lists that asset too, so the two enabled ones replace a game file
@@ -23,10 +26,12 @@ and conflict (content conflicts count only game files).
 Refuses when <out> exists and is not empty. Writes only below <out> and never replaces a file.
 """
 
+import io
 import json
 import os
 import struct
 import sys
+import zipfile
 
 PAKS_PARTS = ("steamapps", "common", "TEKKEN 8", "Polaris", "Content", "Paks")
 DATA = b"data"
@@ -85,6 +90,21 @@ APPMANIFEST = (
     "\t}\n"
     "}\n"
 )
+
+SMOKE_ARCHIVE = "install-smoke.zip"
+SMOKE_INSTALL_KEY = "Standard:SmokeInstall"
+
+
+def make_install_smoke_zip():
+    """One stored mod folder for the P4 smoke install (fixed timestamps: the same bytes every run)."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        for name, content in (("SmokeInstall/smoke.pak", DATA), ("SmokeInstall/readme.txt", b"smoke")):
+            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_STORED
+            archive.writestr(info, content)
+    return buffer.getvalue()
+
 
 ALPHA_MODINFO = (
     b'{"Version":"2.0","Category":"Character","Description":"Smoke fixture","Author":"RemMods"}'
@@ -205,7 +225,8 @@ MARKER = """{
     { "key": "Logic:Tool", "state": "enabled", "conflicts": 0, "contentConflicts": 0 },
     { "key": "Logic:Off", "state": "disabled", "conflicts": 0, "contentConflicts": 0 }
   ],
-  "archives": ["Mods/Pack.zip"],
+  "archives": ["Mods/Pack.zip", "install-smoke.zip"],
+  "install": { "archive": "install-smoke.zip", "key": "Standard:SmokeInstall" },
   "unmanaged": [
     { "relPath": "Stray.pak", "kind": "paksFile" },
     { "relPath": "Mods/_Half_tmp_0123456789abcdef0123456789abcdef", "kind": "tempFolder" }
@@ -231,6 +252,7 @@ SMOKE_PAKS_FILES = (
     ("global.ucas", b""),
     ("global.utoc", b""),
     ("Stray.pak", DATA),
+    (SMOKE_ARCHIVE, make_install_smoke_zip()),
     ("Mods/Alpha/Alpha.pak", DATA),
     ("Mods/Alpha/Alpha.ucas", DATA),
     ("Mods/Alpha/Alpha.utoc", ALPHA_TOC),

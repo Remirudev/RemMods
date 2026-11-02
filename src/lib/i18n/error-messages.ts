@@ -1,3 +1,4 @@
+import { formatSize } from '../../shared/format-size'
 import { isIpcError } from '../ipc/ipc-error'
 import type { AppError } from '../ipc/types'
 import { i18n } from './index'
@@ -16,7 +17,7 @@ const NAME_ISSUES = [
   'temp_name',
 ] as const
 
-function isNameIssue(value: string): value is (typeof NAME_ISSUES)[number] {
+export function isNameIssue(value: string): value is (typeof NAME_ISSUES)[number] {
   return (NAME_ISSUES as readonly string[]).includes(value)
 }
 
@@ -129,6 +130,45 @@ export function describeAppError(error: AppError): ErrorDescription {
       return {
         title: t(($) => $.titles.importFailed),
         message: t(($) => $.importFailed[problem]),
+      }
+    }
+    case 'archiveFailed': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.archiveFailed),
+        message: t(($) => $.archiveFailed[reason]),
+      }
+    }
+    case 'installBlocked': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.installBlocked),
+        message: t(($) => $.installBlocked[reason]),
+      }
+    }
+    case 'installBusy':
+      return {
+        title: t(($) => $.titles.installBusy),
+        message: t(($) => $.messages.installBusy),
+      }
+    case 'installCancelled':
+      return {
+        title: t(($) => $.titles.installCancelled),
+        message: t(($) => $.messages.installCancelled),
+      }
+    case 'noSpace': {
+      const needed = formatSize(error.needed, i18n.language) ?? ''
+      const available = formatSize(error.available, i18n.language) ?? ''
+      return {
+        title: t(($) => $.titles.noSpace),
+        message: t(($) => $.messages.noSpace, { needed, available }),
+      }
+    }
+    case 'sourceRejected': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.sourceRejected),
+        message: t(($) => $.sourceRejected[reason]),
       }
     }
     case 'revealFailed': {

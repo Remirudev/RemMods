@@ -1,4 +1,5 @@
 pub mod game;
+pub mod install;
 pub mod mods;
 pub mod mods_manage;
 pub mod profiles;

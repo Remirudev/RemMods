@@ -21,13 +21,25 @@ pub(crate) struct Planned {
     pub(crate) verify: Vec<bool>,
 }
 
+/// Whether a target may equal the pre-batch source of an earlier op of the same batch (that name
+/// is vacated by then). Only `rename_batch_replacing` allows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Chains {
+    Reject,
+    AllowVacated,
+}
+
 /// One op's paths as they are before the batch runs.
 struct Before {
     from: PathBuf,
     to: PathBuf,
 }
 
-pub(crate) fn preflight(scope: &Scope, ops: &[RenameOp]) -> Result<Planned, FsError> {
+pub(crate) fn preflight(
+    scope: &Scope,
+    ops: &[RenameOp],
+    chains: Chains,
+) -> Result<Planned, FsError> {
     check_shape(ops)?;
     let before = pre_batch_forms(ops);
     check_order(&before)?;
@@ -36,7 +48,8 @@ pub(crate) fn preflight(scope: &Scope, ops: &[RenameOp]) -> Result<Planned, FsEr
         checker.check(&op.from)?;
         checker.check(&op.to)?;
     }
-    let case_only = check_targets_distinct(&before)?;
+    let vacated = vacated_names(&before, chains);
+    let case_only = check_targets_distinct(&before, &vacated)?;
     for op in &before {
         if !exists(&op.from) {
             return Err(FsError::SourceMissing {
@@ -44,7 +57,7 @@ pub(crate) fn preflight(scope: &Scope, ops: &[RenameOp]) -> Result<Planned, FsEr
             });
         }
     }
-    check_targets_free(&before, &case_only)?;
+    check_targets_free(&before, &case_only, &vacated)?;
     for (op, original) in before.iter().zip(ops) {
         platform::lock_probe(&op.from, original.is_dir)
             .map_err(|error| FsError::io("probe", &op.from, error))?;
@@ -104,9 +117,32 @@ fn check_order(before: &[Before]) -> Result<(), FsError> {
     Ok(())
 }
 
-/// No two targets fold-equal, no target fold-equal to another op's source. Returns which ops are
-/// case-only (fold-equal names whose bytes differ).
-fn check_targets_distinct(before: &[Before]) -> Result<Vec<bool>, FsError> {
+/// Per op: the source names of earlier ops (same folder) its target is fold-equal to; always
+/// empty under `Chains::Reject`.
+fn vacated_names(before: &[Before], chains: Chains) -> Vec<Vec<OsString>> {
+    before
+        .iter()
+        .enumerate()
+        .map(|(index, op)| {
+            if chains == Chains::Reject {
+                return Vec::new();
+            }
+            let target = folded(&op.to);
+            before[..index]
+                .iter()
+                .filter(|earlier| folded(&earlier.from) == target)
+                .filter_map(|earlier| earlier.from.file_name().map(OsStr::to_os_string))
+                .collect()
+        })
+        .collect()
+}
+
+/// No two targets fold-equal, no target fold-equal to another op's source (except a vacated
+/// earlier one). Returns which ops are case-only (fold-equal names whose bytes differ).
+fn check_targets_distinct(
+    before: &[Before],
+    vacated: &[Vec<OsString>],
+) -> Result<Vec<bool>, FsError> {
     let sources: Vec<_> = before.iter().map(|op| folded(&op.from)).collect();
     let mut targets = HashSet::new();
     let mut case_only = Vec::with_capacity(before.len());
@@ -117,10 +153,10 @@ fn check_targets_distinct(before: &[Before]) -> Result<Vec<bool>, FsError> {
                 reason: "duplicate_target",
             });
         }
-        let chained = sources
-            .iter()
-            .enumerate()
-            .any(|(other, source)| other != index && *source == target);
+        let allow_earlier = vacated.get(index).is_some_and(|names| !names.is_empty());
+        let chained = sources.iter().enumerate().any(|(other, source)| {
+            other != index && *source == target && !(allow_earlier && other < index)
+        });
         if chained {
             return Err(FsError::InvalidBatch { reason: "chained" });
         }
@@ -135,14 +171,19 @@ fn check_targets_distinct(before: &[Before]) -> Result<Vec<bool>, FsError> {
     Ok(case_only)
 }
 
-/// Each target absent, and its folder holds no fold-equal entry except the op's own source.
-fn check_targets_free(before: &[Before], case_only: &[bool]) -> Result<(), FsError> {
+/// Each target absent, and its folder holds no fold-equal entry except the op's own source (and
+/// the vacated sources of earlier ops).
+fn check_targets_free(
+    before: &[Before],
+    case_only: &[bool],
+    vacated: &[Vec<OsString>],
+) -> Result<(), FsError> {
     let mut listings: HashMap<PathBuf, Vec<(String, OsString)>> = HashMap::new();
-    for (op, &case_only) in before.iter().zip(case_only) {
+    for ((op, &case_only), vacated) in before.iter().zip(case_only).zip(vacated) {
         let taken = || FsError::TargetExists {
             path: op.to.clone(),
         };
-        if !case_only && exists(&op.to) {
+        if !case_only && vacated.is_empty() && exists(&op.to) {
             return Err(taken());
         }
         let (Some(parent), Some(target_name), Some(source_name)) =
@@ -160,9 +201,9 @@ fn check_targets_free(before: &[Before], case_only: &[bool]) -> Result<(), FsErr
             }
         };
         let target_key = fold_key(&key_text(target_name));
-        let clash = listing
-            .iter()
-            .any(|(key, name)| *key == target_key && name.as_os_str() != source_name);
+        let clash = listing.iter().any(|(key, name)| {
+            *key == target_key && name.as_os_str() != source_name && !vacated.contains(name)
+        });
         if clash {
             return Err(taken());
         }

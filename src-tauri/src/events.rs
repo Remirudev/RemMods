@@ -1,7 +1,9 @@
 //! Backend-initiated events. They are not buffered: the UI subscribes first, then fetches.
 
 use remmods_core::game::GameStatusChange;
-use remmods_ipc::{RunningState, UpdateNotice, WatchState};
+use remmods_ipc::{
+    DropPhase, PickedSource, RejectedSource, RunningState, UpdateNotice, WatchState,
+};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri_specta::Event;
@@ -40,6 +42,17 @@ impl From<GameStatusChange> for GameStatusChanged {
 #[serde(rename_all = "camelCase")]
 pub struct WatchStatusChanged {
     pub state: WatchState,
+}
+
+/// `install-drop`: files or folders are dragged over the window (`enter`/`leave`, `count` items)
+/// or were dropped (`dropped`: the registered sources and the refused ones).
+#[derive(Serialize, Deserialize, Clone, Debug, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallDrop {
+    pub phase: DropPhase,
+    pub count: u32,
+    pub sources: Vec<PickedSource>,
+    pub rejected: Vec<RejectedSource>,
 }
 
 /// Emits to every window; a failure only means nobody listens, so it is logged, not returned.

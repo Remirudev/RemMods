@@ -2,6 +2,7 @@ import { ActionIcon, Button, Group, Tooltip } from '@mantine/core'
 import { IconFolderOpen, IconRefresh } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { useRevealPaks } from '../../shared/game/queries'
+import { InstallMenu } from './InstallMenu'
 import { LaunchButton } from './LaunchButton'
 import { RunningBadge } from './RunningBadge'
 import type { GameControlsProps } from './types'
@@ -25,6 +26,7 @@ export function GameControls({ running, tracking, refreshing, onRefresh }: GameC
           <IconRefresh size={20} stroke={1.8} />
         </ActionIcon>
       </Tooltip>
+      <InstallMenu />
       <Button
         variant="default"
         leftSection={<IconFolderOpen size={18} stroke={1.8} />}

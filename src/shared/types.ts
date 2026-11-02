@@ -1,3 +1,20 @@
+import type { SourceKind } from '../lib/ipc/types'
+
 export type UiScaleAction = 'increase' | 'decrease' | 'reset'
 
 export type UiScaleKeyEvent = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey'>
+
+export type QueuedSource =
+  | { kind: 'token'; id: string; name: string; sourceKind: SourceKind }
+  | { kind: 'archive'; row: string; name: string }
+
+export interface InstallQueueState {
+  queue: readonly QueuedSource[]
+  // The head of the queue, the one being installed.
+  current: QueuedSource | null
+  // Counts head changes, so a modal for the same source twice in a row is still a new modal.
+  turn: number
+  push: (sources: readonly QueuedSource[]) => void
+  shift: () => void
+  clear: () => void
+}

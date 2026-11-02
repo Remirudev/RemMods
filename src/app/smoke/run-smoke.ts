@@ -1,11 +1,13 @@
 import { ipc } from '../../lib/ipc'
 import { describeForLog, isIpcError } from '../../lib/ipc/ipc-error'
 import type { GameStatus, Settings, SmokeCheck } from '../../lib/ipc/types'
+import { runInstallRoundTrip } from './install-round-trip'
 import {
   checkCollectedErrors,
   checkCommand,
   checkEmptyProfiles,
   checkGameStatus,
+  checkInstallRoundTrip,
   checkMantineCss,
   checkModsListWithoutGame,
   checkModsTable,
@@ -96,6 +98,9 @@ async function checkFixtureGame(): Promise<SmokeCheck[]> {
   const roundTrip = snapshot.ok
     ? await load(() => runToggleRoundTrip(snapshot.value))
     : ({ ok: false, error: 'no snapshot to toggle in' } as const)
+  const install = snapshot.ok
+    ? await load(() => runInstallRoundTrip(snapshot.value))
+    : ({ ok: false, error: 'no snapshot to install into' } as const)
   return [
     checkModsTable(document),
     checkCommand('modsRefresh', snapshot),
@@ -107,6 +112,9 @@ async function checkFixtureGame(): Promise<SmokeCheck[]> {
     roundTrip.ok
       ? checkToggleRoundTrip(roundTrip.value)
       : failedCheck('toggleRoundTrip', roundTrip.error),
+    install.ok
+      ? checkInstallRoundTrip(install.value)
+      : failedCheck('installRoundTrip', install.error),
   ]
 }
 

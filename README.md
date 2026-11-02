@@ -32,6 +32,14 @@ exclusive, with an automatic snapshot first), import the original app's `profile
 never written), and export or import RemMods profiles. **Windows: the Trash is not supported yet**
 (docs/windows-gaps.md WG-5); "Remove" there means "Delete permanently", which asks twice.
 
+**Phase 4 (in progress)**: install mods. Drop zip, 7z or rar archives onto the window or pick them (or
+a folder) with the file picker. The preview shows the detected root, the mod name, the filename
+encoding, variants to choose from, automatic fixes and anything that blocks the install. Files are
+unpacked into a hidden staging folder first and moved into place in one step, so a cancelled or failed
+install leaves nothing behind; a mod that is already installed can be replaced (the old one goes to
+the Trash). Limits: no password-protected archives and no multi-volume archives (install those from an
+extracted folder).
+
 ## Platforms
 
 | Platform | Support |
@@ -92,6 +100,14 @@ target) and prints the Paks path:
 ```sh
 python3 -I scripts/make-fixtures.py smoke /tmp/remmods-fixture
 ./target/debug/remmods --smoke --paks "/tmp/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+```
+
+Hostile and odd zips for the archive reader (traversal names, forged headers, legacy encodings) come
+from a second script; `archive_fixtures` checks each against `manifest.json` on both OSes:
+
+```sh
+python3 -I scripts/make-archive-fixtures.py /tmp/archive-fixtures
+REMMODS_ARCHIVE_FIXTURES=/tmp/archive-fixtures cargo test -p remmods-core --test archive_fixtures
 ```
 
 `npm run tauri -- build --no-bundle` builds the optimised (LTO) app in `target/release/`. Installers

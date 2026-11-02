@@ -10,7 +10,7 @@ use super::FsError;
 use crate::platform::{self, OsKind};
 
 /// Names of the mod roots under Paks, matched ASCII-case-insensitively.
-const MOD_ROOT_NAMES: [&str; 3] = ["Mods", "~mods", "LogicMods"];
+pub(crate) const MOD_ROOT_NAMES: [&str; 3] = ["Mods", "~mods", "LogicMods"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScopeViolation {
@@ -31,6 +31,8 @@ struct Root {
 pub struct Scope {
     mod_roots: Vec<Root>,
     app_dirs: Vec<Root>,
+    /// The Paks folder of `for_paks`; installs create missing mod roots below it.
+    paks: Option<PathBuf>,
 }
 
 impl Scope {
@@ -41,7 +43,7 @@ impl Scope {
         let entries = match listing {
             Ok(entries) => entries,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(Self::build(&[], app_dirs.iter().copied()));
+                return Ok(Self::build(&[], app_dirs.iter().copied(), Some(paks)));
             }
             Err(error) => return Err(FsError::io("scope", paks, error)),
         };
@@ -58,7 +60,11 @@ impl Scope {
                 mod_roots.push(paks.join(name));
             }
         }
-        Ok(Self::build(&mod_roots, app_dirs.iter().copied()))
+        Ok(Self::build(
+            &mod_roots,
+            app_dirs.iter().copied(),
+            Some(paks),
+        ))
     }
 
     /// Explicit roots (tests).
@@ -66,6 +72,7 @@ impl Scope {
         Ok(Self::build(
             mod_roots,
             app_dirs.iter().map(PathBuf::as_path),
+            None,
         ))
     }
 
@@ -105,13 +112,34 @@ impl Scope {
         })
     }
 
-    fn build<'a>(mod_roots: &[PathBuf], app_dirs: impl Iterator<Item = &'a Path>) -> Scope {
+    /// The Paks folder this scope was built for (`None` for `from_roots`).
+    pub fn paks(&self) -> Option<&Path> {
+        self.paks.as_deref()
+    }
+
+    /// Adds a mod root that was just created; false when it does not resolve.
+    pub(crate) fn add_mod_root(&mut self, root: &Path) -> bool {
+        match existing_root(root) {
+            Some(root) => {
+                self.mod_roots.push(root);
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn build<'a>(
+        mod_roots: &[PathBuf],
+        app_dirs: impl Iterator<Item = &'a Path>,
+        paks: Option<&Path>,
+    ) -> Scope {
         Scope {
             mod_roots: mod_roots
                 .iter()
                 .filter_map(|root| existing_root(root))
                 .collect(),
             app_dirs: app_dirs.filter_map(existing_root).collect(),
+            paks: paks.map(Path::to_path_buf),
         }
     }
 }
@@ -246,7 +274,7 @@ pub(crate) fn is_within(path: &Path, base: &Path) -> bool {
 }
 
 /// Symlinks, and on Windows junctions (std reports name-surrogate reparse points as links).
-fn is_link(path: &Path) -> bool {
+pub(crate) fn is_link(path: &Path) -> bool {
     platform::fs_path(path)
         .and_then(fs::symlink_metadata)
         .is_ok_and(|metadata| metadata.file_type().is_symlink())

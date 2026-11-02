@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use super::batch::{self, BatchOptions, BatchReport, RenameOp};
 use super::journal::{Journal, RecoveryReport};
+use super::preflight::Chains;
 use super::scope::Scope;
 use super::sessions::{self, SESSIONS_DIR};
 use super::{AppLock, FsError, ensure_dir, preflight, recovery, write_atomic};
@@ -107,7 +108,7 @@ impl WriteGuard<'_> {
 
     /// The batch checks alone; writes nothing.
     pub fn preflight(&self, ops: &[RenameOp]) -> Result<(), FsError> {
-        preflight::preflight(&self.scope, ops).map(drop)
+        preflight::preflight(&self.scope, ops, Chains::Reject).map(drop)
     }
 
     pub fn rename_batch(
@@ -115,7 +116,34 @@ impl WriteGuard<'_> {
         ops: &[RenameOp],
         options: &BatchOptions,
     ) -> Result<BatchReport, FsError> {
-        batch::run(&self.scope, &self.gate.journal, ops, options)
+        batch::run(
+            &self.scope,
+            &self.gate.journal,
+            ops,
+            options,
+            Chains::Reject,
+        )
+    }
+
+    /// `rename_batch` that also allows a target equal (fold key) to the pre-batch source of an
+    /// EARLIER op of the same batch: that name is vacated by then. Everything else as
+    /// `rename_batch`.
+    pub fn rename_batch_replacing(
+        &self,
+        ops: &[RenameOp],
+        options: &BatchOptions,
+    ) -> Result<BatchReport, FsError> {
+        batch::run(
+            &self.scope,
+            &self.gate.journal,
+            ops,
+            options,
+            Chains::AllowVacated,
+        )
+    }
+
+    pub(super) fn scope_mut(&mut self) -> &mut Scope {
+        &mut self.scope
     }
 
     /// App-data JSON (mod-meta.json): only inside the app dirs of the scope.

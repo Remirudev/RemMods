@@ -67,7 +67,7 @@ fn smoke_tree_matches_the_marker() {
         .iter()
         .map(|a| a.rel_path.as_str())
         .collect();
-    assert_eq!(archives, ["Mods/Pack.zip"]);
+    assert_eq!(archives, ["install-smoke.zip", "Mods/Pack.zip"]);
     let unmanaged: Vec<(&str, UnmanagedKind)> = content
         .unmanaged
         .iter()

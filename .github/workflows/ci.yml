@@ -95,6 +95,20 @@ jobs:
       - name: cargo test
         run: cargo test --workspace --locked
 
+      # Zips crafted by Python (hostile names, flags, forged headers) through the archive reader.
+      - name: Archive fixtures through core
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then PY=python; else PY=python3; fi
+          "$PY" -I scripts/make-archive-fixtures.py "$RUNNER_TEMP/archive-fixtures"
+          REMMODS_ARCHIVE_FIXTURES="$RUNNER_TEMP/archive-fixtures" cargo test -p remmods-core --locked --test archive_fixtures
+
+      # `rar-builtin` is a default feature; without it a RAR is reported as RarDisabled.
+      - name: Build and test without rar-builtin
+        if: runner.os == 'Linux'
+        run: |
+          cargo check -p remmods-core --locked --no-default-features
+          cargo test -p remmods-core --locked --no-default-features --test archive_backends
+
       # PLAN §4's 50 ms warm-scan gate needs an optimised build; the debug run above checks 250 ms.
       - name: Scan performance (release)
         if: runner.os == 'Linux'

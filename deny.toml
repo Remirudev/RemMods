@@ -68,6 +68,11 @@ deny = ["zstd"]
 reason = "C zstd"
 
 [[bans.features]]
+crate = "rars"
+deny = ["experimental-ring-state"]
+reason = "experimental RAR writer state; the app only reads archives"
+
+[[bans.features]]
 crate = "bzip2"
 deny = ["bzip2-sys", "static"]
 reason = "C bzip2; the default libbz2-rs-sys backend is pure Rust"

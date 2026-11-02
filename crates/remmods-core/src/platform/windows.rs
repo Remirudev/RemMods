@@ -16,6 +16,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 use super::{OsErrorClass, OsKind, RetryPolicy};
 
 mod fs;
+mod memory;
 mod process;
 mod registry;
 mod trash;
@@ -23,6 +24,7 @@ mod trash;
 pub(super) use fs::{
     create_new_file, create_private_dir, lock_probe, rename_noreplace, rename_noreplace_across,
 };
+pub(super) use memory::total_memory;
 pub(super) use process::processes;
 pub(super) use registry::{registry_string, steam_hints};
 pub(super) use trash::{

@@ -1,0 +1,19 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  background: color-mix(in srgb, var(--mantine-color-body) 90%, transparent);
+}
+
+.frame {
+  position: absolute;
+  inset: var(--mantine-spacing-md);
+  border: 2px dashed var(--mantine-primary-color-filled);
+  border-radius: var(--mantine-radius-md);
+}

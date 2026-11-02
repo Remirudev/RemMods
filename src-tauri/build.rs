@@ -34,6 +34,11 @@ const COMMANDS: &[&str] = &[
     "profiles_diff",
     "profiles_apply",
     "profiles_transfer",
+    "pick_archives",
+    "pick_folder",
+    "install_inspect",
+    "install_start",
+    "install_cancel",
 ];
 
 fn main() {

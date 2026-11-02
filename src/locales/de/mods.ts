@@ -232,7 +232,7 @@ export const mods: LocaleShape<typeof en> = {
   },
   archives: {
     description:
-      'Archive, die in Paks, Mods, ~mods oder LogicMods liegen. Das Spiel ignoriert sie; die Installation kommt in einer späteren Version.',
+      'Archive, die in Paks, Mods, ~mods oder LogicMods liegen. Das Spiel ignoriert sie; installiere eines, um es als Mod zu entpacken.',
     empty: 'Keine Archive.',
     reveal: 'Im Dateimanager zeigen',
   },

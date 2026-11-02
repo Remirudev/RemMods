@@ -1,5 +1,7 @@
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight'
 import {
+  IconArchive,
+  IconFolder,
   IconFolderOpen,
   IconMoonStars,
   IconPlayerPlay,
@@ -10,12 +12,14 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRefreshMods } from '../features/mods/queries'
 import { useGameStatus, useLaunchGame, useRevealPaks } from '../shared/game/queries'
+import { pickArchivesToQueue, pickFolderToQueue } from '../shared/install-actions'
 import { useActivePanelStore } from './active-panel-store'
 import { PANEL_IDS, panelRegistry } from './panels'
 import { useColorSchemeToggle } from './use-color-scheme-toggle'
 
 export function CommandPalette() {
   const { t } = useTranslation('shell')
+  const { t: tInstall } = useTranslation('install')
   const setActivePanel = useActivePanelStore((state) => state.setActivePanel)
   const { toggle: toggleScheme } = useColorSchemeToggle()
   const status = useGameStatus().data
@@ -53,6 +57,18 @@ export function CommandPalette() {
               onClick: () => refreshMods(),
             },
             {
+              id: 'install-archives',
+              label: tInstall(($) => $.palette.archives),
+              leftSection: <IconArchive size={18} stroke={1.8} />,
+              onClick: () => void pickArchivesToQueue(tInstall(($) => $.pick.archives)),
+            },
+            {
+              id: 'install-folder',
+              label: tInstall(($) => $.palette.folder),
+              leftSection: <IconFolder size={18} stroke={1.8} />,
+              onClick: () => void pickFolderToQueue(tInstall(($) => $.pick.folder)),
+            },
+            {
               id: 'open-paks',
               label: t(($) => $.palette.openPaks),
               leftSection: <IconFolderOpen size={18} stroke={1.8} />,
@@ -71,7 +87,17 @@ export function CommandPalette() {
         onClick: toggleScheme,
       },
     ]
-  }, [t, setActivePanel, toggleScheme, running, ready, launchGame, refreshMods, revealPaks])
+  }, [
+    t,
+    tInstall,
+    setActivePanel,
+    toggleScheme,
+    running,
+    ready,
+    launchGame,
+    refreshMods,
+    revealPaks,
+  ])
 
   return (
     <Spotlight

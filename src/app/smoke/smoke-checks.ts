@@ -138,3 +138,9 @@ export function checkToggleRoundTrip(failures: readonly string[] | null): SmokeC
   if (failures.length === 0) return passedCheck('toggleRoundTrip')
   return failedCheck('toggleRoundTrip', failures.slice(0, MAX_REPORTED_ERRORS).join('\n'))
 }
+
+export function checkInstallRoundTrip(failures: readonly string[] | null): SmokeCheck {
+  if (failures === null) return passedCheck('installRoundTrip', 'no fixture')
+  if (failures.length === 0) return passedCheck('installRoundTrip')
+  return failedCheck('installRoundTrip', failures.slice(0, MAX_REPORTED_ERRORS).join('\n'))
+}

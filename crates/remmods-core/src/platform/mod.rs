@@ -10,11 +10,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 mod entry;
+mod meminfo;
 mod procfs;
 mod trash;
 
 pub(crate) use entry::os_str_prefix;
 pub use entry::{FileId, RawName, file_id, fs_path, os_str_cut, os_string, raw_name};
+pub use meminfo::parse_meminfo_total;
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
 pub(crate) use trash::DirTraits;
 pub use trash::{
@@ -227,6 +229,12 @@ pub fn lock_probe(path: &Path, is_dir: bool) -> io::Result<()> {
 /// Names of the processes holding `paths`. P2: None everywhere (Restart Manager is WG-1).
 pub fn who_holds(_paths: &[PathBuf]) -> Option<Vec<String>> {
     None
+}
+
+/// Physical memory in bytes. Linux: `MemTotal` from `/proc/meminfo`; Windows:
+/// `GlobalMemoryStatusEx`; other OSes: None. Read-only.
+pub fn total_memory() -> Option<u64> {
+    imp::total_memory()
 }
 
 pub fn os_kind() -> OsKind {

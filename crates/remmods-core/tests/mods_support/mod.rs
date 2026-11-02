@@ -167,6 +167,7 @@ pub fn smoke_tree(out: &Path) -> PathBuf {
             ("Mods/Loose.ucas", DATA),
             ("Mods/Loose.utoc", &loose_toc),
             ("Mods/Pack.zip", DATA),
+            ("install-smoke.zip", DATA),
             (
                 "Mods/_Half_tmp_0123456789abcdef0123456789abcdef/Half.pak",
                 DATA,

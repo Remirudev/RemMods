@@ -1,6 +1,7 @@
 import { common as deCommon } from '../../locales/de/common'
 import { errors as deErrors } from '../../locales/de/errors'
 import { game as deGame } from '../../locales/de/game'
+import { install as deInstall } from '../../locales/de/install'
 import { mods as deMods } from '../../locales/de/mods'
 import { onboarding as deOnboarding } from '../../locales/de/onboarding'
 import { profiles as deProfiles } from '../../locales/de/profiles'
@@ -9,6 +10,7 @@ import { shell as deShell } from '../../locales/de/shell'
 import { common as enCommon } from '../../locales/en/common'
 import { errors as enErrors } from '../../locales/en/errors'
 import { game as enGame } from '../../locales/en/game'
+import { install as enInstall } from '../../locales/en/install'
 import { mods as enMods } from '../../locales/en/mods'
 import { onboarding as enOnboarding } from '../../locales/en/onboarding'
 import { profiles as enProfiles } from '../../locales/en/profiles'
@@ -24,6 +26,7 @@ export const enResources = {
   game: enGame,
   onboarding: enOnboarding,
   profiles: enProfiles,
+  install: enInstall,
 }
 
 export const deResources = {
@@ -35,6 +38,7 @@ export const deResources = {
   game: deGame,
   onboarding: deOnboarding,
   profiles: deProfiles,
+  install: deInstall,
 }
 
 export const resources = {

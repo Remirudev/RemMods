@@ -3,8 +3,10 @@
 mod args;
 mod base_index;
 mod commands;
+mod drop;
 mod events;
 mod focus;
+mod install_sources;
 mod monitor;
 mod os;
 mod smoke;

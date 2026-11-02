@@ -224,3 +224,46 @@ backup of step 1.
     `diff -u local/paks-p3-before.tsv local/paks-p3-after.tsv` shows only the intended changes. Restore
     from `local/backup-p3/` if anything is unexpected, and diff again: no output after the restore.
     Result:
+
+## P4 steps (install phase)
+
+The first phase that unpacks untrusted archives and writes new mod folders. Run **at the very end of
+the app, with the owner**: Claude prepares, you drop the files and play. Every command works in fish.
+Nothing is written inside `Paks` except by RemMods. Each step ends with a "Result:" line to fill in.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p4-before.tsv`. Back up `Mods`,
+   `~mods`, `LogicMods` and `~/.local/share/com.remirudev.remmods/` to `~/RemMods-backups/<date>/`
+   (`cp -a --reflink=auto`). Copy the 19 archives read-only to `local/archives-p4/`: only the
+   extensions that exist, fish errors on an unmatched glob (for example
+   `for f in ~/Downloads/*.zip; cp -n $f local/archives-p4/; end` once per extension that is there).
+   Result:
+2. `python3 -I scripts/make-fixtures.py smoke local/p4-fixture`, then `npm run tauri dev` (needs the
+   display; sandbox off, owner-approved). Note the current game folder, then pick the fixture's
+   (`local/p4-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks` is its Paks folder).
+   Result:
+3. Drop all 19 archives at once. For each preview check the root, the name, the encoding, the
+   variants, the fixes and the issues against `bsdtar -tf <archive>` or `7z l <archive>`, record the
+   comparison in `local/p4-archives.md`, then install each one. Afterwards
+   `find <fixture Paks>/{Mods,~mods,LogicMods} -type f | sort` matches the expected trees: wrapper
+   folders stripped, `.pak` files live, files the mod shipped as `-x` still off. **Exit criterion 1.**
+   Result:
+4. In the fixture:
+   - install one folder (the "Install folder" picker);
+   - `python3 -I scripts/make-archive-fixtures.py local/p4-hostile`, then drop `traversal-backslash.zip`
+     (blocked, nothing written), `multi.z01` and `encrypted.zip` (each shows its hint);
+   - start a large install and cancel it: no `_install_tmp_*` folder is left and Repair is empty;
+   - install the same mod twice and choose Replace: the old version is in the Trash.
+
+   Result:
+5. Switch back to the real game folder (the path noted in step 2). Game closed: drop one zip, one rar
+   and one 7z mod from `local/archives-p4/`, chosen with the owner (not installed yet, or confirm
+   Replace). Each lands enabled in the expected root.
+   Result:
+6. Launch from RemMods, offline Practice: the three mods show (Claude lists the character and outfit
+   to check for each). Quit. **Exit criterion 2.**
+   Result:
+7. Trash the three test installs or keep them (owner's choice). Then
+   `scripts/paks-snapshot.sh > local/paks-p4-after.tsv` and
+   `diff -u local/paks-p4-before.tsv local/paks-p4-after.tsv`: only the intended changes, else restore
+   from the backup and diff again.
+   Result:

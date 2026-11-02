@@ -24,6 +24,12 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   profileNotFound: true,
   profileNameTaken: true,
   importFailed: true,
+  archiveFailed: true,
+  installBlocked: true,
+  installBusy: true,
+  installCancelled: true,
+  noSpace: true,
+  sourceRejected: true,
 }
 
 export class IpcError extends Error {

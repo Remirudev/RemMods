@@ -11,6 +11,7 @@ use std::thread;
 use std::time::Duration;
 
 use remmods_core::game::GameLocation;
+use remmods_core::mods::RootKind;
 use remmods_core::{Core, platform, safe_fs};
 use remmods_ipc::{ModsSnapshot, SmokeCheck, SmokeReport};
 use serde::{Deserialize, Serialize};
@@ -32,6 +33,8 @@ const FIXTURE_VERSION: u32 = 1;
 const FIXTURE_MAX_BYTES: u64 = 64 * 1024;
 /// Differences listed in the `scanFixture` detail; the rest are only counted.
 const SHOWN_DIFFERENCES: usize = 5;
+/// Staging folders of an install in progress (`_install_tmp_<32 hex>`).
+const STAGING_PREFIX: &str = "_install_tmp_";
 
 /// The marker's expectations: rows, archives, Unmanaged entries, leftovers and the build id.
 #[derive(Clone, Debug, Deserialize)]
@@ -44,6 +47,16 @@ pub struct SmokeFixture {
     unmanaged: Vec<FixtureUnmanaged>,
     leftovers: Vec<String>,
     build_id: String,
+    /// The archive row the frontend installs from, and the row key it must produce.
+    #[serde(default)]
+    install: Option<FixtureInstall>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FixtureInstall {
+    archive: String,
+    key: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -90,6 +103,9 @@ pub fn finish(app: &AppHandle, core: &Core, smoke: &SmokeState, report: SmokeRep
     let mut report = with_navigation_check(report, smoke);
     if let Some(fixture) = &smoke.fixture {
         report.checks.push(scan_fixture_check(core, fixture));
+        if let Some(install) = &fixture.install {
+            report.checks.push(install_fixture_check(core, install));
+        }
     }
     let passed = report.passed();
     if !smoke.finish(passed) {
@@ -157,6 +173,69 @@ fn scan_fixture_check(core: &Core, fixture: &SmokeFixture) -> SmokeCheck {
     }
 }
 
+/// The install round trip left `<paks>/<root>/<name>` with a live `.pak` and no staging folder
+/// in any mod root.
+fn install_fixture_check(core: &Core, install: &FixtureInstall) -> SmokeCheck {
+    let problem = match installed_paks(core) {
+        Some(paks) => install_problem(&paks, &install.key),
+        None => Some("no game folder".to_owned()),
+    };
+    SmokeCheck {
+        name: "installFixture".into(),
+        ok: problem.is_none(),
+        detail: Some(
+            problem
+                .unwrap_or_else(|| format!("{} installed from {}", install.key, install.archive)),
+        ),
+    }
+}
+
+fn install_problem(paks: &Path, key: &str) -> Option<String> {
+    let Some((root, name)) = key.split_once(':').and_then(|(root, name)| {
+        RootKind::ALL
+            .into_iter()
+            .find(|kind| format!("{kind:?}") == root)
+            .map(|kind| (kind, name))
+    }) else {
+        return Some(format!("unreadable key {key:?}"));
+    };
+    let folder = paks.join(root.folder()).join(name);
+    let names = match dir_names(&folder) {
+        Ok(names) => names,
+        Err(error) => return Some(format!("{key} not installed: {error}")),
+    };
+    if !names
+        .iter()
+        .any(|name| name.to_ascii_lowercase().ends_with(".pak"))
+    {
+        return Some(format!("{key} has no live .pak"));
+    }
+    for kind in RootKind::ALL {
+        let leftover = dir_names(&paks.join(kind.folder()))
+            .unwrap_or_default()
+            .into_iter()
+            .find(|name| name.starts_with(STAGING_PREFIX));
+        if let Some(leftover) = leftover {
+            return Some(format!("staging folder {}/{leftover} left", kind.folder()));
+        }
+    }
+    None
+}
+
+fn dir_names(dir: &Path) -> std::io::Result<Vec<String>> {
+    let dir = platform::fs_path(dir)?;
+    std::fs::read_dir(dir)?
+        .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
+        .collect()
+}
+
+fn installed_paks(core: &Core) -> Option<std::path::PathBuf> {
+    match core.game_status().location {
+        GameLocation::Ready(install) => Some(install.paks),
+        GameLocation::NotSet | GameLocation::Missing { .. } => None,
+    }
+}
+
 fn installed_build(core: &Core) -> Option<String> {
     match core.game_status().location {
         GameLocation::Ready(install) => install.build_id,
@@ -187,6 +266,9 @@ fn fixture_differences(
             row.content_conflicts.len(),
         )
     });
+    // The frontend's install round trip adds this row; `installFixture` checks it.
+    let installed = fixture.install.as_ref().map(|install| install.key.as_str());
+    let actual_rows = actual_rows.filter(|(key, ..)| Some(key.as_str()) != installed);
     compare_sets("row", expected_rows, actual_rows, &mut differences);
     compare_sets(
         "archive",

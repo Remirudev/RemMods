@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use super::FsError;
 use super::journal::Journal;
-use super::preflight::{list_folded, preflight};
+use super::preflight::{Chains, list_folded, preflight};
 use super::rename::{RenameMethod, STUCK_UNLINK_OP, rename_one};
 use super::scope::Scope;
 use crate::platform::{self, OsErrorClass, RetryPolicy};
@@ -72,8 +72,9 @@ pub(crate) fn run(
     journal: &Journal,
     ops: &[RenameOp],
     options: &BatchOptions,
+    chains: Chains,
 ) -> Result<BatchReport, FsError> {
-    let planned = preflight(scope, ops)?;
+    let planned = preflight(scope, ops, chains)?;
     let Some(last) = planned.ops.last() else {
         return Ok(BatchReport {
             done: 0,

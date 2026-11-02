@@ -29,6 +29,8 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
+  src/archive/         zip/7z/rar/folder readers (one backend file per crate), names, limits, capped sink
+  src/install/         inspect (root, name, variants, issues) and start (stage, commit, job), no fs mutator
   tests/fixtures/      proc/ (fake /proc captures) and steam/ (VDF/ACF files); byte-exact, outside Biome
 crates/remmods-pak/    pure-Rust .utoc reader (header + directory index; no decompression, no Oodle); no core dep
 crates/remmods-ipc/    DTOs + AppError (serde + specta, no Tauri) and their tests
@@ -36,9 +38,10 @@ src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust te
   src/commands/        one file per domain; async, spawn_blocking, Result<T, AppError>
   src/os/              the only other cfg place (navigation, webview checks)
   src/watcher.rs       Paks watcher thread: debounced rescans, auto-refresh status
+  src/install_sources.rs, src/drop.rs   dropped/picked sources registered by id (no paths over IPC)
   src/bin/             export-bindings (feature "bindings") writes src/lib/ipc/bindings.ts
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh
+scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, checklists/
 ```
 
@@ -93,7 +96,12 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - The Trash is reached only through `platform::trash_location` + `safe_fs` `WriteGuard::trash`; tests
   pass a `TrashEnv` inside their TempDir and never use `TrashEnv::from_env()` (only the shell does).
   Permanent delete needs a token from `mods_delete_prepare` (the second confirmation);
-  `remove_aside` is the only recursive delete under a mod root.
+  `remove_aside` and `discard_staging` (one shared inert-temp-folder check) are the only recursive
+  deletes under a mod root.
+- Archives are read only through `remmods_core::archive` (one backend file per crate, never library
+  extract helpers); extraction writes only through `safe_fs::StagingDir`/`StagedFile` into a journaled
+  `_install_tmp_<32hex>` staging folder, capped at each entry's declared size; installs commit through
+  `WriteGuard::rename_batch_replacing`.
 - Pure-Rust crates preferred. `deny.toml` bans C/asm crates and features; `scripts/check-native.sh`
   checks both targets' dependency trees and Linux build-script outputs.
 
@@ -129,6 +137,7 @@ scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 npm run tauri -- build --debug --no-bundle && ./target/debug/remmods --smoke
 python3 -I scripts/make-fixtures.py smoke <empty dir>   # fixture game folder; then: remmods --smoke --paks <printed Paks path>
 python3 -I scripts/scan-expect.py <paks.tsv>            # expected scan-* log lines from a paks-snapshot
+python3 -I scripts/make-archive-fixtures.py <empty dir> # crafted zips + manifest.json; REMMODS_ARCHIVE_FIXTURES=<dir> cargo test -p remmods-core --test archive_fixtures
 scripts/utoc-compare.sh <dir>                           # Rust vs Python .utoc listing (read-only)
 python3 -I scripts/proc-capture.py <label> > local/proc-<label>.json   # redact by hand before committing
 scripts/paks-snapshot.sh > local/paks-<label>.tsv   # read-only listing of the game's Paks folder

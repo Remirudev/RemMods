@@ -50,6 +50,10 @@ pub(super) fn is_no_such_process(_error: &io::Error) -> bool {
     false
 }
 
+pub(super) fn total_memory() -> Option<u64> {
+    None
+}
+
 pub(super) fn steam_hints() -> SteamHints {
     SteamHints {
         os: OS_KIND,

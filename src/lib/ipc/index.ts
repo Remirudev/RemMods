@@ -1,8 +1,11 @@
+import type { Channel } from '@tauri-apps/api/core'
 import { commands } from './bindings'
 import { unwrapResult } from './ipc-error'
 import type {
   ApplyRequest,
   DeleteRequest,
+  InspectRequest,
+  InstallProgress,
   LocationChoice,
   MetadataRequest,
   ModTarget,
@@ -10,6 +13,7 @@ import type {
   RenameRequest,
   SettingsUpdate,
   SmokeReport,
+  StartRequest,
   ToggleRequest,
   TransferRequest,
   TrashRequest,
@@ -65,5 +69,13 @@ export const ipc = {
     unwrapResult('profiles_apply', () => commands.profilesApply(request)),
   profilesTransfer: (request: TransferRequest) =>
     unwrapResult('profiles_transfer', () => commands.profilesTransfer(request)),
+  pickArchives: (title: string) =>
+    unwrapResult('pick_archives', () => commands.pickArchives(title)),
+  pickFolder: (title: string) => unwrapResult('pick_folder', () => commands.pickFolder(title)),
+  installInspect: (request: InspectRequest) =>
+    unwrapResult('install_inspect', () => commands.installInspect(request)),
+  installStart: (request: StartRequest, progress: Channel<InstallProgress>) =>
+    unwrapResult('install_start', () => commands.installStart(request, progress)),
+  installCancel: () => unwrapResult('install_cancel', () => commands.installCancel()),
   modsWatchStatus: () => unwrapResult('mods_watch_status', () => commands.modsWatchStatus()),
 }

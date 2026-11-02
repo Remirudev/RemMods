@@ -39,6 +39,13 @@ unicode-normalization = { version = "=0.1.26" }
 notify = { version = "=8.2.1", default-features = false }
 uuid = { version = "=1.29.0", default-features = false, features = ["std", "v4"] }
 
+zip = { version = "=9.2.0", default-features = false, features = ["deflate-flate2-zlib-rs", "deflate64", "bzip2", "lzma", "xz", "ppmd"] }
+sevenz-rust2 = { version = "=0.24.2", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
+rars = { version = "=0.12.3", default-features = false }
+encoding_rs = { version = "=0.8.44" }
+fs4 = { version = "=1.1.0", default-features = false, features = ["sync"] }
+crc32fast = { version = "=1.5.4" }
+
 rustix = { version = "=1.1.6", features = ["std", "process", "fs"] }
 windows-sys = { version = "=0.61.2", features = [
     "Win32_Foundation",
@@ -46,6 +53,7 @@ windows-sys = { version = "=0.61.2", features = [
     "Win32_System_Registry",
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_Storage_FileSystem",
+    "Win32_System_SystemInformation",
 ] }
 
 tempfile = { version = "=3.27.0" }
@@ -59,6 +67,24 @@ all = { level = "warn", priority = -1 }
 # No unwrap()/expect() outside tests; a provably infallible one needs an allow and a reason.
 unwrap_used = "warn"
 expect_used = "warn"
+
+# Archive decoders run at full speed in dev builds too (PLAN §2).
+[profile.dev.package.zip]
+opt-level = 3
+[profile.dev.package.sevenz-rust2]
+opt-level = 3
+[profile.dev.package.rars]
+opt-level = 3
+[profile.dev.package.lzma-rust2]
+opt-level = 3
+[profile.dev.package.zlib-rs]
+opt-level = 3
+[profile.dev.package.libbz2-rs-sys]
+opt-level = 3
+[profile.dev.package.ppmd-rust]
+opt-level = 3
+[profile.dev.package.deflate64]
+opt-level = 3
 
 [profile.release]
 lto = true

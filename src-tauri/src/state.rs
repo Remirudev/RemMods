@@ -5,6 +5,7 @@ use std::time::Instant;
 
 use remmods_core::Core;
 
+use crate::install_sources::SourceRegistry;
 use crate::monitor::MonitorHandle;
 use crate::smoke::SmokeFixture;
 use crate::watcher::WatcherHandle;
@@ -17,6 +18,8 @@ pub struct AppState {
     pub monitor: MonitorHandle,
     pub watcher: WatcherHandle,
     pub last_focus_rescan: Mutex<Option<Instant>>,
+    /// Picked and dropped install sources (paths stay in Rust).
+    pub install_sources: Mutex<SourceRegistry>,
 }
 
 pub struct SmokeState {
@@ -46,6 +49,7 @@ impl AppState {
             monitor,
             watcher,
             last_focus_rescan: Mutex::new(None),
+            install_sources: Mutex::new(SourceRegistry::default()),
         }
     }
 }

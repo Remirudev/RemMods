@@ -1,16 +1,16 @@
-//! Permanent removal of a set-aside folder: the only recursive delete below a mod root. The folder
-//! was renamed to an install-temp name with every live payload file disabled first, so the game
-//! never sees a half-removed mod.
+//! Permanent removal of a set-aside folder or an install staging folder: the only recursive delete
+//! below a mod root. A set-aside folder was renamed to an install-temp name with every live
+//! payload file disabled first, and staging holds inert files only, so the game never sees a
+//! half-removed mod.
 
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::FsError;
 use super::gate::WriteGuard;
-use super::journal::OpRecord;
 use super::names::is_install_temp_name;
-use super::scope::is_within;
+use super::scope::Scope;
 use crate::platform;
 
 const TEMP_MARKER: &str = "_tmp_";
@@ -23,52 +23,54 @@ impl WriteGuard<'_> {
     /// its parent is a mod root; an install-temp name; a real folder (no link or junction); no live
     /// `.pak/.ucas/.utoc/.sig` at any depth; no journal record names it or anything below it.
     pub fn remove_aside(&self, aside: &Path) -> Result<(), FsError> {
-        self.scope().check(aside)?;
-        let not_an_aside = || FsError::NotAnAside {
-            path: aside.to_path_buf(),
-        };
-        let parent_is_root = aside
-            .parent()
-            .is_some_and(|parent| self.scope().is_mod_root(parent));
-        let temp_named = aside.file_name().is_some_and(is_install_temp_name);
-        if !parent_is_root || !temp_named {
-            return Err(not_an_aside());
-        }
-        let raw =
-            platform::fs_path(aside).map_err(|error| FsError::io("remove_aside", aside, error))?;
-        let metadata = fs::symlink_metadata(&raw)
-            .map_err(|error| FsError::io("remove_aside", aside, error))?;
-        if !metadata.is_dir() || metadata.file_type().is_symlink() {
-            return Err(not_an_aside());
-        }
-        if has_live_payload(&raw).map_err(|error| FsError::io("remove_aside", aside, error))? {
-            return Err(FsError::AsideNotInert {
-                path: aside.to_path_buf(),
-            });
-        }
+        let raw = check_inert_temp_tree(self.scope(), aside)?;
         if self.is_journaled(aside)? {
             return Err(FsError::AsideJournaled {
                 path: aside.to_path_buf(),
             });
         }
-        // std's remove_dir_all unlinks links inside instead of following them.
-        fs::remove_dir_all(&raw).map_err(|error| FsError::io("remove_aside", aside, error))
+        remove_tree(&raw, aside)
     }
+}
 
-    /// An undecodable record path counts as naming the folder: refusing is the safe side.
-    fn is_journaled(&self, aside: &Path) -> Result<bool, FsError> {
-        let entries = self.journal().entries()?;
-        let named = entries.iter().flat_map(|entry| &entry.ops).any(|op| {
-            let records = match op {
-                OpRecord::Rename { from, to, .. } => vec![from, to],
-                OpRecord::Placeholder { path } => vec![path],
-            };
-            records
-                .into_iter()
-                .any(|record| record.decode().is_none_or(|path| is_within(&path, aside)))
-        });
-        Ok(named)
+/// The checks of `remove_aside` except the journal, then the removal: the only recursive delete
+/// below a mod root (set-aside folders, install staging folders).
+pub(crate) fn remove_inert_temp_tree(scope: &Scope, path: &Path) -> Result<(), FsError> {
+    let raw = check_inert_temp_tree(scope, path)?;
+    remove_tree(&raw, path)
+}
+
+/// In scope, directly in a mod root, an install-temp name, a real folder, no live payload.
+/// Returns the file-system form of `path`.
+pub(crate) fn check_inert_temp_tree(scope: &Scope, path: &Path) -> Result<PathBuf, FsError> {
+    scope.check(path)?;
+    let not_an_aside = || FsError::NotAnAside {
+        path: path.to_path_buf(),
+    };
+    let parent_is_root = path
+        .parent()
+        .is_some_and(|parent| scope.is_mod_root(parent));
+    let temp_named = path.file_name().is_some_and(is_install_temp_name);
+    if !parent_is_root || !temp_named {
+        return Err(not_an_aside());
     }
+    let raw = platform::fs_path(path).map_err(|error| FsError::io("remove_aside", path, error))?;
+    let metadata =
+        fs::symlink_metadata(&raw).map_err(|error| FsError::io("remove_aside", path, error))?;
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        return Err(not_an_aside());
+    }
+    if has_live_payload(&raw).map_err(|error| FsError::io("remove_aside", path, error))? {
+        return Err(FsError::AsideNotInert {
+            path: path.to_path_buf(),
+        });
+    }
+    Ok(raw)
+}
+
+/// std's remove_dir_all unlinks links inside instead of following them.
+pub(crate) fn remove_tree(raw: &Path, shown: &Path) -> Result<(), FsError> {
+    fs::remove_dir_all(raw).map_err(|error| FsError::io("remove_aside", shown, error))
 }
 
 /// `"_" + label + "_tmp_" + suffix`, the label cut so the name stays within 255 UTF-8 bytes and
@@ -97,7 +99,7 @@ fn cut_at_char(text: &str, max_bytes: usize) -> &str {
 }
 
 /// A no-follow walk: links are never entered, but a link named like a payload still counts.
-fn has_live_payload(dir: &Path) -> std::io::Result<bool> {
+pub(crate) fn has_live_payload(dir: &Path) -> std::io::Result<bool> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         if is_live_name(&entry.file_name()) {

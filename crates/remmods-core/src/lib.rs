@@ -1,9 +1,11 @@
 //! RemMods core: all logic, synchronous, no Tauri.
 #![deny(unsafe_code)]
 
+pub mod archive;
 pub mod content;
 pub mod error;
 pub mod game;
+pub mod install;
 pub mod mods;
 pub mod navigation;
 pub mod paths;
@@ -37,6 +39,8 @@ pub struct Core {
     pub profiles: profiles::ProfileStore,
     /// The second confirmation of permanent deletes (spec §5.4).
     pub delete_tokens: mods::DeleteTokens,
+    /// Inspections and the one install job (P4 spec §5.5).
+    pub install: install::InstallService,
     pub trash_env: TrashEnv,
     require_marker: Option<String>,
     /// The original app's data folder (Windows only); exports never go there.
@@ -96,6 +100,7 @@ impl Core {
             ops,
             profiles: profiles::ProfileStore::new(paths.profiles_file()),
             delete_tokens: mods::DeleteTokens::new(),
+            install: install::InstallService::default(),
             trash_env: options.trash,
             require_marker: options.require_marker,
             tmm_dir: options.tmm_dir,

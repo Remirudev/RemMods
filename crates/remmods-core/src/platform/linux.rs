@@ -66,6 +66,11 @@ pub(super) fn is_no_such_process(error: &io::Error) -> bool {
     Errno::from_io_error(error) == Some(Errno::SRCH)
 }
 
+pub(super) fn total_memory() -> Option<u64> {
+    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+    super::parse_meminfo_total(&text)
+}
+
 pub(super) fn steam_hints() -> SteamHints {
     SteamHints {
         os: OS_KIND,

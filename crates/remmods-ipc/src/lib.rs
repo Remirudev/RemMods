@@ -4,6 +4,8 @@
 mod content;
 mod error;
 mod game;
+mod install;
+mod install_convert;
 mod manage;
 mod mod_issues;
 mod mods;
@@ -23,6 +25,13 @@ pub use game::{
     DetectionNote, FolderProblem, GameCandidate, GameLocation, GameStatus, InstallInfo,
     LocationChoice, LocationSource, NoteCode, PickOutcome, RevealProblem, RunningState, SteamKind,
     UpdateNotice, UpdateTracking,
+};
+pub use install::{
+    ArchiveFormat, ArchiveProblem, CandidatePick, CaseClash, ClashPick, DropPhase, ExistingMatch,
+    ExistingRelation, InspectRequest, Inspection, InstallBlock, InstallCandidate, InstallIssue,
+    InstallIssueCode, InstallOutcome, InstallPhase, InstallProgress, InstallSourceRef,
+    InstalledMod, IssueSeverity, KeptReason, NameEncoding, NameOverride, PickedSource,
+    RejectedSource, ReplacedOld, RootReason, SourceKind, SourceReject, StartRequest, VariantGroup,
 };
 pub use manage::{
     DeleteOutcome, DeletePrepared, DeleteRequest, ManageAction, ManageBlock, MetadataRequest,

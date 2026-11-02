@@ -1,5 +1,7 @@
 use remmods_core::CoreError;
+use remmods_core::archive::{ArchiveError, UnsupportedReason};
 use remmods_core::game::GameError;
+use remmods_core::install::InstallError;
 use remmods_core::mods::{
     ManageAction as CoreManageAction, ManageBlock as CoreManageBlock, ModsError,
 };
@@ -10,6 +12,7 @@ use remmods_core::settings::SettingsError;
 use serde::{Deserialize, Serialize};
 
 use crate::game::{FolderProblem, RevealProblem};
+use crate::install::{ArchiveProblem, InstallBlock, SourceReject};
 use crate::manage::{ManageAction, ManageBlock, TrashUnavailableReason};
 use crate::mods::bytes;
 use crate::profiles::ImportProblem;
@@ -73,6 +76,24 @@ pub enum AppError {
     ImportFailed {
         problem: ImportProblem,
     },
+    ArchiveFailed {
+        reason: ArchiveProblem,
+    },
+    InstallBlocked {
+        reason: InstallBlock,
+    },
+    InstallBusy,
+    InstallCancelled,
+    /// Bytes the install needs and the bytes free in the Paks file system.
+    NoSpace {
+        #[specta(type = specta_typescript::Number)]
+        needed: f64,
+        #[specta(type = specta_typescript::Number)]
+        available: f64,
+    },
+    SourceRejected {
+        reason: SourceReject,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -108,6 +129,7 @@ impl From<CoreError> for AppError {
             CoreError::Game(error) => game_error(error),
             CoreError::Mods(error) => mods_error(error),
             CoreError::Profiles(error) => profile_error(error),
+            CoreError::Install(error) => install_error(error),
         }
     }
 }
@@ -213,6 +235,54 @@ fn profile_error(error: ProfileError) -> AppError {
             problem: problem.into(),
         },
         ProfileError::DiffChanged => AppError::Stale,
+    }
+}
+
+fn install_error(error: InstallError) -> AppError {
+    match error {
+        InstallError::Archive(error) => archive_error(error),
+        InstallError::Busy => AppError::InstallBusy,
+        InstallError::UnknownInspection | InstallError::SourceChanged => AppError::Stale,
+        InstallError::Blocked { reason } => AppError::InstallBlocked {
+            reason: reason.into(),
+        },
+        InstallError::NoSpace { needed, available } => AppError::NoSpace {
+            needed: bytes(needed),
+            available: bytes(available),
+        },
+        InstallError::Cancelled => AppError::InstallCancelled,
+        InstallError::Source { reason } => AppError::SourceRejected {
+            reason: reason.into(),
+        },
+    }
+}
+
+fn archive_error(error: ArchiveError) -> AppError {
+    let failed = |reason| AppError::ArchiveFailed { reason };
+    match error {
+        ArchiveError::NotAnArchive => failed(ArchiveProblem::NotAnArchive),
+        ArchiveError::Unsupported { reason } => failed(match reason {
+            UnsupportedReason::MultiVolume => ArchiveProblem::MultiVolume,
+            UnsupportedReason::SelfExtracting => ArchiveProblem::SelfExtracting,
+            UnsupportedReason::Method => ArchiveProblem::UnsupportedMethod,
+            UnsupportedReason::RarDisabled => ArchiveProblem::RarDisabled,
+        }),
+        ArchiveError::Encrypted => failed(ArchiveProblem::Encrypted),
+        ArchiveError::Corrupt { .. } | ArchiveError::SizeMismatch { .. } => {
+            failed(ArchiveProblem::Corrupt)
+        }
+        ArchiveError::MemoryLimit { .. } => failed(ArchiveProblem::MemoryLimit),
+        ArchiveError::TooManyEntries { .. } => failed(ArchiveProblem::TooManyEntries),
+        ArchiveError::TooLarge { .. } => failed(ArchiveProblem::TooLarge),
+        ArchiveError::Cancelled => AppError::InstallCancelled,
+        ArchiveError::Io { class, .. } => AppError::Io {
+            op: "archive_read".to_owned(),
+            class: class.into(),
+        },
+        ArchiveError::Target { class, .. } => AppError::Io {
+            op: "archive_write".to_owned(),
+            class: class.into(),
+        },
     }
 }
 

@@ -21,6 +21,7 @@ mod rename;
 mod retry;
 mod scope;
 mod sessions;
+mod staging;
 mod trash;
 mod watch;
 
@@ -35,6 +36,8 @@ pub use journal::{JournalProblem, RecoveryReport};
 pub use lock::{AppLock, LockMode};
 pub use rename::{RenameMethod, link_unlink_noreplace, placeholder_noreplace};
 pub use scope::{Scope, ScopeViolation};
+pub(crate) use scope::{is_within, resolve_existing};
+pub use staging::{StagedFile, StagingDir};
 pub use trash::{TrashReport, TrashedItem, percent_encode_path, trashinfo_text};
 pub use watch::{Debounce, PaksWatcher, WatchError, WatchSignal, signal_for};
 

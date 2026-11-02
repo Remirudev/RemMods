@@ -1,5 +1,7 @@
 import { AppShell } from '@mantine/core'
+import { InstallHost } from '../features/install/InstallHost'
 import { CommandPalette } from './CommandPalette'
+import { DropOverlay } from './DropOverlay'
 import { PanelHost } from './PanelHost'
 import { Rail } from './rail/Rail'
 import { ResizeHandles } from './title-bar/ResizeHandles'
@@ -38,6 +40,8 @@ export function App() {
       </AppShell>
       {customTitleBar && <ResizeHandles />}
       <CommandPalette />
+      <InstallHost />
+      <DropOverlay />
     </>
   )
 }

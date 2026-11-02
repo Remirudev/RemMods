@@ -49,6 +49,11 @@
     "allow-profiles-delete",
     "allow-profiles-diff",
     "allow-profiles-apply",
-    "allow-profiles-transfer"
+    "allow-profiles-transfer",
+    "allow-pick-archives",
+    "allow-pick-folder",
+    "allow-install-inspect",
+    "allow-install-start",
+    "allow-install-cancel"
   ]
 }

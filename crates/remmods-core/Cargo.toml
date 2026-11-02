@@ -8,6 +8,10 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[features]
+default = ["rar-builtin"]
+rar-builtin = ["dep:rars"]
+
 [lib]
 name = "remmods_core"
 doctest = false
@@ -27,6 +31,11 @@ unicase.workspace = true
 unicode-normalization.workspace = true
 notify.workspace = true
 uuid.workspace = true
+zip.workspace = true
+sevenz-rust2.workspace = true
+rars = { workspace = true, optional = true }
+encoding_rs.workspace = true
+fs4.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 rustix.workspace = true
@@ -37,6 +46,10 @@ windows-sys.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 proptest.workspace = true
+crc32fast.workspace = true
+# Writers for crafted fixtures; tests only.
+sevenz-rust2 = { workspace = true, features = ["compress"] }
+rars = { workspace = true, features = ["write", "encryption"] }
 
 [lints]
 workspace = true

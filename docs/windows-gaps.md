@@ -17,3 +17,4 @@ Linux-first still builds and passes its tests on Windows, and on Windows it eith
 | WG-4 | Toggle while TEKKEN 8 runs | The DELETE-access probe (InUse without a prompt) is verified in CI only, not on a real PC (PLAN §11) | no | open |
 | WG-5 | Recycle Bin mover | Trash always reports `TrashUnavailable(NotSupported)`, so removal on Windows is "Delete permanently" (second confirmation) or Cancel; PLAN §4's `IFileOperation` mover arrives in P3b | yes (for 1.0) | open |
 | WG-6 | Profile export path | The Windows save dialog's overwrite prompt is assumed; it is verified on Linux/portal only | no | open |
+| WG-7 | Explorer drag and drop, IFileDialog multi-select | The archive drop path and the multi-file picker are CI-compiled only; verified on Linux (Plasma portal, Dolphin) | no | open |
