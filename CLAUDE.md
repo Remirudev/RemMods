@@ -41,7 +41,7 @@ src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust te
   src/install_sources.rs, src/drop.rs   dropped/picked sources registered by id (no paths over IPC)
   src/bin/             export-bindings (feature "bindings") writes src/lib/ipc/bindings.ts
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh
+scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh and smoke-paks-diff.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, checklists/
 ```
 
