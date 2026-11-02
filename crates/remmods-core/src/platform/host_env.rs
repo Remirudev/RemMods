@@ -10,7 +10,9 @@ use super::entry::{RawName, os_string, raw_name};
 
 /// Variables the AppImage runtime sets for the mounted app.
 pub const APPIMAGE_RUNTIME_VARS: &[&str] = &["APPDIR", "APPIMAGE", "ARGV0", "OWD"];
-/// Variables AppRun and the GTK hook set to single values inside the mount.
+/// Variables AppRun and the GTK hook set to values inside the mount. AppRun builds both
+/// `GST_PLUGIN_SYSTEM_PATH*` values from a mount entry and the old `QT_PLUGIN_PATH`, so they are
+/// removed whole rather than list-cleaned (set, they stop GStreamer scanning its system folders).
 pub const APPRUN_VALUE_VARS: &[&str] = &[
     "PYTHONHOME",
     "PYTHONDONTWRITEBYTECODE",
@@ -24,6 +26,8 @@ pub const APPRUN_VALUE_VARS: &[&str] = &[
     "GSETTINGS_SCHEMA_DIR",
     "GI_TYPELIB_PATH",
     "APPIMAGE_GTK_THEME",
+    "GST_PLUGIN_SYSTEM_PATH",
+    "GST_PLUGIN_SYSTEM_PATH_1_0",
 ];
 /// `:`-separated lists AppRun prepends mount entries to.
 pub const APPRUN_PATH_LISTS: &[&str] = &[

@@ -44,6 +44,9 @@ PLATFORMS = {
     "windows-x86_64-nsis": "nsis",
 }
 MINISIGN_CHECKED = ("appimage", "nsis")
+# The updater parses pub_date with time's Rfc3339; fromisoformat alone also takes ISO 8601 forms
+# (date only, no offset, a space separator, the basic format) that the updater rejects.
+PUB_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})", re.ASCII)
 
 
 class CheckError(Exception):
@@ -161,8 +164,10 @@ def check_manifest(doc, version, repo, assets, pubkey):
     if not isinstance(doc.get("notes"), str):
         raise CheckError("latest.json notes must be a string")
     pub_date = doc.get("pub_date")
+    if not isinstance(pub_date, str) or not PUB_DATE_RE.fullmatch(pub_date):
+        raise CheckError(f"latest.json pub_date {pub_date!r} is not RFC 3339")
     try:
-        datetime.fromisoformat(str(pub_date).replace("Z", "+00:00"))
+        datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
     except ValueError:
         raise CheckError(f"latest.json pub_date {pub_date!r} is not RFC 3339") from None
     platforms = doc.get("platforms")
@@ -338,6 +343,10 @@ def self_test():
     fails("unknown asset id", lambda d: [p.__setitem__("url", p["url"][: p["url"].rfind("/") + 1] + "999") for p in d["platforms"].values()])
     fails("asset id of a .sig", lambda d: [p.__setitem__("url", p["url"][: p["url"].rfind("/") + 1] + "201") for p in d["platforms"].values()])
     fails("bad pub_date", lambda d: d.__setitem__("pub_date", "yesterday"))
+    for bad_date in ("2026-11-02", "2026-11-02T08:00:00", "2026-11-02 08:00:00Z", "20261102T080000Z",
+                     "2026-11-02T08:00Z", "2026-13-02T08:00:00Z"):
+        fails(f"pub_date {bad_date}", lambda d, value=bad_date: d.__setitem__("pub_date", value))
+    fails("pub_date not a string", lambda d: d.__setitem__("pub_date", None))
     fails("extra entry field", lambda d: d["platforms"]["linux-x86_64-rpm"].__setitem__("with_elevated_task", False))
     fails("not base64 signature", lambda d: d["platforms"]["linux-x86_64-rpm"].__setitem__("signature", "%%%"))
 

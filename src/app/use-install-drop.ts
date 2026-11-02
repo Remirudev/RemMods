@@ -7,6 +7,7 @@ import type { InstallDrop, RejectedSource } from '../lib/ipc/types'
 import { logError } from '../lib/log/frontend-log'
 import { queuedFromPicked } from '../shared/install-actions'
 import { useInstallQueue } from '../shared/install-queue'
+import { isUpdating } from '../shared/update-run-store'
 
 const TOAST_MS = 10_000
 const IDLE = { active: false, count: 0 }
@@ -31,12 +32,17 @@ function handleDropped(event: InstallDrop): void {
 }
 
 // The Rust side owns drag and drop (the webview never sees the paths): it reports the drag
-// entering and leaving, and the classified sources on the drop.
+// entering and leaving, and the classified sources on the drop. While a self-update runs every
+// drop is ignored (the sources stay unused in Rust's bounded registry).
 export function useInstallDrop(): { active: boolean; count: number } {
   const [state, setState] = useState(IDLE)
 
   useEffect(() => {
     const subscription = onInstallDrop((event) => {
+      if (isUpdating()) {
+        setState(IDLE)
+        return
+      }
       if (event.phase === 'enter') {
         setState({ active: true, count: event.count })
         return

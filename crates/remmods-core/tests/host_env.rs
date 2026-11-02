@@ -81,6 +81,28 @@ fn h2_appimage_runtime_and_value_vars_are_removed() {
     assert!(partial.set.is_empty());
 }
 
+/// AppRun's form: a mount entry, then the inherited `QT_PLUGIN_PATH`, which is no GStreamer path.
+#[test]
+fn h2_gstreamer_plugin_paths_are_removed_whole() {
+    let plan = host_env_plan(
+        &env(&[
+            ("APPDIR", APPDIR),
+            (
+                "GST_PLUGIN_SYSTEM_PATH",
+                "/tmp/.mount_x/usr/lib/gstreamer:/usr/lib/qt6/plugins",
+            ),
+            (
+                "GST_PLUGIN_SYSTEM_PATH_1_0",
+                "/tmp/.mount_x/usr/lib/gstreamer-1.0:/usr/lib/qt6/plugins",
+            ),
+        ]),
+        &[],
+    );
+    assert_eq!(planned(&plan, "GST_PLUGIN_SYSTEM_PATH"), Some(None));
+    assert_eq!(planned(&plan, "GST_PLUGIN_SYSTEM_PATH_1_0"), Some(None));
+    assert!(plan.set.is_empty());
+}
+
 #[test]
 fn h3_path_loses_mount_and_empty_entries() {
     let plan = host_env_plan(

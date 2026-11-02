@@ -1,8 +1,9 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
-use std::time::Instant;
+use std::sync::{Arc, Mutex, PoisonError, TryLockError};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use remmods_core::Core;
 use remmods_core::app_update::InstallKind;
@@ -32,6 +33,9 @@ pub struct AppState {
     pub updating: AtomicBool,
     /// Started on `RunEvent::Exit` (after an AppImage update or a safe-graphics restart).
     pub relaunch: Mutex<Option<Relaunch>>,
+    /// `true` once `RunEvent::Exit` runs. `update_install` holds the lock from this check through
+    /// the seal, the rewrite and storing the relaunch, so an exit and a seal never overlap.
+    pub exit_gate: Mutex<bool>,
 }
 
 /// A program the exit path starts through `platform::host_command`.
@@ -40,7 +44,8 @@ pub struct Relaunch {
     pub program: PathBuf,
     pub args: Vec<OsString>,
     /// This session runs from `--appimage-extract-and-run` (FUSE may be missing): the relaunched
-    /// AppImage gets `APPIMAGE_EXTRACT_AND_RUN=1` so its runtime extracts instead of mounting.
+    /// AppImage gets that argument first, which its runtime reads and removes before AppRun, so
+    /// it extracts instead of mounting and no host program inherits a setting.
     pub extract_and_run: bool,
 }
 
@@ -63,6 +68,7 @@ pub struct SmokeState {
 const RUNNING: u8 = 0;
 const PASSED: u8 = 1;
 const FAILED: u8 = 2;
+const EXIT_POLL: Duration = Duration::from_millis(50);
 
 impl AppState {
     pub fn new(
@@ -85,6 +91,7 @@ impl AppState {
             update: Mutex::new(None),
             updating: AtomicBool::new(false),
             relaunch: Mutex::new(None),
+            exit_gate: Mutex::new(false),
         }
     }
 
@@ -99,6 +106,35 @@ impl AppState {
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
                 .is_none()
+    }
+
+    /// Marks the process as exiting, so no update seals any more. A seal that won the race holds
+    /// the lock until it has finished (relaunch stored) or failed (gate unsealed); this waits up
+    /// to `bound` for it. False when the bound passed first.
+    pub fn close_for_exit(&self, bound: Duration) -> bool {
+        let deadline = Instant::now() + bound;
+        let mut logged = false;
+        loop {
+            match self.exit_gate.try_lock() {
+                Ok(mut exiting) => {
+                    *exiting = true;
+                    return true;
+                }
+                Err(TryLockError::Poisoned(poisoned)) => {
+                    *poisoned.into_inner() = true;
+                    return true;
+                }
+                Err(TryLockError::WouldBlock) => {}
+            }
+            if Instant::now() >= deadline {
+                return false;
+            }
+            if !logged {
+                log::info!("exit waits for the update install to finish");
+                logged = true;
+            }
+            thread::sleep(EXIT_POLL);
+        }
     }
 }
 

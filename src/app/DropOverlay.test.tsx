@@ -1,9 +1,10 @@
-import { Notifications } from '@mantine/notifications'
+import { Notifications, notifications } from '@mantine/notifications'
 import { emit } from '@tauri-apps/api/event'
 import { screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { InstallDrop } from '../lib/ipc/types'
 import { useInstallQueue } from '../shared/install-queue'
+import { useUpdateRun } from '../shared/update-run-store'
 import { installIpcMock } from '../test/ipc-mock'
 import { renderWithProviders } from '../test/render'
 import { DropOverlay } from './DropOverlay'
@@ -34,7 +35,11 @@ async function waitUntilListening() {
 }
 
 describe('DropOverlay', () => {
-  beforeEach(() => useInstallQueue.getState().clear())
+  beforeEach(() => {
+    useInstallQueue.getState().clear()
+    notifications.clean()
+  })
+  afterEach(() => useUpdateRun.setState({ updating: false }))
 
   it('shows the hint with the count while files are dragged over and hides on leave', async () => {
     mountOverlay()
@@ -86,5 +91,25 @@ describe('DropOverlay', () => {
     expect(screen.getAllByText(/notes\.txt: Not a zip/)).toHaveLength(1)
     expect(screen.getByText(/remote\.zip: .*copy it to a local folder first/s)).toBeVisible()
     expect(useInstallQueue.getState().queue).toEqual([])
+  })
+
+  it('ignores drags and drops while a self-update runs', async () => {
+    mountOverlay()
+    await waitUntilListening()
+    useUpdateRun.getState().setUpdating(true)
+    await emit(EVENT, ENTER)
+    expect(screen.queryByTestId('drop-overlay')).not.toBeInTheDocument()
+    await emit(EVENT, {
+      phase: 'dropped',
+      count: 1,
+      sources: [{ id: 'src-1', name: 'one.zip', kind: 'zip' }],
+      rejected: [{ name: 'notes.txt', reason: 'unsupportedType' }],
+    } satisfies InstallDrop)
+    // The mocked emit calls the listener before it resolves; the listener is still on.
+    useUpdateRun.getState().setUpdating(false)
+    await emit(EVENT, ENTER)
+    await waitFor(() => expect(screen.getByTestId('drop-overlay')).toBeInTheDocument())
+    expect(useInstallQueue.getState().queue).toEqual([])
+    expect(screen.queryByText('Some items cannot be installed')).not.toBeInTheDocument()
   })
 })

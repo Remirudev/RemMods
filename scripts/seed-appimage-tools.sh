@@ -11,26 +11,44 @@
 # where the bundler finds it and skips its own download. Any mismatch fails before a file is made
 # executable. With GITHUB_ENV set, LDAI_RUNTIME_FILE is exported to the later steps of the job, so
 # the AppImage plugin hands the runtime to appimagetool as --runtime-file.
-# Usage: scripts/seed-appimage-tools.sh
+# The names and the tools folder come from the bundler inside @tauri-apps/cli VERIFIED_CLI; the
+# script refuses to run when package-lock.json locks another CLI (check-workflows.py W11 does the
+# same in the policy job), because a new bundler may expect other names and download its own.
+# --verify-cache runs after `tauri build`: it fails when the tools folder holds anything besides the
+# seeded files and the two plugin scripts the bundler writes from its own binary, when a seeded file
+# is missing or changed (linuxdeploy is not re-hashed: the bundler zeroes bytes 8-10 of it), or when
+# a bundler tools folder exists anywhere else (target/.tauri, the AppImage output folder).
+# Usage: scripts/seed-appimage-tools.sh [--verify-cache]
 set -euo pipefail
 
 usage() {
-    sed -n '2,14s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
+    sed -n '2,23s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
 }
 
+mode=seed
 if (($# > 0)); then
     case "$1" in
         -h | --help)
             usage
             exit 0
             ;;
+        --verify-cache)
+            mode=verify
+            ;;
         *)
-            echo "seed-appimage-tools: takes no arguments" >&2
+            echo "seed-appimage-tools: unknown argument $1 (see --help)" >&2
             exit 2
             ;;
     esac
+    if (($# > 1)); then
+        echo "seed-appimage-tools: takes at most one argument" >&2
+        exit 2
+    fi
 fi
 
+# tauri-bundler 2.10.4 (src/bundle/linux/appimage/linuxdeploy.rs, prepare_tools) checked for this
+# CLI: tools folder ${XDG_CACHE_HOME:-$HOME/.cache}/tauri, the names below, linuxdeploy-07333c6.
+readonly VERIFIED_CLI=2.12.4
 readonly RELEASES=https://github.com
 # Recorded on 2026-11-02 from files that were downloaded and hashed but never run. AppRun and
 # linuxdeploy match the `digest` GitHub reports for the release assets; GitHub reports none for
@@ -43,8 +61,69 @@ readonly TOOLS=(
     "runtime-x86_64|$RELEASES/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64|2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
 )
 readonly RUNTIME=runtime-x86_64
+readonly LINUXDEPLOY=linuxdeploy-07333c6-x86_64.AppImage
+# Written by the bundler from bytes inside its own binary (include_bytes!), not downloaded.
+readonly BUNDLER_SCRIPTS=(linuxdeploy-plugin-gtk.sh linuxdeploy-plugin-gstreamer.sh)
 
+repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+
+fail() {
+    echo "seed-appimage-tools: $*" >&2
+    exit 1
+}
+
+check_locked_cli() {
+    local lock="$repo/package-lock.json" locked
+    [[ -f $lock ]] || fail "$lock is missing"
+    for package in @tauri-apps/cli @tauri-apps/cli-linux-x64-gnu; do
+        locked="$(python3 -I -c 'import json, sys
+print((json.load(open(sys.argv[1], encoding="utf-8"))["packages"].get("node_modules/" + sys.argv[2]) or {}).get("version"))' \
+            "$lock" "$package")"
+        [[ $locked == "$VERIFIED_CLI" ]] ||
+            fail "package-lock.json locks $package $locked, the seed was checked for $VERIFIED_CLI (see W11)"
+    done
+}
+
+verify_cache() {
+    local entry name sha256 found allowed
+    [[ -d $cache_dir ]] || fail "$cache_dir is missing"
+    for found in "$cache_dir"/* "$cache_dir"/.[!.]* "$cache_dir"/..?*; do
+        [[ -e $found || -L $found ]] || continue
+        name="${found##*/}"
+        allowed=no
+        for entry in "${TOOLS[@]}"; do
+            [[ $name == "${entry%%|*}" ]] && allowed=yes
+        done
+        for entry in "${BUNDLER_SCRIPTS[@]}"; do
+            [[ $name == "$entry" ]] && allowed=yes
+        done
+        [[ $allowed == yes && -f $found && ! -L $found ]] ||
+            fail "$found was not seeded: the bundler downloaded or wrote a tool the seed does not cover"
+    done
+    for entry in "${TOOLS[@]}"; do
+        IFS='|' read -r name _ sha256 <<< "$entry"
+        [[ -f $cache_dir/$name ]] || fail "$cache_dir/$name is missing after the build"
+        [[ $name == "$LINUXDEPLOY" ]] && continue
+        printf '%s  %s\n' "$sha256" "$cache_dir/$name" | sha256sum -c --strict --quiet - ||
+            fail "$cache_dir/$name changed after seeding"
+    done
+    local target="${CARGO_TARGET_DIR:-$repo/target}"
+    for found in "$target/.tauri" "$repo/src-tauri/.tauri" "$repo/.tauri"; do
+        [[ ! -e $found ]] || fail "$found exists: the bundler used a tools folder the seed does not fill"
+    done
+    for found in "$target"/*/bundle/appimage/AppRun-* "$target"/*/bundle/appimage/linuxdeploy-*; do
+        [[ ! -e $found ]] || fail "$found exists: the bundler used its output folder as the tools folder"
+    done
+    echo "seed-appimage-tools: $cache_dir holds only the seeded tools and the bundler's plugin scripts"
+}
+
+check_locked_cli
+if [[ $mode == verify ]]; then
+    verify_cache
+    exit 0
+fi
+
 staging="$(mktemp -d)"
 trap 'rm -rf -- "$staging"' EXIT
 

@@ -143,6 +143,10 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - AppImage and NSIS bundles are built only in CI; locally only `--bundles deb,rpm`. Never download and
   run linuxdeploy, appimagetool, AppRun or makensis (`scripts/seed-appimage-tools.sh` is CI-only).
   Never install a package on this machine (no `dpkg -i`, `rpm -i`, `pacman -U`, `makepkg -i/-s`).
+- A `@tauri-apps/cli` bump (Dependabot included) fails W11 until the new tauri-bundler's
+  `prepare_tools` (AppImage tool names, URLs, tools folder) is checked against
+  `scripts/seed-appimage-tools.sh` and its `VERIFIED_CLI` is updated (by the owner or the main
+  session; the post-build `--verify-cache` step catches a bundler that downloaded its own tools).
 - Regenerate `THIRD-PARTY-NOTICES` and `THIRD-PARTY-NOTICES-NPM` after every `Cargo.lock` or
   `package-lock.json` change (`bash scripts/notices.sh`, Dependabot PRs included): CI's `policy` and
   `linux` jobs fail on stale notices. `LICENSE` is shipped and embedded as-is.
@@ -189,7 +193,7 @@ python3 -I scripts/inspect-bundle.py --expect deb target/release/bundle/deb/RemM
 python3 -I scripts/render-pkgbuild.py --deb <deb> --version 0.1.0 --local --out <empty dir>   # AUR files; .SRCINFO must equal makepkg --printsrcinfo
 bash scripts/notices.sh [--check] [rust|npm|all]  # THIRD-PARTY-NOTICES{,-NPM}; needs cargo install --locked --features cli cargo-about@0.9.3
 python3 -I scripts/release-check.py               # release gate, CI mode (release.yml: --tag vX.Y.Z --strict)
-python3 -I scripts/check-workflows.py             # workflow rules W1-W11 (needs PyYAML); every release script has --self-test
+python3 -I scripts/check-workflows.py             # workflow rules W1-W11 (needs PyYAML); every release .py script except npm-notices.py has --self-test (npm-notices.py --check runs in CI's linux job)
 python3 -I scripts/make-fixtures.py smoke <empty dir>   # fixture game folder; then: remmods --smoke --paks <printed Paks path>
 python3 -I scripts/scan-expect.py <paks.tsv>            # expected scan-* log lines from a paks-snapshot
 python3 -I scripts/make-archive-fixtures.py <empty dir> # crafted zips + manifest.json; REMMODS_ARCHIVE_FIXTURES=<dir> cargo test -p remmods-core --test archive_fixtures

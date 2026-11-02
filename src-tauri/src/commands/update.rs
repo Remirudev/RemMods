@@ -4,7 +4,7 @@
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, PoisonError};
+use std::sync::{PoisonError, mpsc};
 use std::time::{Duration, Instant};
 
 use remmods_core::Core;
@@ -17,8 +17,9 @@ use remmods_ipc::{
 };
 use tauri::ipc::Channel;
 use tauri::utils::config::BundleType;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_updater::{Update, Updater, UpdaterExt};
+use tauri_plugin_window_state::AppHandleExt;
 
 use super::{internal, run_blocking};
 use crate::state::{AppState, Relaunch};
@@ -28,6 +29,8 @@ const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
 /// non-closable progress modal up forever. A per-read bound fails a stall, never a slow download.
 const DOWNLOAD_STALL: Duration = Duration::from_secs(60);
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
+/// How long the Windows exit hook waits for the main thread to save the window state.
+const WINDOW_STATE_SAVE_WAIT: Duration = Duration::from_secs(2);
 
 #[tauri::command]
 #[specta::specta]
@@ -86,9 +89,9 @@ pub async fn update_install(
     run_blocking(state.core.clone(), Core::update_preflight).await?;
     let bytes = download(&update, &progress).await?;
     send(&progress, AppUpdateProgress::Installing);
-    install(state.core.clone(), update, bytes).await?;
+    install(app.clone(), update, bytes).await?;
     updating.keep();
-    after_install(&app, &state, &progress);
+    after_install(&app, &progress);
     Ok(())
 }
 
@@ -152,7 +155,7 @@ fn updater(app: &AppHandle) -> Result<Updater, AppError> {
         .version_comparator(|current, release| {
             app_update::is_offered(&current.to_string(), &release.version.to_string())
         })
-        .on_before_exit(before_exit())
+        .on_before_exit(before_exit(app.clone()))
         .timeout(CHECK_TIMEOUT)
         .configure_client(|client| client.read_timeout(DOWNLOAD_STALL))
         .build()
@@ -166,11 +169,37 @@ fn updater(app: &AppHandle) -> Result<Updater, AppError> {
 /// It replaces the default `cleanup_before_exit()`, which hides every window and releases the
 /// single-instance mutex: the plugin can still return `Err` after this hook (when the installer
 /// does not start) and the app must then stay fully usable. On success `process::exit(0)` follows
-/// and the OS releases everything, so flushing the log is all that is needed.
-fn before_exit() -> impl Fn() + Send + Sync + 'static {
+/// and the OS releases everything, but no `RunEvent::Exit` fires, so the window state (saved by
+/// its plugin only there) is saved here, and the log is flushed.
+fn before_exit(app: AppHandle) -> impl Fn() + Send + Sync + 'static {
     move || {
+        save_window_state(&app);
         log::info!("starting the update installer; RemMods exits now");
         log::logger().flush();
+    }
+}
+
+/// On the main thread: the plugin holds its cache lock while it asks the window for its geometry,
+/// which from another thread waits for the main thread, so a save from here could deadlock with a
+/// move or resize. The wait is bounded; a main thread that does not answer only loses the state.
+fn save_window_state(app: &AppHandle) {
+    let (sender, receiver) = mpsc::channel();
+    let saver = app.clone();
+    let queued = app.run_on_main_thread(move || {
+        let saved = saver
+            .save_window_state(crate::WINDOW_STATE_FLAGS)
+            .map_err(|error| error.to_string());
+        // The hook may have stopped waiting; then nobody needs the result.
+        let _ = sender.send(saved);
+    });
+    if let Err(error) = queued {
+        log::warn!("saving the window state before the update failed: {error}");
+        return;
+    }
+    match receiver.recv_timeout(WINDOW_STATE_SAVE_WAIT) {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => log::warn!("saving the window state before the update failed: {error}"),
+        Err(_) => log::warn!("saving the window state before the update timed out"),
     }
 }
 
@@ -194,41 +223,62 @@ async fn download(
 
 /// Seals the operation gate, then lets the plugin replace the app. Windows never returns on
 /// success (the installer restarts RemMods); on Linux the AppImage file was rewritten.
-async fn install(core: Arc<Core>, update: Update, bytes: Vec<u8>) -> Result<(), AppError> {
-    tauri::async_runtime::spawn_blocking(move || install_sealed(&core, &update, &bytes))
-        .await
-        .map_err(|error| internal("update install task", error))?
+async fn install(app: AppHandle, update: Update, bytes: Vec<u8>) -> Result<(), AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        install_sealed(&app.state::<AppState>(), &update, &bytes)
+    })
+    .await
+    .map_err(|error| internal("update install task", error))?
 }
 
-fn install_sealed(core: &Core, update: &Update, bytes: &[u8]) -> Result<(), AppError> {
+/// Holds the exit gate from the check through the seal, the rewrite and storing the relaunch: an
+/// exit that came first refuses the seal before anything is written, and one that comes later
+/// waits on `RunEvent::Exit` until the file is complete (or the install failed and unsealed).
+fn install_sealed(state: &AppState, update: &Update, bytes: &[u8]) -> Result<(), AppError> {
+    let exiting = state
+        .exit_gate
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    if *exiting {
+        log::warn!(
+            "update {} not installed: RemMods is exiting",
+            update.version
+        );
+        return Err(failed(UpdateStage::Install));
+    }
+    let core = &state.core;
     core.seal_for_update().map_err(AppError::from)?;
     log::info!("installing update {}", update.version);
     update.install(bytes).map_err(|error| {
         core.unseal_after_update();
         log::error!("installing update {} failed: {error}", update.version);
         failed(stage_of(&error, UpdateStage::Install))
-    })
+    })?;
+    store_relaunch(state);
+    drop(exiting);
+    Ok(())
 }
 
-/// Linux AppImage: the file at `$APPIMAGE` is the new version. RemMods exits and relaunches it
-/// through `host_command` on `RunEvent::Exit`. The gate stays sealed until the process exits.
-fn after_install(app: &AppHandle, state: &AppState, progress: &Channel<AppUpdateProgress>) {
+/// Linux AppImage: the file at `$APPIMAGE` is the new version, relaunched through `host_command`
+/// on `RunEvent::Exit`. Stored before the exit gate opens, so the exit that follows finds it.
+fn store_relaunch(state: &AppState) {
+    let Some(program) = std::env::var_os("APPIMAGE") else {
+        log::error!("APPIMAGE is unset after an update; not relaunching");
+        return;
+    };
+    *state
+        .relaunch
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner) = Some(Relaunch {
+        program: program.into(),
+        args: Vec::new(),
+        extract_and_run: app_update::appimage_extracted(std::env::var_os("APPDIR").as_deref()),
+    });
+}
+
+/// RemMods exits; the gate stays sealed until the process ends.
+fn after_install(app: &AppHandle, progress: &Channel<AppUpdateProgress>) {
     send(progress, AppUpdateProgress::Restarting);
-    match std::env::var_os("APPIMAGE") {
-        Some(program) => {
-            *state
-                .relaunch
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner) = Some(Relaunch {
-                program: program.into(),
-                args: Vec::new(),
-                extract_and_run: app_update::appimage_extracted(
-                    std::env::var_os("APPDIR").as_deref(),
-                ),
-            });
-        }
-        None => log::error!("APPIMAGE is unset after an update; not relaunching"),
-    }
     log::info!("update installed; exiting to relaunch");
     app.exit(0);
 }

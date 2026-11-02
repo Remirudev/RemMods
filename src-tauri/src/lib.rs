@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, PoisonError};
+use std::time::Duration;
 
 use log::LevelFilter;
 use remmods_core::app_update::{self, InstallKind};
@@ -40,8 +41,16 @@ const LOG_FILE_NAME: &str = "remmods";
 const LOG_MAX_BYTES: u128 = 2 * 1024 * 1024;
 const LOG_FILES_KEPT: usize = 5;
 const SAFE_GRAPHICS_ARG: &str = "--safe-graphics";
-/// Read by the type-2 AppImage runtime: extract and run instead of a FUSE mount.
-const APPIMAGE_EXTRACT_AND_RUN: &str = "APPIMAGE_EXTRACT_AND_RUN";
+/// Read and removed by the type-2 AppImage runtime when it is the first argument: extract and run
+/// instead of a FUSE mount.
+const APPIMAGE_EXTRACT_AND_RUN_ARG: &str = "--appimage-extract-and-run";
+/// How long the exit waits for an update that is rewriting the AppImage (about 100 MB).
+const EXIT_INSTALL_WAIT: Duration = Duration::from_secs(60);
+/// Restores size, position, maximized and fullscreen. Never VISIBLE (the window stays hidden
+/// until `app_ready`) and never DECORATIONS, which would override the title bar setting with
+/// the previous session's frame.
+pub(crate) const WINDOW_STATE_FLAGS: StateFlags =
+    StateFlags::all().difference(StateFlags::VISIBLE.union(StateFlags::DECORATIONS));
 
 pub fn run() {
     let args = LaunchArgs::from_env();
@@ -210,21 +219,14 @@ fn core_options(args: &LaunchArgs) -> CoreOptions {
 }
 
 fn on_run_event(app: &AppHandle, event: RunEvent) {
-    // A user-initiated exit (`code: None`) waits for the update install; `app.exit(0)` after it
-    // carries a code and still exits.
-    if let RunEvent::ExitRequested {
-        code: None, api, ..
-    } = &event
-        && app
-            .try_state::<AppState>()
-            .is_some_and(|state| state.update_install_running())
-    {
-        log::info!("exit refused while the update is being installed");
-        api.prevent_exit();
-        return;
-    }
+    // While sealed, `CloseRequested` (window.rs) refuses the close. An exit accepted before the
+    // seal waits here for the install; `ExitRequested(None)` only follows the last window's
+    // `Destroyed`, so it is not refused.
     if let RunEvent::Exit = event {
         if let Some(state) = app.try_state::<AppState>() {
+            if !state.close_for_exit(EXIT_INSTALL_WAIT) {
+                log::error!("the update install did not finish within {EXIT_INSTALL_WAIT:?}");
+            }
             state.monitor.stop();
             state.watcher.stop();
             if let Some(smoke_state) = state.smoke.as_ref() {
@@ -251,10 +253,11 @@ fn relaunch_on_exit(app: &AppHandle, state: &AppState) {
     };
     tauri_plugin_single_instance::destroy(app);
     let mut command = platform::host_command(&relaunch.program);
-    command.args(&relaunch.args);
+    // An argument, not the variable: the runtime removes it, so it reaches no host program.
     if relaunch.extract_and_run {
-        command.env(APPIMAGE_EXTRACT_AND_RUN, "1");
+        command.arg(APPIMAGE_EXTRACT_AND_RUN_ARG);
     }
+    command.args(&relaunch.args);
     match platform::spawn_detached(command) {
         Ok(()) => log::info!(
             "relaunched {} with {:?}",
@@ -319,12 +322,16 @@ fn restart_in_safe_graphics(app: &AppHandle) -> bool {
     true
 }
 
+/// An existing file only, or the restart would end this instance with nothing to start. The
+/// binary path is the one cached before `main`: after a package upgrade replaced the running
+/// binary, `std::env::current_exe()` reads `/proc/self/exe` as "<path> (deleted)".
 fn relaunch_program(install_kind: InstallKind) -> Option<PathBuf> {
-    if install_kind == InstallKind::AppImage {
+    let program = if install_kind == InstallKind::AppImage {
         std::env::var_os("APPIMAGE").map(PathBuf::from)
     } else {
-        std::env::current_exe().ok()
-    }
+        tauri::utils::platform::current_exe().ok()
+    };
+    program.filter(|program| program.is_file())
 }
 
 fn log_plugin(log_dir: &Path) -> TauriPlugin<Wry> {
@@ -347,13 +354,9 @@ fn log_plugin(log_dir: &Path) -> TauriPlugin<Wry> {
         .build()
 }
 
-/// Restores size, position, maximized and fullscreen. Never VISIBLE (the window stays hidden
-/// until `app_ready`) and never DECORATIONS, which would override the title bar setting with
-/// the previous session's frame.
 fn window_state_plugin() -> TauriPlugin<Wry> {
-    let skipped = StateFlags::VISIBLE | StateFlags::DECORATIONS;
     tauri_plugin_window_state::Builder::new()
-        .with_state_flags(StateFlags::all().difference(skipped))
+        .with_state_flags(WINDOW_STATE_FLAGS)
         .build()
 }
 

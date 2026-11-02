@@ -359,6 +359,9 @@ to 9 and 12 are the P5 exit check; steps 10 and 11 follow later releases.
    into its own folder, so its working directory is not `$HOME`; the `$HOME` working directory of
    RemMods' child processes is tested in CI.) The game starts with your gamescope launch options as
    before. In offline Practice, the enabled mods are visible (PLAN §9 per-phase check). Quit the game.
+   Close RemMods and leave Steam running: within a few seconds
+   `findmnt -rn -o TARGET | string match '*/.mount_RemMod*'` prints nothing (Steam inherited none of
+   the AppImage runtime's file descriptors, so it does not keep the mount alive).
    Result:
 10. AUR (you, after v1.0.0 is published): remove the user desktop file of step 4 first, it would hide
     the package's (`rm ~/.local/share/applications/RemMods.desktop`), then `paru -S remmods-bin`.
@@ -372,12 +375,16 @@ to 9 and 12 are the P5 exit check; steps 10 and 11 follow later releases.
     the update." RemMods restarts from the same file (it keeps its old file name) and Settings →
     Updates shows the new version. The relaunched process has none of RemMods' variables (SPEC-P5
     A8): `string split0 < /proc/(pgrep -n -x remmods)/environ | string match -r '^(WEBKIT_|__NV_)'`
-    prints nothing. No rollback copy is left: `find /tmp ~/.cache -maxdepth 1 -name 'tauri_current_app*'`
-    prints nothing.
+    prints nothing. No rollback copy is left in any of the three places the updater may put it (the
+    temp folder, the cache folder, the AppImage's own folder):
+    `find /tmp $TMPDIR ~/.cache $XDG_CACHE_HOME ~/Applications -maxdepth 1 -name 'tauri_current_app*' 2>/dev/null`
+    prints nothing (an unset variable expands to nothing in fish).
     Then once more with an older AppImage started as `./RemMods_<old>_amd64.AppImage
     --appimage-extract-and-run`: "Install and restart" brings RemMods back (extracted again, no FUSE
-    needed). In that session the desktop file's "Start in safe graphics mode" action only focuses the
-    window (the log says why).
+    needed), and the relaunched process did not get the setting as a variable:
+    `string split0 < /proc/(pgrep -n -x remmods)/environ | string match 'APPIMAGE_EXTRACT_AND_RUN*'`
+    prints nothing. In that session the desktop file's "Start in safe graphics mode" action only
+    focuses the window (the log says why).
     Result:
 12. Game closed. `scripts/paks-snapshot.sh > local/paks-p5-after.tsv`, then
     `diff -u local/paks-p5-before.tsv local/paks-p5-after.tsv`: no output. Restore

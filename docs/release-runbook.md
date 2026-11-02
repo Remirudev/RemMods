@@ -63,7 +63,8 @@ denies reading, and add that rule before you create the key.
 
 3. Add the content of `~/.ssh/aur_remmods.pub` to the account (My Account → SSH Public Key).
 4. Fetch AUR's host keys and compare their fingerprints with the ones listed on the aur.archlinux.org
-   home page ("SSH Public Key Fingerprints"); all must match:
+   home page (section "Support" → "Submitting Packages": "The following SSH fingerprints are used
+   for the AUR:"); all must match:
 
    ```fish
    ssh-keyscan aur.archlinux.org > aur_known_hosts
@@ -81,7 +82,9 @@ All in the repository's Settings (as the owner):
    - "Prevent self-review": **off** (you push the tag yourself, so it would block every release).
    - Deployment branches and tags: "Selected branches and tags", add the **tag** rule `v*`.
 2. **Secrets and variables of the environment** (from the repository folder; `gh` asks for nothing
-   but the password):
+   but the password). Same place as section 1: a terminal outside Claude Code (not the app's
+   Terminal panel), with no agent session running; mount the backup medium only for these commands
+   and unmount it after the last `gh` command.
 
    ```fish
    set key /run/media/$USER/BACKUP/remmods-updater.key
@@ -95,9 +98,11 @@ All in the repository's Settings (as the owner):
    The first command stores the key file's content (not its path). The second prompts for the
    password. `AUR_COMMIT_EMAIL` appears in the public AUR git history, so choose the address
    accordingly. The `aur-push` job refuses to run when either variable is empty.
-3. **Tag ruleset** (Settings → Rules → Rulesets → New tag ruleset): target tags matching `v*`;
-   restrict creations, updates and deletions; bypass list: only you (Repository admin). Then only you
-   can start a release.
+3. **Tag ruleset** (Settings → Rules → Rulesets → New tag ruleset): Ruleset name `release tags`.
+   Enforcement status: change **Disabled** to **Active** (the form starts at Disabled, and a
+   disabled ruleset protects nothing). Target tags matching `v*`; restrict creations, updates and
+   deletions; bypass list: only you (Repository admin). Click **Create**; Settings → Rules →
+   Rulesets then lists the ruleset as Active. Then only you can start a release.
 4. **Immutable releases** (Settings → General → Releases): turn on release immutability, so a
    published release's assets and tag cannot be changed afterwards.
 5. Delete the local private-key copies that are not backups: `rm ~/.ssh/aur_remmods` (CI holds the
@@ -179,6 +184,13 @@ version instead of moving the tag.
 - Check the AUR package: `paru -S remmods-bin` and the AUR step of docs/checklists/ingame-linux.md.
 - The AppImage bundles WebKitGTK from Ubuntu 24.04. Release a patch version about once a month, and
   after every Ubuntu 24.04 WebKitGTK security update, so AppImage users get the fixed libraries.
+- A Dependabot pull request that bumps `@tauri-apps/cli` fails the `policy` check (W11) on purpose:
+  the AppImage tools seeded by `scripts/seed-appimage-tools.sh` are known only for the CLI named in
+  its `VERIFIED_CLI`. Check the new tauri-bundler's `prepare_tools`
+  (`src/bundle/linux/appimage/linuxdeploy.rs`: tool names, URLs, tools folder); if they are
+  unchanged, set `VERIFIED_CLI` to the new version in the same pull request. The pull request's
+  `artifacts` run then builds an AppImage, and its "Check the AppImage tools cache" step fails if
+  the bundler still downloaded a tool of its own.
 
 ## 6. Code signing (later)
 

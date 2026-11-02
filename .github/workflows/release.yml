@@ -2,16 +2,18 @@ name: release
 
 # Release pipeline (docs/PLAN.md §10, SPEC-P5 §7.5). A v* tag on main:
 #   verify -> draft + build (no secrets) -> artifacts (installs and smoke-tests the exact bundles)
-#   -> sign (only after artifacts passed) -> upload (+ latest.json) -> latest-json (minisign check)
-#   -> sums (SHA256SUMS, release assets byte-equal to the tested bundles) -> publish -> aur-check
-#   -> aur-push (re-renders PKGBUILD/.SRCINFO and compares them with aur-check's).
+#   -> sign (only after artifacts passed) -> upload (assets, then writes latest.json)
+#   -> latest-json (checks it: check-latest-json.py, signatures with minisign)
+#   -> sums (SHA256SUMS, release assets byte-equal to the tested bundles) -> publish + aur-check
+#   (parallel) -> aur-push (re-renders PKGBUILD/.SRCINFO and compares them with aur-check's).
 # No job that builds holds a secret or a write token: `tauri build --no-sign` runs without either,
 # and a separate `sign` job signs the finished files (SPEC-P5 A26).
 # Environment `release` (required reviewer): sign, publish, aur-push.
 # Secrets (environment `release`): TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD,
 # AUR_SSH_PRIVATE_KEY. Variables: AUR_KNOWN_HOSTS, AUR_COMMIT_EMAIL.
 # Rules checked by scripts/check-workflows.py: SHA-pinned actions, no `${{ }}` in run scripts (values
-# arrive through env), checkout without persisted credentials, no caches, `npm ci --ignore-scripts`.
+# arrive through env), checkout without persisted credentials, no caches, `npm ci --ignore-scripts`,
+# AppImage tools seeded before the build and checked after it.
 
 on:
   push:
@@ -170,6 +172,11 @@ jobs:
       # The updater config comes only from tauri.release.conf.json; --no-sign: no key in this job.
       - name: Build the release bundles (unsigned)
         run: npm run tauri -- build --config src-tauri/tauri.release.conf.json --no-sign
+
+      # Fails when the bundler skipped a seeded tool and downloaded its own (W11).
+      - name: Check the AppImage tools cache
+        if: runner.os == 'Linux'
+        run: bash scripts/seed-appimage-tools.sh --verify-cache
 
       - name: glibc floor and package contents
         if: runner.os == 'Linux'

@@ -1,8 +1,9 @@
 import { Channel } from '@tauri-apps/api/core'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import type { AppUpdateChannel, AppUpdateCheck, AppUpdateProgress } from '../../lib/ipc/types'
+import { useUpdateRun } from '../../shared/update-run-store'
 import { TEST_UPDATE_CHANNEL } from '../../test/fixtures'
 import { installIpcMock } from '../../test/ipc-mock'
 import { renderWithProviders } from '../../test/render'
@@ -48,6 +49,8 @@ async function confirmInstall(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('UpdatesSection', () => {
+  afterEach(() => useUpdateRun.setState({ updating: false }))
+
   it('disables the check and says why when the build has no update channel', async () => {
     const ipc = renderSection(TEST_UPDATE_CHANNEL)
 
@@ -99,6 +102,7 @@ describe('UpdatesSection', () => {
     expect(payload.version).toBe('0.2.0')
     expect(payload.progress).toBeInstanceOf(Channel)
     expect(screen.getByRole('dialog', { name: 'Updating RemMods' })).toBeVisible()
+    expect(useUpdateRun.getState().updating).toBe(true)
 
     const channel = progress as ProgressChannel | null
     channel?.onmessage({ kind: 'installing' })
@@ -190,6 +194,7 @@ describe('UpdatesSection', () => {
       expect(screen.queryByRole('dialog', { name: 'Updating RemMods' })).not.toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: 'Check for updates' })).toBeEnabled()
+    expect(useUpdateRun.getState().updating).toBe(false)
   })
 
   it('shows a failed check inside the section', async () => {

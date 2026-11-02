@@ -1,12 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useInstallQueue } from './install-queue'
 import type { QueuedSource } from './types'
+import { useUpdateRun } from './update-run-store'
 
 const A: QueuedSource = { kind: 'token', id: 'src-a', name: 'a.zip', sourceKind: 'zip' }
 const B: QueuedSource = { kind: 'archive', row: 'm:b', name: 'b.7z' }
 
 describe('install queue', () => {
   beforeEach(() => useInstallQueue.getState().clear())
+  afterEach(() => useUpdateRun.setState({ updating: false }))
+
+  it('queues nothing while a self-update runs', () => {
+    useUpdateRun.getState().setUpdating(true)
+    useInstallQueue.getState().push([A, B])
+    expect(useInstallQueue.getState().queue).toEqual([])
+    expect(useInstallQueue.getState().current).toBeNull()
+  })
 
   it('starts empty', () => {
     const state = useInstallQueue.getState()

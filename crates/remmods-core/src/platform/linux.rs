@@ -1,9 +1,10 @@
 use std::io;
+use std::os::fd::{BorrowedFd, RawFd};
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 
-use rustix::io::Errno;
+use rustix::io::{Errno, FdFlags};
 
 mod fs;
 mod trash;
@@ -92,11 +93,82 @@ pub(super) fn registry_string(
 }
 
 /// The child gets its own session, so closing RemMods (or its terminal) does not take the
-/// launched program down with it.
+/// launched program down with it. It also gets none of the descriptors RemMods inherited: the
+/// AppImage runtime passes its keepalive pipe and the mount folder (fd 1023) without
+/// close-on-exec, and a host program holding them keeps the mount, and a replaced AppImage, alive
+/// after RemMods exits. RemMods keeps them open itself: only the child marks them close-on-exec.
 pub(super) fn prepare_detached(command: &mut Command) {
-    // SAFETY: the hook runs in the forked child before exec and only calls setsid(2), which is
-    // async-signal-safe and touches no memory shared with the parent.
+    let candidates = fd_candidates();
+    // SAFETY: the hook runs in the forked child before exec. It calls only setsid(2) and
+    // fcntl(2), which are async-signal-safe, and reads `candidates`, which was collected before
+    // the fork; it allocates nothing and touches no memory shared with the parent. FD_CLOEXEC is a
+    // flag of the child's own descriptor table. Nothing is closed, so std's exec-error pipe works.
     unsafe {
-        command.pre_exec(|| rustix::process::setsid().map(drop).map_err(io::Error::from));
+        command.pre_exec(move || {
+            rustix::process::setsid().map_err(io::Error::from)?;
+            for &fd in &candidates {
+                mark_cloexec(fd)?;
+            }
+            Ok(())
+        });
+    }
+}
+
+/// Descriptors from 3 up that may be open when the child forks: the entries of `/proc/self/fd`
+/// (inherited ones are open from the start; everything RemMods, std or GLib opens later is
+/// close-on-exec already), or every number below the soft `RLIMIT_NOFILE` when the listing fails.
+/// Collected before the fork: reading a directory is not async-signal-safe.
+fn fd_candidates() -> Vec<RawFd> {
+    match listed_fds(Path::new("/proc/self/fd")) {
+        Ok(fds) => fds,
+        Err(error) => {
+            log::debug!("listing /proc/self/fd failed ({error}); marking every descriptor");
+            (FIRST_INHERITED_FD..fd_scan_limit()).collect()
+        }
+    }
+}
+
+const FIRST_INHERITED_FD: RawFd = 3;
+/// Bounds the fallback scan when the soft limit is huge or unlimited; the runtime's fds sit low.
+const FD_SCAN_CAP: RawFd = 1 << 16;
+
+fn listed_fds(dir: &Path) -> io::Result<Vec<RawFd>> {
+    let mut fds = Vec::new();
+    for entry in std::fs::read_dir(dir)? {
+        let name = entry?.file_name();
+        let fd = name
+            .to_str()
+            .and_then(|name| name.parse::<RawFd>().ok())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "non-numeric fd entry"))?;
+        if fd >= FIRST_INHERITED_FD {
+            fds.push(fd);
+        }
+    }
+    Ok(fds)
+}
+
+fn fd_scan_limit() -> RawFd {
+    let soft = rustix::process::getrlimit(rustix::process::Resource::Nofile).current;
+    soft.and_then(|soft| RawFd::try_from(soft).ok())
+        .map_or(FD_SCAN_CAP, |soft| soft.min(FD_SCAN_CAP))
+}
+
+/// Runs in the forked child. A number that is not open (the listing's own directory handle, an
+/// fd closed since) answers EBADF and is skipped.
+fn mark_cloexec(fd: RawFd) -> io::Result<()> {
+    // SAFETY: the borrow only carries the number into two fcntl(2) calls and never outlives this
+    // function; nothing reads or closes through it, and a number that is not open gets EBADF.
+    let borrowed = unsafe { BorrowedFd::borrow_raw(fd) };
+    let flags = match rustix::io::fcntl_getfd(borrowed) {
+        Ok(flags) => flags,
+        Err(Errno::BADF) => return Ok(()),
+        Err(error) => return Err(error.into()),
+    };
+    if flags.contains(FdFlags::CLOEXEC) {
+        return Ok(());
+    }
+    match rustix::io::fcntl_setfd(borrowed, flags | FdFlags::CLOEXEC) {
+        Ok(()) | Err(Errno::BADF) => Ok(()),
+        Err(error) => Err(error.into()),
     }
 }

@@ -18,3 +18,8 @@ export interface InstallQueueState {
   shift: () => void
   clear: () => void
 }
+
+export interface UpdateRunState {
+  updating: boolean
+  setUpdating: (updating: boolean) => void
+}

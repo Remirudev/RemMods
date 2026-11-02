@@ -21,6 +21,8 @@ on:
       - packaging/**
       - scripts/render-pkgbuild.py
       - scripts/inspect-bundle.py
+      - scripts/seed-appimage-tools.sh
+      - package-lock.json
       - src-tauri/tauri.conf.json
       - src-tauri/tauri.linux.conf.json
       - src-tauri/tauri.windows.conf.json
@@ -99,6 +101,11 @@ jobs:
 
       - name: Build the bundles (unsigned, no updater config)
         run: npm run tauri -- build
+
+      # Fails when the bundler skipped a seeded tool and downloaded its own (W11).
+      - name: Check the AppImage tools cache
+        if: runner.os == 'Linux'
+        run: bash scripts/seed-appimage-tools.sh --verify-cache
 
       - name: Collect the bundles (Linux)
         if: runner.os == 'Linux'
