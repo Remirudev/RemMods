@@ -10,6 +10,7 @@ function noticeFor(install: AppInstallKind): UpdateNotice {
   const format = PACKAGE_FORMATS[install]
   if (format) return { kind: 'notice', notice: 'package', format }
   if (install === 'aur') return { kind: 'notice', notice: 'aur', format: null }
+  if (install === 'local') return { kind: 'notice', notice: 'local', format: null }
   return { kind: 'notice', notice: 'unknown', format: null }
 }
 

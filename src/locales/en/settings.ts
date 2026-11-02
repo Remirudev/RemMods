@@ -81,6 +81,7 @@ export const settings = {
       deb: 'Debian package (.deb)',
       rpm: 'RPM package',
       aur: 'AUR package (remmods-bin)',
+      local: 'Local install (cachyos-install.sh)',
       unknown: 'Unknown',
     },
     check: 'Check for updates',
@@ -106,6 +107,7 @@ export const settings = {
       package:
         'Installed from a package: download the new {{format}} from the releases page and install it with your package manager.',
       aur: 'Installed from the AUR: update with your AUR helper, for example paru -Syu.',
+      local: 'Installed with cachyos-install.sh: run it again from the RemMods folder to update.',
       unknown:
         'This copy was not installed from a release package. Download the new version from the releases page.',
       notConfigured: 'This build has no update channel (development or test build).',

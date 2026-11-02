@@ -84,6 +84,7 @@ export const settings: LocaleShape<typeof en> = {
       deb: 'Debian-Paket (.deb)',
       rpm: 'RPM-Paket',
       aur: 'AUR-Paket (remmods-bin)',
+      local: 'Lokale Installation (cachyos-install.sh)',
       unknown: 'Unbekannt',
     },
     check: 'Nach Updates suchen',
@@ -109,6 +110,8 @@ export const settings: LocaleShape<typeof en> = {
       package:
         'Aus einem Paket installiert: Lade das neue {{format}}-Paket von der Release-Seite herunter und installiere es mit deiner Paketverwaltung.',
       aur: 'Aus dem AUR installiert: Aktualisiere mit deinem AUR-Helfer, zum Beispiel paru -Syu.',
+      local:
+        'Mit cachyos-install.sh installiert: Führe es im RemMods-Ordner erneut aus, um zu aktualisieren.',
       unknown:
         'Diese Kopie wurde nicht aus einem Release-Paket installiert. Lade die neue Version von der Release-Seite herunter.',
       notConfigured: 'Dieser Build hat keinen Update-Kanal (Entwicklungs- oder Test-Build).',

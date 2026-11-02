@@ -34,7 +34,7 @@ export interface GameRow {
 
 export type PackageFormat = '.deb' | '.rpm'
 
-export type UpdateNoticeKey = 'package' | 'aur' | 'unknown'
+export type UpdateNoticeKey = 'package' | 'aur' | 'local' | 'unknown'
 
 export interface UpdateNotice {
   kind: 'notice'

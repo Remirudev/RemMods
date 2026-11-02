@@ -104,6 +104,25 @@ The commands below work in bash, zsh and fish. Run them in the folder you downlo
 - **Windows**: run the setup. It installs for the current user only (no administrator prompt) into
   `%LOCALAPPDATA%\RemMods` and downloads WebView2 if it is missing.
 
+**From this repository (CachyOS / Arch, no package):** `./cachyos-install.sh` builds the release
+binary when the sources are newer than it and installs it for your user only, without root and
+without a package manager:
+
+- the program as `~/.local/bin/remmods` and a marker `~/.local/lib/remmods/install-source`, so
+  Settings → Updates shows "Local install (cachyos-install.sh)";
+- the icons into `~/.local/share/icons/hicolor/` and the menu entry
+  `~/.local/share/applications/remmods.desktop` (taskbar icon and "Start in safe graphics mode"
+  included).
+
+```sh
+./cachyos-install.sh               # build when stale, then install; run it again to update
+./cachyos-install.sh --build       # force a fresh release build first
+./cachyos-install.sh --uninstall   # remove the installed files
+```
+
+It needs the build tools from [Development](#development). `PREFIX=/other/prefix` installs below
+another prefix instead of `~/.local`.
+
 Removing RemMods keeps its settings, profiles and logs (Linux: `~/.config/com.remirudev.remmods/` and
 `~/.local/share/com.remirudev.remmods/`; Windows: unless you tick "delete app data" in the
 uninstaller).
@@ -138,6 +157,7 @@ Settings → Updates also shows how this copy was installed.
 | Windows installer | The same button. RemMods closes, the installer shows its progress and starts RemMods again. |
 | deb, rpm | Settings → Updates says that a new version exists. Download the new package from the releases page and install it like the first one (`sudo apt install ./RemMods_*_amd64.deb`, `sudo dnf install ./RemMods-*-1.x86_64.rpm`). |
 | AUR | Update with your AUR helper, for example `paru -Syu`. |
+| Local install (`cachyos-install.sh`) | Pull the new sources and run `./cachyos-install.sh` again; it rebuilds and replaces the installed binary. |
 | Built from source, CI test builds | No update channel ("This build has no update channel"). |
 
 Updates are signed. RemMods installs one only after its signature matches the key built into the

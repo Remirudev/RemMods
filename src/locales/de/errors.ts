@@ -85,6 +85,8 @@ export const errors: LocaleShape<typeof en> = {
     deb: 'RemMods wurde aus einem .deb-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
     rpm: 'RemMods wurde aus einem RPM-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
     aur: 'RemMods wurde aus dem AUR installiert. Aktualisiere es mit deinem AUR-Helfer, zum Beispiel paru -Syu.',
+    local:
+      'RemMods wurde mit cachyos-install.sh installiert. Führe es im RemMods-Ordner erneut aus, um zu aktualisieren.',
     unknown:
       'Diese Kopie wurde nicht aus einem Release-Paket installiert und kann sich deshalb nicht selbst aktualisieren. Lade die neue Version von der Release-Seite herunter.',
   },

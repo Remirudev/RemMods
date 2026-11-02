@@ -10,6 +10,7 @@ pub enum AppInstallKind {
     Deb,
     Rpm,
     Aur,
+    Local,
     Unknown,
 }
 
@@ -76,6 +77,7 @@ impl From<app_update::InstallKind> for AppInstallKind {
             app_update::InstallKind::Deb => Self::Deb,
             app_update::InstallKind::Rpm => Self::Rpm,
             app_update::InstallKind::Aur => Self::Aur,
+            app_update::InstallKind::Local => Self::Local,
             app_update::InstallKind::Unknown => Self::Unknown,
         }
     }

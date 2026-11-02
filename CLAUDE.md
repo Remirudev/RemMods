@@ -55,6 +55,8 @@ e2e/                   Playwright flows: specs/, mock/ (the stateful mock backen
 scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh and smoke-paks-diff.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh;
                        release: release-check/check-workflows/check-latest-json/make-latest-json/render-pkgbuild/inspect-bundle/npm-notices.py, notices.sh, seed-appimage-tools.sh (CI only)
 packaging/             aur/PKGBUILD.in (remmods-bin), release-notes.md (draft release text, @VERSION@)
+cachyos-install.sh     the owner's local install into ~/.local: release build --no-bundle, binary,
+                       `install-source=local` marker (Settings shows "Local install"), icons, desktop entry
 about.toml, about.hbs  cargo-about config + template → THIRD-PARTY-NOTICES; npm-notices.py → THIRD-PARTY-NOTICES-NPM
 .github/workflows/     ci.yml (merge gate), release.yml (v* tags), artifacts.yml (installs every package, --smoke)
 docs/                  PLAN.md, REVIEW-LOG.md, windows-gaps.md, release-runbook.md (owner), checklists/
@@ -155,6 +157,8 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - AppImage and NSIS bundles are built only in CI; locally only `--bundles deb,rpm`. Never download and
   run linuxdeploy, appimagetool, AppRun or makensis (`scripts/seed-appimage-tools.sh` is CI-only).
   Never install a package on this machine (no `dpkg -i`, `rpm -i`, `pacman -U`, `makepkg -i/-s`).
+  `cachyos-install.sh` is the owner's to run; Claude runs it only with `PREFIX` inside `$TMPDIR`,
+  never against `~/.local`.
 - A `@tauri-apps/cli` bump (Dependabot included) fails W11 until the new tauri-bundler's
   `prepare_tools` (AppImage tool names, URLs, tools folder) is checked against
   `scripts/seed-appimage-tools.sh` and its `VERIFIED_CLI` is updated (by the owner or the main
@@ -204,6 +208,7 @@ cargo test -p remmods-core --test fs_matrix   # no-op locally; the real run is t
 scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
 npm run tauri -- build --debug --no-bundle && ./target/debug/remmods --smoke
 npm run tauri -- build --bundles deb,rpm          # local packages only (never appimage/nsis, never the release config)
+PREFIX="$TMPDIR/prefix" ./cachyos-install.sh     # test the local install; the owner runs it without PREFIX
 python3 -I scripts/inspect-bundle.py --expect deb target/release/bundle/deb/RemMods_*_amd64.deb   # or --expect rpm <rpm>
 python3 -I scripts/render-pkgbuild.py --deb <deb> --version 0.1.0 --local --out <empty dir>   # AUR files; .SRCINFO must equal makepkg --printsrcinfo
 bash scripts/notices.sh [--check] [rust|npm|all]  # THIRD-PARTY-NOTICES{,-NPM}; needs cargo install --locked --features cli cargo-about@0.9.3

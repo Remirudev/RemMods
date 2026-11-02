@@ -150,7 +150,7 @@ export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErr
 { kind: "busyCancelled" };
 
 /**  How this copy of RemMods was installed; only `appImage` and `nsis` update themselves. */
-export type AppInstallKind = "appImage" | "nsis" | "deb" | "rpm" | "aur" | "unknown";
+export type AppInstallKind = "appImage" | "nsis" | "deb" | "rpm" | "aur" | "local" | "unknown";
 
 export type AppPathsDto = {
 	config: string,

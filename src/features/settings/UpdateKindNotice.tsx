@@ -16,7 +16,7 @@ export function UpdateKindNotice({ notice }: UpdateKindNoticeProps) {
     <Alert color="blue" icon={<IconInfoCircle size={20} stroke={1.8} />}>
       <Stack gap="xs">
         <Text size="sm">{text}</Text>
-        {notice.notice !== 'aur' && (
+        {notice.notice !== 'aur' && notice.notice !== 'local' && (
           <CopyLinkRow label={t(($) => $.updates.releases)} url={RELEASES_URL} />
         )}
       </Stack>

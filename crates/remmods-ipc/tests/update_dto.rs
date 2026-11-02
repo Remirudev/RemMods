@@ -43,6 +43,7 @@ fn every_install_kind_string() {
         (AppInstallKind::Deb, "deb"),
         (AppInstallKind::Rpm, "rpm"),
         (AppInstallKind::Aur, "aur"),
+        (AppInstallKind::Local, "local"),
         (AppInstallKind::Unknown, "unknown"),
     ];
     for (kind, text) in cases {
@@ -58,6 +59,7 @@ fn install_kinds_convert_one_to_one() {
         (InstallKind::Deb, AppInstallKind::Deb),
         (InstallKind::Rpm, AppInstallKind::Rpm),
         (InstallKind::Aur, AppInstallKind::Aur),
+        (InstallKind::Local, AppInstallKind::Local),
         (InstallKind::Unknown, AppInstallKind::Unknown),
     ];
     for (core, ipc) in cases {

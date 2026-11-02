@@ -160,6 +160,20 @@ describe('UpdatesSection', () => {
     ).toBeVisible()
   })
 
+  it('tells a local install to run the install script again, without the releases link', async () => {
+    renderSection({ ...TEST_UPDATE_CHANNEL, install: 'local' })
+
+    expect(await screen.findByText('Local install (cachyos-install.sh)')).toBeVisible()
+    expect(
+      screen.getByText(
+        'Installed with cachyos-install.sh: run it again from the RemMods folder to update.',
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByText('https://github.com/Remirudev/RemMods/releases'),
+    ).not.toBeInTheDocument()
+  })
+
   it('gives an AUR install the AUR helper notice', async () => {
     const user = userEvent.setup()
     renderSection(configured('aur'))

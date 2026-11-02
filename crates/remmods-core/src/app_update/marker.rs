@@ -9,6 +9,7 @@ pub const INSTALL_SOURCE_FILE: &str = "install-source";
 pub const MARKER_MAX_BYTES: u64 = 256;
 
 const AUR_MARKER: &[u8] = b"install-source=aur";
+const LOCAL_MARKER: &[u8] = b"install-source=local";
 
 /// `<prefix>/bin/remmods` → `<prefix>/lib/remmods/install-source`; `None` when the executable is
 /// not in a `bin` folder.
@@ -26,10 +27,13 @@ pub fn marker_path(exe: &Path) -> Option<PathBuf> {
     Some(prefix.join("lib").join("remmods").join(INSTALL_SOURCE_FILE))
 }
 
-/// Exactly `install-source=aur`, optionally followed by one `\n`.
+/// Exactly `install-source=aur` or `install-source=local`, optionally followed by one `\n`.
 pub fn parse_marker(bytes: &[u8]) -> Option<InstallSource> {
-    let body = bytes.strip_suffix(b"\n").unwrap_or(bytes);
-    (body == AUR_MARKER).then_some(InstallSource::Aur)
+    match bytes.strip_suffix(b"\n").unwrap_or(bytes) {
+        AUR_MARKER => Some(InstallSource::Aur),
+        LOCAL_MARKER => Some(InstallSource::Local),
+        _ => None,
+    }
 }
 
 /// Read-only; `None` unless the marker is a regular file of at most 256 bytes that parses.

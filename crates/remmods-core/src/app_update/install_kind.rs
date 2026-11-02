@@ -19,13 +19,17 @@ pub enum InstallKind {
     Deb,
     Rpm,
     Aur,
+    /// A plain release binary that `cachyos-install.sh` put into a user prefix.
+    Local,
     Unknown,
 }
 
-/// The package that installed RemMods, as its marker file says.
+/// What installed RemMods, as its marker file says.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InstallSource {
     Aur,
+    /// `cachyos-install.sh`, which installs an unbundled release binary.
+    Local,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,6 +53,9 @@ pub fn classify_install(facts: &InstallFacts) -> InstallKind {
         Some(BundleKind::Deb) => InstallKind::Deb,
         Some(BundleKind::Rpm) => InstallKind::Rpm,
         Some(BundleKind::Nsis) => InstallKind::Nsis,
+        Some(BundleKind::Other) | None if facts.marker == Some(InstallSource::Local) => {
+            InstallKind::Local
+        }
         Some(BundleKind::AppImage | BundleKind::Msi | BundleKind::Other) | None => {
             InstallKind::Unknown
         }
@@ -60,9 +67,11 @@ pub fn classify_install(facts: &InstallFacts) -> InstallKind {
 pub fn install_permission(kind: InstallKind) -> InstallPermission {
     match kind {
         InstallKind::AppImage | InstallKind::Nsis => InstallPermission::SelfUpdate,
-        InstallKind::Deb | InstallKind::Rpm | InstallKind::Aur | InstallKind::Unknown => {
-            InstallPermission::Notice
-        }
+        InstallKind::Deb
+        | InstallKind::Rpm
+        | InstallKind::Aur
+        | InstallKind::Local
+        | InstallKind::Unknown => InstallPermission::Notice,
     }
 }
 

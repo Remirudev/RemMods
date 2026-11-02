@@ -23,30 +23,43 @@ const BUNDLES: [Option<BundleKind>; 7] = [
     Some(BundleKind::Other),
 ];
 
-const KINDS: [InstallKind; 6] = [
+const KINDS: [InstallKind; 7] = [
     InstallKind::AppImage,
     InstallKind::Nsis,
     InstallKind::Deb,
     InstallKind::Rpm,
     InstallKind::Aur,
+    InstallKind::Local,
     InstallKind::Unknown,
 ];
 
-fn expected_kind(bundle: Option<BundleKind>, aur: bool, appimage_ok: bool) -> InstallKind {
-    match bundle {
-        Some(BundleKind::AppImage) if appimage_ok => InstallKind::AppImage,
-        Some(BundleKind::Deb) if aur => InstallKind::Aur,
-        Some(BundleKind::Deb) => InstallKind::Deb,
-        Some(BundleKind::Rpm) => InstallKind::Rpm,
-        Some(BundleKind::Nsis) => InstallKind::Nsis,
+const MARKERS: [Option<InstallSource>; 3] =
+    [None, Some(InstallSource::Aur), Some(InstallSource::Local)];
+
+fn expected_kind(
+    bundle: Option<BundleKind>,
+    marker: Option<InstallSource>,
+    appimage_ok: bool,
+) -> InstallKind {
+    match (bundle, marker) {
+        (Some(BundleKind::AppImage), _) if appimage_ok => InstallKind::AppImage,
+        (Some(BundleKind::Deb), Some(InstallSource::Aur)) => InstallKind::Aur,
+        (Some(BundleKind::Deb), _) => InstallKind::Deb,
+        (Some(BundleKind::Rpm), _) => InstallKind::Rpm,
+        (Some(BundleKind::Nsis), _) => InstallKind::Nsis,
+        (Some(BundleKind::Other) | None, Some(InstallSource::Local)) => InstallKind::Local,
         _ => InstallKind::Unknown,
     }
 }
 
-fn facts(bundle: Option<BundleKind>, aur: bool, appimage_ok: bool) -> InstallFacts {
+fn facts(
+    bundle: Option<BundleKind>,
+    marker: Option<InstallSource>,
+    appimage_ok: bool,
+) -> InstallFacts {
     InstallFacts {
         bundle,
-        marker: aur.then_some(InstallSource::Aur),
+        marker,
         appimage_ok,
     }
 }
@@ -55,20 +68,20 @@ fn facts(bundle: Option<BundleKind>, aur: bool, appimage_ok: bool) -> InstallFac
 fn u1_classify_every_combination() {
     let mut rows = 0;
     for bundle in BUNDLES {
-        for aur in [false, true] {
+        for marker in MARKERS {
             for appimage_ok in [false, true] {
                 assert_eq!(
-                    classify_install(&facts(bundle, aur, appimage_ok)),
-                    expected_kind(bundle, aur, appimage_ok),
-                    "{bundle:?} aur={aur} appimage_ok={appimage_ok}"
+                    classify_install(&facts(bundle, marker, appimage_ok)),
+                    expected_kind(bundle, marker, appimage_ok),
+                    "{bundle:?} {marker:?} appimage_ok={appimage_ok}"
                 );
                 rows += 1;
             }
         }
     }
-    assert_eq!(rows, 28);
+    assert_eq!(rows, 42);
     assert_eq!(
-        classify_install(&facts(Some(BundleKind::AppImage), false, false)),
+        classify_install(&facts(Some(BundleKind::AppImage), None, false)),
         InstallKind::Unknown
     );
 }
@@ -81,6 +94,7 @@ fn u2_only_appimage_and_nsis_update_themselves() {
         (InstallKind::Deb, InstallPermission::Notice),
         (InstallKind::Rpm, InstallPermission::Notice),
         (InstallKind::Aur, InstallPermission::Notice),
+        (InstallKind::Local, InstallPermission::Notice),
         (InstallKind::Unknown, InstallPermission::Notice),
     ];
     for (kind, permission) in expected {
@@ -90,16 +104,41 @@ fn u2_only_appimage_and_nsis_update_themselves() {
 
 #[test]
 fn u3_the_aur_marker_counts_only_for_deb_bundles() {
-    let aur = classify_install(&facts(Some(BundleKind::Deb), true, true));
+    let aur_marker = Some(InstallSource::Aur);
+    let aur = classify_install(&facts(Some(BundleKind::Deb), aur_marker, true));
     assert_eq!(aur, InstallKind::Aur);
     assert_eq!(install_permission(aur), InstallPermission::Notice);
     assert_eq!(
-        classify_install(&facts(Some(BundleKind::Rpm), true, true)),
+        classify_install(&facts(Some(BundleKind::Rpm), aur_marker, true)),
         InstallKind::Rpm
     );
     assert_eq!(
-        classify_install(&facts(None, true, true)),
+        classify_install(&facts(None, aur_marker, true)),
         InstallKind::Unknown
+    );
+}
+
+#[test]
+fn u3b_the_local_marker_counts_only_for_unbundled_binaries() {
+    let local_marker = Some(InstallSource::Local);
+    let local = classify_install(&facts(None, local_marker, true));
+    assert_eq!(local, InstallKind::Local);
+    assert_eq!(install_permission(local), InstallPermission::Notice);
+    assert!(!may_self_install(local, None));
+    assert_eq!(
+        classify_install(&facts(Some(BundleKind::Other), local_marker, false)),
+        InstallKind::Local
+    );
+    for bundle in [BundleKind::Deb, BundleKind::Rpm, BundleKind::Nsis] {
+        assert_ne!(
+            classify_install(&facts(Some(bundle), local_marker, true)),
+            InstallKind::Local,
+            "{bundle:?}"
+        );
+    }
+    assert_eq!(
+        classify_install(&facts(Some(BundleKind::AppImage), local_marker, true)),
+        InstallKind::AppImage
     );
 }
 
@@ -250,7 +289,15 @@ fn u6_parse_marker_is_exact() {
         parse_marker(b"install-source=aur\n"),
         Some(InstallSource::Aur)
     );
-    let refused: [&[u8]; 9] = [
+    assert_eq!(
+        parse_marker(b"install-source=local"),
+        Some(InstallSource::Local)
+    );
+    assert_eq!(
+        parse_marker(b"install-source=local\n"),
+        Some(InstallSource::Local)
+    );
+    let refused: [&[u8]; 13] = [
         b"install-source=aur\r\n",
         b"\xEF\xBB\xBFinstall-source=aur",
         b" install-source=aur",
@@ -258,6 +305,10 @@ fn u6_parse_marker_is_exact() {
         b"install-source=AUR",
         b"install-source=aur\n\n",
         b"install-source=deb",
+        b"install-source=LOCAL",
+        b"install-source=local ",
+        b"install-source=local\r\n",
+        b"install-source=localx",
         b"",
         b"\n",
     ];
@@ -302,6 +353,9 @@ fn u7_marker_path_and_read_marker() {
 
     fs::write(&file, b"install-source=aur\n").expect("marker");
     assert_eq!(read_marker(&exe), Some(InstallSource::Aur));
+
+    fs::write(&file, b"install-source=local\n").expect("local marker");
+    assert_eq!(read_marker(&exe), Some(InstallSource::Local));
 
     let oversize = vec![b'x'; usize::try_from(MARKER_MAX_BYTES).expect("size") + 1];
     fs::write(&file, oversize).expect("oversize marker");

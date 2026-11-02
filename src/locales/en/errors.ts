@@ -76,6 +76,8 @@ export const errors = {
     deb: 'RemMods was installed from a .deb package. Install the new version with your package manager.',
     rpm: 'RemMods was installed from an RPM package. Install the new version with your package manager.',
     aur: 'RemMods was installed from the AUR. Update it with your AUR helper, for example paru -Syu.',
+    local:
+      'RemMods was installed with cachyos-install.sh. Run it again from the RemMods folder to update.',
     unknown:
       'This copy was not installed from a release package, so it cannot update itself. Download the new version from the releases page.',
   },

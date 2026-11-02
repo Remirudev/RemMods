@@ -18,6 +18,7 @@ const CONFIGURED: [AppInstallKind, UpdateOffer][] = [
   ['deb', { kind: 'notice', notice: 'package', format: '.deb' }],
   ['rpm', { kind: 'notice', notice: 'package', format: '.rpm' }],
   ['aur', { kind: 'notice', notice: 'aur', format: null }],
+  ['local', { kind: 'notice', notice: 'local', format: null }],
   ['unknown', { kind: 'notice', notice: 'unknown', format: null }],
 ]
 
@@ -50,6 +51,7 @@ describe('kindNotice', () => {
     })
     expect(kindNotice(channel('rpm', isConfigured))?.format).toBe('.rpm')
     expect(kindNotice(channel('aur', isConfigured))?.notice).toBe('aur')
+    expect(kindNotice(channel('local', isConfigured))?.notice).toBe('local')
     expect(kindNotice(channel('appImage', isConfigured))).toBeNull()
     expect(kindNotice(channel('nsis', isConfigured))).toBeNull()
   })
