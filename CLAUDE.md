@@ -48,7 +48,7 @@ src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust te
   tauri.{linux,windows}.conf.json  bundle targets, depends, notices files; tauri.release.conf.json:
                        updater config + updater artifacts, used only by release.yml
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
-scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh;
+scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh and smoke-paks-diff.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh;
                        release: release-check/check-workflows/check-latest-json/make-latest-json/render-pkgbuild/inspect-bundle/npm-notices.py, notices.sh, seed-appimage-tools.sh (CI only)
 packaging/             aur/PKGBUILD.in (remmods-bin), release-notes.md (draft release text, @VERSION@)
 about.toml, about.hbs  cargo-about config + template → THIRD-PARTY-NOTICES; npm-notices.py → THIRD-PARTY-NOTICES-NPM

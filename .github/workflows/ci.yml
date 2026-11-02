@@ -219,8 +219,9 @@ jobs:
         run: ./target/debug/remmods.exe --smoke
 
       # Scans the generated fixture (check scanFixture), toggles Standard:Alpha and Logic:Tool off and
-      # on (check toggleRoundTrip) and proves Paks ends as it began. Folder mtimes are ignored: the
-      # round trip renames inside Mods and LogicMods, which bumps their mtimes on every file system.
+      # on (check toggleRoundTrip) and installs install-smoke.zip (check installFixture).
+      # smoke-paks-diff.sh proves the install added exactly Mods/SmokeInstall/ and everything else in
+      # Paks ends as it began.
       - name: Smoke test with fixture (Xvfb)
         if: runner.os == 'Linux'
         timeout-minutes: 5
@@ -231,8 +232,7 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" ./target/debug/remmods --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
-            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
 
       - name: Smoke test with fixture
         if: runner.os == 'Windows'
@@ -245,8 +245,7 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           ./target/debug/remmods.exe --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
-            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
 
       - name: Upload smoke logs
         if: failure()
