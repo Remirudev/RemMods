@@ -11,7 +11,8 @@ use rustix::fs::{AtFlags, CWD, StatxFlags, statx};
 use rustix::io::Errno;
 
 use super::super::{
-    DirTraits, MountId, TopdirPolicy, TrashEnv, TrashKind, TrashLocation, TrashUnavailableReason,
+    DirTraits, MountId, Recycled, TopdirPolicy, TrashEnv, TrashKind, TrashLocation,
+    TrashUnavailableReason,
 };
 
 const STICKY: u32 = 0o1000;
@@ -32,6 +33,15 @@ pub(in crate::platform) fn trash_env_from_env() -> TrashEnv {
         uid: current_uid(),
         topdirs: TopdirPolicy::Detect,
     }
+}
+
+/// The Recycle Bin is Windows only.
+pub(in crate::platform) fn recycle(_item: &Path, _force_abort: bool) -> io::Result<Recycled> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(in crate::platform) fn enter_mta_for_tests() -> io::Result<()> {
+    Err(io::ErrorKind::Unsupported.into())
 }
 
 pub(in crate::platform) fn mount_identity(path: &Path) -> io::Result<MountId> {

@@ -27,6 +27,7 @@ function openRename(client: QueryClient, subject: ManageSubject, suggestedName?:
         siblings={siblingFolds(rows, row)}
         originalApp={originalAppRunning(client)}
         onClose={() => modals.close(modalId)}
+        modalId={modalId}
       />
     ),
   })

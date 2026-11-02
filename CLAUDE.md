@@ -16,7 +16,7 @@ disagree, ask before changing either.
 | Shell | Tauri 2.12.5; plugins single-instance, log, window-state, opener, updater 2.14.1 (Rust only, release builds only). No fs, shell or process plugins |
 | IPC | tauri-specta + specta `=2.0.0-rc.26`, specta-typescript 0.0.13; bumped together by hand |
 | UI | React 19.3, Mantine 9.7 (Quiet Canvas theme), TanStack Query, zustand (UI state only), i18next EN + DE |
-| Tooling | Node 26, Vite 8, TypeScript 6.0 (not 7: no tsserver for WebStorm), Biome 2.6, Vitest 5 + jsdom |
+| Tooling | Node 26, Vite 8, TypeScript 6.0 (not 7: no tsserver for WebStorm), Biome 2.6, Vitest 5 + jsdom, Playwright 1.64.1 (Chromium only) |
 | CI | GitHub Actions on ubuntu-24.04 and windows-2025; cargo-deny 0.20.2, cargo-about 0.9.3; Dependabot weekly |
 | Packages | AppImage, deb + rpm (package `rem-mods`), AUR `remmods-bin` (repackaged deb), NSIS per user; built only in CI |
 
@@ -25,9 +25,12 @@ disagree, ask before changing either.
 ```
 crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/platform/        the only place for cfg and unsafe; one API, identical signatures on both OSes
-                       (host_env.rs: cfg-free env plan for host_command, CLI paths against $OWD)
+                       (host_env.rs: cfg-free env plan for host_command, CLI paths against $OWD;
+                       windows/recycle.rs: the Recycle Bin mover (IFileOperation, fresh STA thread, the
+                       sink aborts instead of deleting))
   src/safe_fs/         the only place that mutates the file system: scope, rename, batch, journal, gate,
-                       watch (names.rs: Windows name rules; app_files.rs: removing one app-folder file)
+                       watch (names.rs: Windows name rules; app_files.rs: removing one app-folder file;
+                       busy.rs: folder-busy waits with Cancel, WG-2)
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
@@ -48,6 +51,7 @@ src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust te
   tauri.{linux,windows}.conf.json  bundle targets, depends, notices files; tauri.release.conf.json:
                        updater config + updater artifacts, used only by release.yml
 src/                   React app: app/ (shell, title bar, rail, smoke), features/<x>/, shared/, lib/, locales/
+e2e/                   Playwright flows: specs/, mock/ (the stateful mock backend that `vite --mode e2e` injects)
 scripts/               check-cfg/native/commands.sh, fs-matrix-mount.sh and smoke-paks-diff.sh (CI only), paks-snapshot.sh, make-fixtures/make-archive-fixtures/scan-expect/proc-capture/utoc-list.py, utoc-compare.sh;
                        release: release-check/check-workflows/check-latest-json/make-latest-json/render-pkgbuild/inspect-bundle/npm-notices.py, notices.sh, seed-appimage-tools.sh (CI only)
 packaging/             aur/PKGBUILD.in (remmods-bin), release-notes.md (draft release text, @VERSION@)
@@ -80,6 +84,8 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - IPC: DTOs are camelCase with no `PathBuf`/`OsString` (display strings only) and no `u64`/`usize`/`i64`
   (use `f64` or `u32`); every `f64` field carries `#[specta(type = specta_typescript::Number)]`;
   struct variants inside `#[serde(tag = "kind")]` enums use single-word field names only. `AppError` is tagged by `kind` and carries no English; the UI translates it.
+- `mods_busy_cancel` is called directly, never inside the `fs` mutation scope (that scope is busy with
+  the waiting call).
 
 ## Platform and file-system rules
 
@@ -103,7 +109,9 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   (`clippy.toml`) bans the std mutators everywhere else: `std::fs` writes, copies, renames,
   removals and links, opening for writing (`OpenOptions::write/append/create/create_new/truncate`,
   `File::create*`), `File::set_len/set_permissions/set_times/set_modified`, `DirBuilder::create`
-  and the OS symlink functions, plus the rustix and windows-sys rename, link, unlink and mkdir calls.
+  and the OS symlink functions, plus the rustix and windows-sys rename, link, unlink and mkdir calls
+  and the windows crate's `IFileOperation::DeleteItem/DeleteItems/PerformOperations` (used only in
+  `platform/windows/recycle.rs`, which only `safe_fs` calls through `platform::recycle`).
   A new mutator API gets added there. Mod paths change only through `OpGate::write` and
   `WriteGuard::rename_batch`; fault injection in tests is a runtime `FaultPlan` in `BatchOptions`,
   not a cargo feature. JSON is written with
@@ -119,8 +127,12 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   version is not kept) or, on Windows, writes the installer to `%TEMP%` and NSIS installs per user.
   The update confirmation is the only confirmation. deb, rpm and AUR installs never self-update; the
   updater never runs `dpkg`, `rpm` or `pkexec`.
-- The Trash is reached only through `platform::trash_location` + `safe_fs` `WriteGuard::trash`; tests
-  pass a `TrashEnv` inside their TempDir and never use `TrashEnv::from_env()` (only the shell does).
+- The Trash is reached only through `platform::trash_location` + `safe_fs` `WriteGuard::trash`; on
+  Windows that means the Recycle Bin via `platform::recycle`, only with `TopdirPolicy::Detect`
+  (`TrashEnv::from_env()` in the shell). Tests pass a `TrashEnv` inside their TempDir and never use
+  `TrashEnv::from_env()` (only the shell does); only `platform_windows_recycle.rs` opts in to the
+  Recycle Bin (`Detect`, its own `remmods-recycle-test-*` items), and the sink aborts every
+  permanent delete.
   Permanent delete needs a token from `mods_delete_prepare` (the second confirmation);
   `remove_aside` and `discard_staging` (one shared inert-temp-folder check) are the only recursive
   deletes under a mod root.
@@ -181,6 +193,9 @@ npm run lint                      # biome ci .   (npm run check fixes, npm run f
 npm run typecheck                 # tsc -b
 npm test                          # vitest run (projects: unit = node, dom = jsdom)
 npm run build                     # tsc -b && vite build
+npm run e2e                       # Playwright (Chromium) against vite --mode e2e + the mock backend;
+                                  # locally: env REMMODS_E2E_CHROMIUM=/usr/bin/chromium npm run e2e
+npm run e2e:serve                 # only the mock-backed UI on 127.0.0.1:1431
 npm run bindings                  # regenerate src/lib/ipc/bindings.ts (commit it)
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -220,6 +235,8 @@ look SHAs up with `git ls-remote`.
   the sandbox and report it instead.
 - Anything that opens a window (`npm run tauri dev`, `remmods --smoke`) needs the real display, so
   it also runs only with the sandbox off, under the same rule.
+- Never `npx playwright install` locally: e2e runs use the system Chromium
+  (`REMMODS_E2E_CHROMIUM=/usr/bin/chromium`); CI installs Playwright's Chromium.
 - No sudo. Commit, push or switch branches only when the user asks.
 - The user's shell is fish; commands meant for them must work in fish.
 - The game's Paks folder is only touched during the in-game checklist (`docs/checklists/ingame-linux.md`),

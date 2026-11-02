@@ -2,6 +2,7 @@ import { ActionIcon, Box, Kbd, Menu } from '@mantine/core'
 import { IconDots, IconPencil, IconTrash, IconTrashX } from '@tabler/icons-react'
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { canManage, rowSubject } from './manage-model'
 import type { RowMenuProps } from './types'
 
@@ -42,7 +43,7 @@ export function RowMenu({ row, onManage }: RowMenuProps) {
             disabled={!canManage(subject, 'trash')}
             onClick={() => onManage('trash', row)}
           >
-            {t(($) => $.rowMenu.trash)}
+            {t(($) => $.rowMenu.trash, { place: trashPlaceWord() })}
           </Menu.Item>
           <Menu.Item
             color="red"

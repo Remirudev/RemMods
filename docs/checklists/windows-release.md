@@ -43,7 +43,8 @@ installs per user with `/S`, checks that `--smoke` reports the install kind `nsi
       toggling while the game runs changes nothing on disk.
 - [ ] Enabling a disabled mod while the game runs works.
 - [ ] Record the `MoveFileExW` error code for an existing target (183 or 80).
-- [ ] Record which holder Restart Manager names while Defender scans a freshly installed mod.
+- [ ] While Defender scans a freshly installed mod, toggling it shows the folder-busy toast or
+      completes; record which (WG-1 holder names are deferred).
 
 ## Shell integration
 
@@ -67,6 +68,33 @@ installs per user with `/S`, checks that `--smoke` reports the install kind `nsi
       folders are removed.
 - [ ] A silent uninstall (`& "$env:LOCALAPPDATA\RemMods\uninstall.exe" /S` in PowerShell) keeps both app
       folders (`%APPDATA%\com.remirudev.remmods`, `%LOCALAPPDATA%\com.remirudev.remmods`).
+
+## Recycle Bin and folder-busy wait (P3b)
+
+CI covers the abort path and a real held folder handle (WG-5, WG-2 in docs/windows-gaps.md); these
+are the cases only a real PC shows.
+
+- [ ] Trash moves a mod folder into the Recycle Bin; it shows there under its name and restores to Paks.
+- [ ] A loose mod (`.pak` group) moves to the Recycle Bin and restores.
+- [ ] Bin turned off for the drive ("Don't move files to the Recycle Bin", or size 0) → "The Recycle
+      Bin cannot be used" ("Windows would not move this folder to the Recycle Bin …") and nothing
+      deleted; "Delete permanently" then removes it after the second confirmation.
+- [ ] A mod on a network share or USB stick without a bin → the same refusal, nothing deleted.
+- [ ] A folder named `Foo.` (made in cmd with `mkdir "\\?\<Paks>\Mods\Foo."`) next to `Foo`: Trash
+      refuses with "Windows cannot move this name to the Recycle Bin. Rename it in Repair first, or
+      delete it permanently.", both folders unchanged.
+- [ ] Folder-busy: open a mod's folder in Explorer and disable that Logic mod (or rename a mod): after
+      about a second the "Waiting for a folder in use" toast appears with the elapsed seconds; close
+      Explorer → the change completes and the toast closes. Repeat and press Cancel (or Enter) →
+      "Cancelled. No mod was changed."; the disk is unchanged.
+- [ ] A file of a mod held open in another program (for example a hex editor) → Trash fails, the
+      folder is complete.
+- [ ] Recycle Bin size limit smaller than a loose mod's `.utoc` → the `.pak` is in the bin, the
+      companions stay inert in Mods, the row is reported as failed.
+- [ ] Bulk trash of three mods ("Move to Recycle Bin (3)") → "Moved 3 mods to the Recycle Bin.", three
+      in the Recycle Bin.
+- [ ] Only if CI ignored them (`#[ignore]` in `crates/remmods-core/tests/platform_windows_recycle.rs`):
+      the W6–W10/W12 cases by hand.
 
 ## Runs
 

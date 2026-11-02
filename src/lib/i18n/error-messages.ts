@@ -1,4 +1,5 @@
 import { formatSize } from '../../shared/format-size'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { isIpcError } from '../ipc/ipc-error'
 import type { AppError } from '../ipc/types'
 import { i18n } from './index'
@@ -95,13 +96,13 @@ export function describeAppError(error: AppError): ErrorDescription {
       const action = error.action
       return {
         title: t(($) => $.titles.manageBlocked),
-        message: `${t(($) => $.manageBlocked.action[action])} ${t(($) => $.manageBlocked.reason[reason])}`,
+        message: `${t(($) => $.manageBlocked.action[action], { place: trashPlaceWord() })} ${t(($) => $.manageBlocked.reason[reason])}`,
       }
     }
     case 'trashUnavailable': {
       const reason = error.reason
       return {
-        title: t(($) => $.titles.trashUnavailable),
+        title: t(($) => $.titles.trashUnavailable, { place: trashPlaceWord() }),
         message: t(($) => $.trashUnavailable[reason]),
       }
     }
@@ -204,6 +205,11 @@ export function describeAppError(error: AppError): ErrorDescription {
         message: t(($) => $.unsupported[feature]),
       }
     }
+    case 'busyCancelled':
+      return {
+        title: t(($) => $.titles.busyCancelled),
+        message: t(($) => $.messages.busyCancelled),
+      }
     case 'revealFailed': {
       const reason = error.reason
       return {

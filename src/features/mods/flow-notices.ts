@@ -1,5 +1,6 @@
 import { notifications } from '@mantine/notifications'
 import { i18n } from '../../lib/i18n'
+import { placeOfKind } from '../../shared/trash-place'
 import type { FlowNotice } from './types'
 
 export function showFlowNotice(notice: FlowNotice): void {
@@ -7,7 +8,10 @@ export function showFlowNotice(notice: FlowNotice): void {
   switch (notice.kind) {
     case 'trashDone':
       notifications.show({
-        message: t(($) => $.trash.done, { name: notice.name }),
+        message:
+          placeOfKind(notice.trash) === 'recycleBin'
+            ? t(($) => $.trash.doneRecycle, { name: notice.name })
+            : t(($) => $.trash.done, { name: notice.name }),
         autoClose: 6000,
       })
       return

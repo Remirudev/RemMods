@@ -86,7 +86,7 @@ describe('trashWithFallback', () => {
     await trashWithFallback(SUBJECT, h.deps)
     expect(h.calls).toEqual(['trash:false'])
     expect(h.stored).toEqual([SNAPSHOT])
-    expect(h.notices).toEqual([{ kind: 'trashDone', name: 'Alpha' }])
+    expect(h.notices).toEqual([{ kind: 'trashDone', name: 'Alpha', trash: 'home' }])
   })
 
   it('does nothing when the first confirm is cancelled', async () => {

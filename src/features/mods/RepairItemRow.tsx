@@ -2,6 +2,7 @@ import { Badge, Button, Code, Group, Paper, Stack, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import { ipc } from '../../lib/ipc'
 import type { RepairAction } from '../../lib/ipc/types'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { useRevealEntry } from './queries'
 import { isActionAvailable, planRepairAction } from './repair-model'
 import type { ManageSubject, RepairItemRowProps } from './types'
@@ -80,7 +81,7 @@ export function RepairItemRow({ item }: RepairItemRowProps) {
                 color={action === 'deletePermanently' ? 'red' : undefined}
                 onClick={() => run(action)}
               >
-                {t(($) => $.repair.actions[action])}
+                {t(($) => $.repair.actions[action], { place: trashPlaceWord() })}
               </Button>
             ))}
         </Group>

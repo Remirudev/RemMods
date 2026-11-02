@@ -13,7 +13,8 @@ pub(super) use fs::{
     create_new_file, create_private_dir, lock_probe, rename_noreplace, rename_noreplace_across,
 };
 pub(super) use trash::{
-    current_uid, dir_traits, mount_identity, trash_env_from_env, trash_location,
+    current_uid, dir_traits, enter_mta_for_tests, mount_identity, recycle, trash_env_from_env,
+    trash_location,
 };
 
 use super::{

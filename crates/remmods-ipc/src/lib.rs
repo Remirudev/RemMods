@@ -2,6 +2,8 @@
 //! only) and no `u64` (JavaScript numbers lose precision past 2^53).
 
 mod about;
+mod bulk;
+mod busy;
 mod content;
 mod error;
 mod game;
@@ -20,6 +22,11 @@ mod toggle;
 mod update;
 
 pub use about::Notices;
+pub use bulk::{
+    BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult, BulkTrashRequest,
+    PreparedRow,
+};
+pub use busy::{BusyPhase, FolderBusyInfo};
 pub use content::{
     AssetEntry, AssetOrigin, BaseIndexState, CharacterHint, ContainerStatus, ContainerSummary,
     ContentConflictLink, ContentSummary, ModContents, Slot, SlotHint,

@@ -57,6 +57,20 @@ export const commands = {
 	modsDeletePermanently: (request: DeleteRequest) => typedError<DeleteOutcome, AppError>(__TAURI_INVOKE("mods_delete_permanently", { request })),
 	/**  Writes the row's `modinfo.json` (the previous one is backed up first). */
 	modsSetMetadata: (request: MetadataRequest) => typedError<ModsSnapshot, AppError>(__TAURI_INVOKE("mods_set_metadata", { request })),
+	/**  Moves several rows to the Trash in one call (one write guard, one rescan); per-row results. */
+	modsTrashMany: (request: BulkTrashRequest) => typedError<BulkOutcome, AppError>(__TAURI_INVOKE("mods_trash_many", { request })),
+	/**
+	 *  First step of a bulk permanent delete: checks every row and issues one token for the eligible
+	 *  ones. Writes nothing.
+	 */
+	modsDeletePrepareMany: (targets: ModTarget[]) => typedError<BulkDeletePrepared, AppError>(__TAURI_INVOKE("mods_delete_prepare_many", { targets })),
+	/**  Second step, after the second confirmation: consumes the token and deletes the rows it covers. */
+	modsDeleteMany: (request: BulkDeleteRequest) => typedError<BulkOutcome, AppError>(__TAURI_INVOKE("mods_delete_many", { request })),
+	/**
+	 *  Cancels folder-busy wait `wait_id` (WG-2); false when it ended or cannot be cancelled. Never
+	 *  waits for the write lock or the blocking pool, so it answers while a mutation is running.
+	 */
+	modsBusyCancel: (waitId: number) => typedError<boolean, AppError>(__TAURI_INVOKE("mods_busy_cancel", { waitId })),
 	/**  Leftovers and rows that need attention, each with the actions the UI offers. Read-only. */
 	repairList: () => typedError<RepairList, AppError>(__TAURI_INVOKE("repair_list")),
 	profilesList: () => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_list")),
@@ -104,6 +118,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	folderBusy: makeEvent<FolderBusy, FolderBusy>("folder-busy"),
 	gameStatusChanged: makeEvent<GameStatusChanged, GameStatusChanged>("game-status-changed"),
 	installDrop: makeEvent<InstallDrop, InstallDrop>("install-drop"),
 	modsChanged: makeEvent<ModsChanged, ModsChanged>("mods-changed"),
@@ -130,7 +145,9 @@ export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErr
 /**  This build carries no updater config (local, dev, CI and `--smoke` builds). */
 { kind: "updateNotConfigured" } | 
 /**  This install kind updates through its package manager, never by itself. */
-{ kind: "updateNotAllowed"; install: AppInstallKind } | { kind: "updateBlocked"; reason: UpdateBlock } | { kind: "updateFailed"; stage: UpdateStage } | { kind: "unsupported"; feature: PlatformFeature };
+{ kind: "updateNotAllowed"; install: AppInstallKind } | { kind: "updateBlocked"; reason: UpdateBlock } | { kind: "updateFailed"; stage: UpdateStage } | { kind: "unsupported"; feature: PlatformFeature } | 
+/**  The user cancelled a wait for a folder in use; nothing was changed. */
+{ kind: "busyCancelled" };
 
 /**  How this copy of RemMods was installed; only `appImage` and `nsis` update themselves. */
 export type AppInstallKind = "appImage" | "nsis" | "deb" | "rpm" | "aur" | "unknown";
@@ -211,6 +228,48 @@ export type AssetEntry = {
 export type AssetOrigin = "adds" | "replaces" | "unknown";
 
 export type BaseIndexState = "complete" | "partial" | "unavailable" | "loading";
+
+/**
+ *  `token` is null when no row is eligible; it covers exactly the rows without a refusal, in
+ *  order.
+ */
+export type BulkDeletePrepared = {
+	token: string | null,
+	rows: PreparedRow[],
+	expiresInSecs: number,
+};
+
+export type BulkDeleteRequest = {
+	targets: ModTarget[],
+	token: string,
+	applyWhileRunning: boolean,
+};
+
+/**  `snapshot` is null when the final rescan failed after rows ran; the rows still count. */
+export type BulkOutcome = {
+	snapshot: ModsSnapshot | null,
+	rows: BulkRow[],
+};
+
+/**  `name` is the row's display name in the fresh scan (its key when it was not found). */
+export type BulkRow = {
+	target: ModTarget,
+	name: string,
+	result: BulkRowResult,
+};
+
+/**
+ *  What a bulk call did with one row. `unavailable` (trash only) changed nothing and lets the UI
+ *  offer the permanent delete; `notRun` rows were skipped after a cancelled folder-busy wait.
+ */
+export type BulkRowResult = { kind: "trashed"; items: number; trash: TrashKind } | { kind: "deleted"; leftover: string | null } | { kind: "unavailable"; reason: TrashUnavailableReason; size: number | null } | { kind: "failed"; error: AppError } | { kind: "notRun" };
+
+export type BulkTrashRequest = {
+	targets: ModTarget[],
+	applyWhileRunning: boolean,
+};
+
+export type BusyPhase = "waiting" | "done" | "timedOut" | "cancelled" | "failed";
 
 export type CandidatePick = {
 	id: number,
@@ -339,6 +398,20 @@ export type ExistingRelation = "sameName" | "foldEqual" | "disabledPrefix";
 export type ExportReport = {
 	count: number,
 	fileName: string,
+};
+
+/**
+ *  `folder-busy`: a folder rename waits for another program (WG-2): `waiting` about once a second,
+ *  then one of `done`, `timedOut`, `cancelled`, `failed`.
+ */
+export type FolderBusy = {
+	waitId: number,
+	phase: BusyPhase,
+	folder: string,
+	holders: string[],
+	elapsedMs: number,
+	limitMs: number,
+	cancellable: boolean,
 };
 
 export type FolderProblem = "notFound" | "ambiguous" | "notUnicode" | "unreadable";
@@ -718,6 +791,17 @@ export type PlatformInfo = {
 	features: PlatformFeatures,
 };
 
+/**
+ *  One row of a bulk delete prepare; `refusal` says why it cannot be deleted (null: the token
+ *  covers it).
+ */
+export type PreparedRow = {
+	target: ModTarget,
+	name: string,
+	size: number | null,
+	refusal: AppError | null,
+};
+
 /**  `mods` is sorted by key bytes. */
 export type Profile = {
 	id: string,
@@ -945,7 +1029,7 @@ export type TransferOutcome = { kind: "imported"; report: ImportReport } | { kin
 /**  The one file-dialog command; the dialog title comes from the UI. */
 export type TransferRequest = { kind: "importTmm"; title: string } | { kind: "import"; title: string } | { kind: "export"; title: string; defaultFileName: string };
 
-export type TrashKind = "home" | "topdirShared" | "topdirUser";
+export type TrashKind = "home" | "topdirShared" | "topdirUser" | "recycleBin";
 
 export type TrashOutcome = {
 	snapshot: ModsSnapshot,
@@ -959,7 +1043,7 @@ export type TrashRequest = {
 	applyWhileRunning: boolean,
 };
 
-export type TrashUnavailableReason = "otherDevice" | "noUsableTrash" | "notSupported";
+export type TrashUnavailableReason = "otherDevice" | "noUsableTrash" | "notSupported" | "recycleRefused" | "notShellSafe";
 
 export type UnmanagedEntry = {
 	modRef: string,

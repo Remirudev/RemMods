@@ -47,7 +47,7 @@ impl Core {
         self.check_marker(&input)?;
         let result = self.toggle_under_guard(&guard, &input, &choice, enable, apply_while_running);
         // Always publish what is on disk now; the service directly, never `mods_refresh` (§3).
-        let refreshed = self.mods.refresh(&input);
+        let refreshed = self.final_refresh(&input);
         match (result, refreshed) {
             (Ok(applied), Ok(refreshed)) => Ok(ToggleOutcome {
                 refreshed,

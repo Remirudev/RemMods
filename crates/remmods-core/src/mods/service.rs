@@ -36,6 +36,9 @@ pub struct Refreshed {
 struct Cached {
     snapshot: Arc<ScanSnapshot>,
     scan_started: u64,
+    /// Set when a rescan after a mutation failed: the disk changed after this scan, so it is
+    /// never answered from the cache again; the next scan clears it.
+    stale: bool,
 }
 
 impl ModsService {
@@ -116,6 +119,14 @@ impl ModsService {
         Ok(self.publish(output, scan_started, scanned_at))
     }
 
+    /// After a mutation whose final rescan failed: `list`, `cached` and `refresh` scan again
+    /// instead of answering with the snapshot taken before the mutation. The revision is kept.
+    pub(crate) fn mark_stale(&self) {
+        if let Some(cached) = lock(&self.cache).as_mut() {
+            cached.stale = true;
+        }
+    }
+
     pub fn last(&self) -> Option<Arc<ScanSnapshot>> {
         lock(&self.cache)
             .as_ref()
@@ -124,7 +135,7 @@ impl ModsService {
 
     fn cached_for(&self, input: &ScanInput) -> Option<CachedView> {
         let cache = lock(&self.cache);
-        let cached = cache.as_ref()?;
+        let cached = cache.as_ref().filter(|cached| !cached.stale)?;
         let content = &cached.snapshot.content;
         (content.paks == input.paks && content.paks_id == input.paks_id).then(|| CachedView {
             snapshot: Arc::clone(&cached.snapshot),
@@ -143,6 +154,7 @@ impl ModsService {
             && cached.snapshot.content == output.content
         {
             cached.scan_started = scan_started;
+            cached.stale = false;
             return Refreshed {
                 snapshot: Arc::clone(&cached.snapshot),
                 changed: false,
@@ -161,6 +173,7 @@ impl ModsService {
         *cache = Some(Cached {
             snapshot: Arc::clone(&snapshot),
             scan_started,
+            stale: false,
         });
         Refreshed {
             snapshot,

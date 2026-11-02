@@ -1,6 +1,12 @@
 import type {
+  AppError,
   AppUpdateChannel,
+  BulkDeletePrepared,
+  BulkOutcome,
+  BulkRow,
+  BulkRowResult,
   ContentSummary,
+  FolderBusy,
   GameCandidate,
   GameStatus,
   GraphicsState,
@@ -12,6 +18,7 @@ import type {
   ModsSnapshot,
   Notices,
   PlatformInfo,
+  PreparedRow,
   Settings,
 } from '../lib/ipc/types'
 
@@ -212,4 +219,45 @@ export const TEST_CONTENTS: ModContents = {
 export const INSTALL_WITHOUT_MANIFEST: Pick<InstallInfo, 'buildId' | 'updateTracking'> = {
   buildId: null,
   updateTracking: 'noManifest',
+}
+
+function targetOf(name: string) {
+  const key = name.toLowerCase()
+  return { modRef: `m:${key}`, key }
+}
+
+export function makeBulkRow(name: string, result: BulkRowResult): BulkRow {
+  return { target: targetOf(name), name, result }
+}
+
+export function makeBulkOutcome(
+  rows: BulkRow[],
+  snapshot: ModsSnapshot | null = makeSnapshot([], { revision: 2 }),
+): BulkOutcome {
+  return { snapshot, rows }
+}
+
+export function makePreparedRow(
+  name: string,
+  size: number | null = 2048,
+  refusal: AppError | null = null,
+): PreparedRow {
+  return { target: targetOf(name), name, size, refusal }
+}
+
+export function makeBulkPrepared(rows: PreparedRow[], token: string | null): BulkDeletePrepared {
+  return { token, rows, expiresInSecs: 120 }
+}
+
+export function makeFolderBusy(overrides: Partial<FolderBusy> = {}): FolderBusy {
+  return {
+    waitId: 7,
+    phase: 'waiting',
+    folder: 'Mods/Alpha',
+    holders: [],
+    elapsedMs: 1200,
+    limitMs: 30000,
+    cancellable: true,
+    ...overrides,
+  }
 }

@@ -113,6 +113,8 @@ pub enum AppError {
     Unsupported {
         feature: PlatformFeature,
     },
+    /// The user cancelled a wait for a folder in use; nothing was changed.
+    BusyCancelled,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -141,17 +143,23 @@ impl AppError {
 impl From<CoreError> for AppError {
     fn from(error: CoreError) -> Self {
         log::warn!("command failed: {error}");
-        match error {
-            CoreError::Fs(error) => fs_error(error),
-            CoreError::Settings(error) => settings_error(error),
-            CoreError::MissingHomeDir => Self::Internal,
-            CoreError::Game(error) => game_error(error),
-            CoreError::Mods(error) => mods_error(error),
-            CoreError::Profiles(error) => profile_error(error),
-            CoreError::Install(error) => install_error(error),
-            CoreError::AppUpdate(error) => app_update_error(error),
-            CoreError::Graphics(error) => graphics_error(error),
-        }
+        quiet(error)
+    }
+}
+
+/// The conversion without the per-error warning: bulk rows and prepare refusals log once per
+/// call instead.
+pub(crate) fn quiet(error: CoreError) -> AppError {
+    match error {
+        CoreError::Fs(error) => fs_error(error),
+        CoreError::Settings(error) => settings_error(error),
+        CoreError::MissingHomeDir => AppError::Internal,
+        CoreError::Game(error) => game_error(error),
+        CoreError::Mods(error) => mods_error(error),
+        CoreError::Profiles(error) => profile_error(error),
+        CoreError::Install(error) => install_error(error),
+        CoreError::AppUpdate(error) => app_update_error(error),
+        CoreError::Graphics(error) => graphics_error(error),
     }
 }
 
@@ -175,6 +183,7 @@ fn fs_error(error: FsError) -> AppError {
             action: CoreManageAction::Delete.into(),
             reason: CoreManageBlock::JournalPending.into(),
         },
+        FsError::BusyCancelled { .. } => AppError::BusyCancelled,
         FsError::FolderBusy { .. } | FsError::InvalidBatch { .. } | FsError::Journal { .. } => {
             log::error!("unexpected file-system error: {error}");
             AppError::Internal
@@ -182,13 +191,26 @@ fn fs_error(error: FsError) -> AppError {
     }
 }
 
+/// A cancelled wait that rolled back completely changed nothing; one that left stuck ops is
+/// reported like a folder held by another program.
 fn batch_failed(batch: &BatchError) -> AppError {
+    let stuck = u32::try_from(batch.stuck.len()).unwrap_or(u32::MAX);
+    if matches!(batch.cause, FsError::BusyCancelled { .. }) {
+        if stuck == 0 {
+            return AppError::BusyCancelled;
+        }
+        return AppError::BatchFailed {
+            class: OsErrorClass::InUse,
+            stuck,
+            folder: true,
+        };
+    }
     AppError::BatchFailed {
         class: batch
             .cause
             .class()
             .map_or(OsErrorClass::Other, OsErrorClass::from),
-        stuck: u32::try_from(batch.stuck.len()).unwrap_or(u32::MAX),
+        stuck,
         folder: matches!(batch.cause, FsError::FolderBusy { .. }),
     }
 }
@@ -242,6 +264,7 @@ fn mods_error(error: ModsError) -> AppError {
         ModsError::DeleteToken => AppError::DeleteTokenInvalid,
         ModsError::ModinfoAmbiguous => AppError::ModinfoAmbiguous,
         ModsError::FieldTooLong { field } => AppError::invalid_input(field),
+        ModsError::BulkTargets => AppError::invalid_input("targets"),
     }
 }
 

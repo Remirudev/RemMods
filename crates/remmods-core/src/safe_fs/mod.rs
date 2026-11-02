@@ -7,6 +7,7 @@ mod aside;
 mod atomic;
 mod backup;
 mod batch;
+mod busy;
 mod dirs;
 mod error;
 mod export;
@@ -30,7 +31,10 @@ pub use app_files::{live_session_exists, remove_app_file};
 pub use aside::set_aside_name;
 pub use atomic::write_atomic;
 pub use backup::backup_file;
-pub use batch::{BatchError, BatchOptions, BatchReport, FaultPlan, RenameOp, RetryMode, StuckOp};
+pub use batch::{
+    BatchError, BatchOptions, BatchReport, BusyFault, FaultPlan, RenameOp, RetryMode, StuckOp,
+};
+pub use busy::{BUSY_NOTICE_AFTER, BusyCanceller, BusyEvent, BusyPhase, BusySink, BusyWaits};
 pub use dirs::{SMOKE_ROOT_PREFIX, create_smoke_root, ensure_dir, remove_smoke_root};
 pub use error::FsError;
 pub use gate::{OpGate, ReadGuard, WriteGuard};

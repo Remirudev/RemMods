@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { rememberPlatformOs } from '../../shared/trash-place'
 import type { AppError } from '../ipc/types'
 import { describeAppError } from './error-messages'
 import { i18n } from './index'
@@ -35,6 +36,9 @@ const ERRORS: AppError[] = [
   { kind: 'trashUnavailable', reason: 'otherDevice', size: 10 },
   { kind: 'trashUnavailable', reason: 'noUsableTrash', size: null },
   { kind: 'trashUnavailable', reason: 'notSupported', size: null },
+  { kind: 'trashUnavailable', reason: 'recycleRefused', size: 10 },
+  { kind: 'trashUnavailable', reason: 'notShellSafe', size: null },
+  { kind: 'busyCancelled' },
   { kind: 'deleteTokenInvalid' },
   { kind: 'modinfoAmbiguous' },
   { kind: 'profileNotFound' },
@@ -119,5 +123,20 @@ describe('describeAppError', () => {
     expect(describeAppError({ kind: 'toggleBlocked', reason: 'noPakFiles' }).message).toBe(
       'This mod has no pak files.',
     )
+  })
+
+  it('says a cancelled wait changed nothing', () => {
+    expect(describeAppError({ kind: 'busyCancelled' }).message).toBe(
+      'Cancelled. No mod was changed.',
+    )
+  })
+
+  it('names the Recycle Bin on Windows in the trash title', () => {
+    const error: AppError = { kind: 'trashUnavailable', reason: 'recycleRefused', size: null }
+    rememberPlatformOs('windows')
+    expect(describeAppError(error).title).toBe('The Recycle Bin cannot be used')
+    rememberPlatformOs('linux')
+    expect(describeAppError(error).title).toBe('The Trash cannot be used')
+    rememberPlatformOs(null)
   })
 })

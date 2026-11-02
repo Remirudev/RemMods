@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use chrono::Local;
+
 use super::details::resolve_ref;
 use super::error::ModsError;
 use super::manage_target::{Managed, ModTarget, plain_path};
@@ -9,7 +11,8 @@ use super::model::{PayloadKind, ScanInput};
 use super::payload::classify_payload;
 use super::service::Refreshed;
 use super::toggle_files::list_toggle_files;
-use crate::platform::TrashKind;
+use crate::platform::{TrashEnv, TrashKind};
+use crate::safe_fs::{FaultPlan, FsError, WriteGuard};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrashRequest {
@@ -23,6 +26,38 @@ pub struct TrashOutcome {
     pub key: String,
     pub items: u32,
     pub kind: TrashKind,
+}
+
+/// What a refused trash reports as the entry's size (folder rows and archives).
+pub(crate) fn trash_size(managed: &Managed<'_>) -> Option<u64> {
+    match managed {
+        Managed::Row(row) => row.size,
+        Managed::Archive(entry) => Some(entry.size),
+        Managed::Leftover(_) | Managed::Unmanaged(_) => None,
+    }
+}
+
+/// Moves one checked entry to the Trash; a refused trash is `TrashUnavailable` with the size.
+/// Returns the number of items moved and the kind of trash.
+pub(crate) fn trash_managed(
+    guard: &WriteGuard<'_>,
+    env: &TrashEnv,
+    input: &ScanInput,
+    managed: &Managed<'_>,
+    fault: Option<&FaultPlan>,
+) -> Result<(u32, TrashKind), ModsError> {
+    let items = trash_items(managed, input)?;
+    let report = guard
+        .trash_with_fault(env, &items, Local::now(), fault)
+        .map_err(|error| match error {
+            FsError::TrashUnavailable { reason } => ModsError::TrashUnavailable {
+                reason,
+                size: trash_size(managed),
+            },
+            other => ModsError::Fs(other),
+        })?;
+    let count = u32::try_from(report.items.len()).unwrap_or(u32::MAX);
+    Ok((count, report.kind))
 }
 
 /// Folder row → its folder; leftover → its folder; archive → its file; loose row → its group,

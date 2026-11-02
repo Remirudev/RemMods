@@ -4,6 +4,8 @@ import { unwrapResult } from './ipc-error'
 import type {
   ApplyRequest,
   AppUpdateProgress,
+  BulkDeleteRequest,
+  BulkTrashRequest,
   DeleteRequest,
   GraphicsMode,
   InspectRequest,
@@ -58,6 +60,14 @@ export const ipc = {
     unwrapResult('mods_delete_prepare', () => commands.modsDeletePrepare(target)),
   modsDeletePermanently: (request: DeleteRequest) =>
     unwrapResult('mods_delete_permanently', () => commands.modsDeletePermanently(request)),
+  modsTrashMany: (request: BulkTrashRequest) =>
+    unwrapResult('mods_trash_many', () => commands.modsTrashMany(request)),
+  modsDeletePrepareMany: (targets: ModTarget[]) =>
+    unwrapResult('mods_delete_prepare_many', () => commands.modsDeletePrepareMany(targets)),
+  modsDeleteMany: (request: BulkDeleteRequest) =>
+    unwrapResult('mods_delete_many', () => commands.modsDeleteMany(request)),
+  modsBusyCancel: (waitId: number) =>
+    unwrapResult('mods_busy_cancel', () => commands.modsBusyCancel(waitId)),
   modsSetMetadata: (request: MetadataRequest) =>
     unwrapResult('mods_set_metadata', () => commands.modsSetMetadata(request)),
   repairList: () => unwrapResult('repair_list', () => commands.repairList()),

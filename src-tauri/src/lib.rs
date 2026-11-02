@@ -129,6 +129,9 @@ fn on_setup(
         fail_fast("Could not open the RemMods data folder", &error, args.smoke)
     });
     let core = Arc::new(core);
+    core.ops
+        .busy()
+        .set_sink(events::folder_busy_sink(app.handle().clone()));
     let monitor = monitor::start(app.handle().clone(), Arc::clone(&core))
         .unwrap_or_else(|error| fail_fast("Could not start the game monitor", &error, args.smoke));
     let watcher = watcher::start(app.handle().clone(), Arc::clone(&core))

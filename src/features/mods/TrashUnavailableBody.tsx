@@ -1,6 +1,7 @@
 import { Stack, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import { formatSize } from '../../shared/format-size'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { ConfirmButtons } from './ConfirmButtons'
 import type { TrashUnavailableBodyProps } from './types'
 
@@ -18,7 +19,7 @@ export function TrashUnavailableBody({
 
   return (
     <Stack gap="xs">
-      <Text size="sm">{t(($) => $.trash.unavailable[reason])}</Text>
+      <Text size="sm">{t(($) => $.trash.unavailable[reason], { place: trashPlaceWord() })}</Text>
       <Text size="sm">{t(($) => $.trash.unavailable.warning, { name, size: sizeText })}</Text>
       <Text size="sm" fw={600} c="red">
         {t(($) => $.delete.final.irreversible)}

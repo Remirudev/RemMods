@@ -3,6 +3,7 @@ import { ipc } from '../lib/ipc'
 import { describeForLog } from '../lib/ipc/ipc-error'
 import { logError } from '../lib/log/frontend-log'
 import { queryKeys } from '../shared/query-keys'
+import { rememberPlatformOs } from '../shared/trash-place'
 import type { PreloadedAppData } from './types'
 
 async function loadOrNull<T>(command: string, load: () => Promise<T>): Promise<T | null> {
@@ -25,6 +26,7 @@ export async function preloadAppData(queryClient: QueryClient): Promise<Preloade
   ])
   if (settings) queryClient.setQueryData(queryKeys.settings, settings)
   if (platformInfo) queryClient.setQueryData(queryKeys.platformInfo, platformInfo)
+  rememberPlatformOs(platformInfo?.os ?? null)
   if (gameStatus) queryClient.setQueryData(queryKeys.gameStatus, gameStatus)
   return { settings, platformInfo, gameStatus }
 }

@@ -46,6 +46,8 @@ pub enum FsError {
     AsideNotInert { path: PathBuf },
     #[error("{path} is named by a journal record", path = path.display())]
     AsideJournaled { path: PathBuf },
+    #[error("waiting for {path} was cancelled", path = path.display())]
+    BusyCancelled { path: PathBuf },
 }
 
 impl FsError {
@@ -72,7 +74,8 @@ impl FsError {
             | Self::TrashUnavailable { .. }
             | Self::NotAnAside { .. }
             | Self::AsideNotInert { .. }
-            | Self::AsideJournaled { .. } => None,
+            | Self::AsideJournaled { .. }
+            | Self::BusyCancelled { .. } => None,
         }
     }
 }

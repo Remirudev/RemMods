@@ -35,6 +35,7 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   updateBlocked: true,
   updateFailed: true,
   unsupported: true,
+  busyCancelled: true,
 }
 
 export class IpcError extends Error {

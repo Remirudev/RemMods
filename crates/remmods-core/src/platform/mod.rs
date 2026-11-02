@@ -26,7 +26,7 @@ pub use meminfo::parse_meminfo_total;
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
 pub(crate) use trash::DirTraits;
 pub use trash::{
-    MountId, TopdirPolicy, TrashEnv, TrashKind, TrashLocation, TrashUnavailableReason,
+    MountId, Recycled, TopdirPolicy, TrashEnv, TrashKind, TrashLocation, TrashUnavailableReason,
 };
 
 #[cfg(target_os = "linux")]
@@ -215,12 +215,29 @@ pub fn current_uid() -> Option<u32> {
 }
 
 /// Read-only probe for the trash that `item` (an existing absolute path, not followed if it is a
-/// link) would move into. Linux: the freedesktop.org rules; Windows/other: `Ok(Err(NotSupported))`.
+/// link) would move into. Linux: the freedesktop.org rules, never `RecycleBin`. Windows: `Detect`
+/// → the volume's Recycle Bin (no drive-type or bin-size probe: the shell decides and `recycle`
+/// never deletes), `Deny`/`Fixed` → `Ok(Err(NotSupported))`. Other OSes: `Ok(Err(NotSupported))`.
 pub fn trash_location(
     env: &TrashEnv,
     item: &Path,
 ) -> io::Result<Result<TrashLocation, TrashUnavailableReason>> {
     imp::trash_location(env, item)
+}
+
+/// Windows: moves one existing file or folder into its volume's Recycle Bin through
+/// IFileOperation on a fresh STA thread and never deletes it (PLAN §4 Trash). `force_abort`
+/// (tests): the sink refuses every delete as if the shell could not recycle. Linux/other:
+/// Err(Unsupported).
+pub(crate) fn recycle(item: &Path, force_abort: bool) -> io::Result<Recycled> {
+    imp::recycle(item, force_abort)
+}
+
+/// Tests only (W10): initialises COM as MTA on the calling thread, so the test needs no
+/// `unsafe`. Linux/other: Err(Unsupported).
+#[doc(hidden)]
+pub fn enter_mta_for_tests() -> io::Result<()> {
+    imp::enter_mta_for_tests()
 }
 
 /// Linux: statx(AT_SYMLINK_NOFOLLOW, STATX_MNT_ID) → (st_dev, mount id when the kernel reports

@@ -7,6 +7,7 @@ import { ipc } from '../../lib/ipc'
 import { isIpcError } from '../../lib/ipc/ipc-error'
 import { FS_SCOPE, routeFsError } from '../../shared/fs-error-route'
 import { storeModsSnapshot } from '../../shared/mods-cache'
+import { useModalLock } from '../../shared/use-modal-lock'
 import { checkName } from './name-check'
 import type { NameIssueCode, RenameDialogProps } from './types'
 
@@ -41,6 +42,7 @@ export function RenameDialog({
   siblings,
   originalApp,
   onClose,
+  modalId,
 }: RenameDialogProps) {
   const { t } = useTranslation('mods')
   const client = useQueryClient()
@@ -83,6 +85,8 @@ export function RenameDialog({
     },
   })
 
+  useModalLock(modalId, rename.isPending)
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (check !== null || submitted.current) return
@@ -106,7 +110,7 @@ export function RenameDialog({
         />
         {originalApp && <Text size="sm">{t(($) => $.confirm.originalAppRunning)}</Text>}
         <Group justify="flex-end">
-          <Button variant="default" onClick={onClose}>
+          <Button variant="default" onClick={onClose} disabled={rename.isPending}>
             {t(($) => $.rename.cancel)}
           </Button>
           <Button type="submit" disabled={issue !== null} loading={rename.isPending}>

@@ -338,3 +338,54 @@ fn os_str_cut_removes_ascii_ends_only() {
     };
     assert_eq!(os_string(&foreign), None);
 }
+
+/// S1: only paths Win32 keeps as they are may reach the shell.
+#[test]
+fn shell_safe_path_table() {
+    use std::path::Path;
+
+    use remmods_core::platform::{OsKind, os_kind};
+
+    let base = r"C:\Games\Paks\Mods";
+    let cases: &[(String, bool)] = &[
+        (format!(r"{base}\Cool"), true),
+        (r"\\?\C:\Games\Mods\Cool".to_owned(), true),
+        (r"\\?\UNC\srv\share\Mods\Cool".to_owned(), true),
+        (r"\\srv\share\Mods\Cool".to_owned(), true),
+        ("/tmp/x/Mods/Cool".to_owned(), true),
+        (format!(r"{base}\Foo."), false),
+        (format!(r"{base}\Foo "), false),
+        (format!(r"{base}\CON"), false),
+        (format!(r"{base}\con.txt"), false),
+        (format!(r"{base}\CONIN$"), false),
+        (format!("{base}\\COM\u{B9}"), false),
+        (format!(r"{base}\a:b"), false),
+        (format!(r"{base}\..\x"), false),
+        (format!(r"{base}\.\x"), false),
+        (r"\\?\Volume{0}\Mods\Cool".to_owned(), false),
+        (r"\\.\C:\Mods\Cool".to_owned(), false),
+        (format!(r"{base}\Cool\"), false),
+    ];
+    for (path, safe) in cases {
+        assert_eq!(shell_safe_path(Path::new(path)), *safe, "{path}");
+    }
+
+    let at_limit = |units: usize| {
+        let head = r"C:\Mods\";
+        format!("{head}{}", "a".repeat(units - head.len()))
+    };
+    assert_eq!(utf16_len(&at_limit(259)), 259);
+    assert!(shell_safe_path(Path::new(&at_limit(259))));
+    assert!(!shell_safe_path(Path::new(&at_limit(260))));
+    let verbatim = format!(r"\\?\{}", at_limit(259));
+    assert!(
+        shell_safe_path(Path::new(&verbatim)),
+        "the plain form counts"
+    );
+
+    if os_kind() == OsKind::Linux {
+        let name = remmods_core::platform::os_string(&RawName::Bytes(b"Cool\xFF".to_vec()))
+            .expect("bytes are an OS name on Linux");
+        assert!(!shell_safe_path(&Path::new("/tmp/Mods").join(name)));
+    }
+}

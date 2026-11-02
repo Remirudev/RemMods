@@ -5,13 +5,14 @@ import { i18n } from '../../lib/i18n'
 import { isIpcError } from '../../lib/ipc/ipc-error'
 import { confirmApplyWhileRunning } from '../../shared/fs-dialogs'
 import { routeFsError } from '../../shared/fs-error-route'
+import { useModalLock } from '../../shared/use-modal-lock'
 import { DiffSection } from './DiffSection'
 import { groupDiff, keyName } from './diff-groups'
 import { useProfileDiff, useProfiles } from './queries'
 import type { ProfileDiffModalProps } from './types'
 import { useApplyProfile } from './use-profile-mutations'
 
-export function ProfileDiffModal({ profile, onClose }: ProfileDiffModalProps) {
+export function ProfileDiffModal({ profile, onClose, modalId }: ProfileDiffModalProps) {
   const { t } = useTranslation('profiles')
   const diff = useProfileDiff(profile.id)
   const readOnly = useProfiles().data?.readOnly ?? false
@@ -19,6 +20,7 @@ export function ProfileDiffModal({ profile, onClose }: ProfileDiffModalProps) {
   const [changedNotice, setChangedNotice] = useState(false)
   const data = diff.data
   const groups = data ? groupDiff(data) : null
+  useModalLock(modalId, apply.isPending)
 
   const run = (applyWhileRunning: boolean) => {
     if (!data) return
@@ -123,7 +125,7 @@ export function ProfileDiffModal({ profile, onClose }: ProfileDiffModalProps) {
         </Stack>
       </ScrollArea.Autosize>
       <Group justify="flex-end">
-        <Button variant="default" onClick={onClose}>
+        <Button variant="default" onClick={onClose} disabled={apply.isPending}>
           {t(($) => $.diff.cancel)}
         </Button>
         <Button

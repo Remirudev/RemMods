@@ -1,9 +1,10 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::commands::{
-    about, game, graphics, install, mods, mods_manage, profiles, repair, settings, shell, update,
+    about, game, graphics, install, mods, mods_bulk, mods_manage, profiles, repair, settings,
+    shell, update,
 };
-use crate::events::{GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged};
+use crate::events::{FolderBusy, GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
 /// from here. Keep the list in sync with `COMMANDS` in `build.rs` (ACL permissions).
@@ -40,6 +41,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods_manage::mods_delete_prepare,
             mods_manage::mods_delete_permanently,
             mods_manage::mods_set_metadata,
+            mods_bulk::mods_trash_many,
+            mods_bulk::mods_delete_prepare_many,
+            mods_bulk::mods_delete_many,
+            mods_bulk::mods_busy_cancel,
             repair::repair_list,
             profiles::profiles_list,
             profiles::profiles_save,
@@ -64,7 +69,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             ModsChanged,
             GameStatusChanged,
             WatchStatusChanged,
-            InstallDrop
+            InstallDrop,
+            FolderBusy
         ])
         .error_handling(ErrorHandlingMode::Result)
         .disable_serde_phases()

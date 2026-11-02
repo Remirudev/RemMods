@@ -212,7 +212,7 @@ impl Core {
             |name| name.to_string_lossy().into_owned(),
         );
         let installed = self.after_commit(&guard, stored, picks, &asides, &root_name);
-        let refreshed = self.mods.refresh(&input)?;
+        let refreshed = self.final_refresh(&input)?;
         let installed = installed
             .into_iter()
             .map(|mut item| {

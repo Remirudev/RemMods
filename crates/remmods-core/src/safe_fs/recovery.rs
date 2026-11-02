@@ -226,6 +226,7 @@ fn recover_op(
                 op.is_dir,
                 RetryMode::Normal,
                 Some((journal, entry)),
+                None,
             );
             match undo {
                 Ok(_) => OpOutcome::RolledBack,

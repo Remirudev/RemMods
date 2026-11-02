@@ -72,7 +72,85 @@ export const mods: LocaleShape<typeof en> = {
     selected_other: '{{count}} ausgewählt',
     enable: 'Aktivieren',
     disable: 'Deaktivieren',
+    trash_one: 'In den {{place}} ({{count}})',
+    trash_other: 'In den {{place}} ({{count}})',
+    delete_one: 'Endgültig löschen… ({{count}})',
+    delete_other: 'Endgültig löschen… ({{count}})',
     clear: 'Auswahl aufheben (Esc)',
+  },
+  bulk: {
+    skippedByMatrix_one:
+      '{{count}} ausgewählte Mod wird übersprungen (verknüpft, lose Dateien oder Archiv).',
+    skippedByMatrix_other:
+      '{{count}} ausgewählte Mods werden übersprungen (verknüpft, lose Dateien oder Archiv).',
+    trashConfirm: {
+      title: 'In den {{place}} verschieben?',
+      body_one:
+        '{{count}} Mod ({{size}}) in den {{place}} verschieben? Du kannst sie dort wiederherstellen.',
+      body_other:
+        '{{count}} Mods ({{size}}) in den {{place}} verschieben? Du kannst sie dort wiederherstellen.',
+      more: 'und {{count}} weitere',
+      confirm: 'In den {{place}}',
+    },
+    deleteFirst: {
+      title: 'Endgültig löschen?',
+      body_one:
+        'Das löscht {{count}} Mod für immer, statt sie in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      body_other:
+        'Das löscht {{count}} Mods für immer, statt sie in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      confirm: 'Weiter',
+    },
+    deleteFinal: {
+      title: 'Diese Mods für immer löschen?',
+      body: 'Diese Mods werden endgültig gelöscht:',
+      skipped: 'Übersprungen: {{reason}}',
+      total: 'Insgesamt: {{size}}',
+      confirm: 'Endgültig löschen ({{count}})',
+    },
+    results: {
+      title: 'Nicht alles hat geklappt',
+      trashed: 'In den Papierkorb verschoben',
+      recycled: 'In den Papierkorb verschoben',
+      deleted: 'Gelöscht',
+      leftover:
+        'Gelöscht, aber ein versteckter Teil ist übrig: {{path}}. Der Reiter Reparieren listet ihn.',
+      unavailable: 'Nicht verschoben: {{reason}}',
+      notDeletable: 'Nicht verschoben, und hier kann sie nicht gelöscht werden: {{reason}}',
+      failed: 'Fehlgeschlagen: {{message}}',
+      cancelled: 'Beim Warten auf den Ordner abgebrochen; diese Mod wurde nicht geändert.',
+      notRun: 'Nicht versucht (abgebrochen)',
+      deleteUnavailable_one: 'Endgültig löschen ({{count}})',
+      deleteUnavailable_other: 'Endgültig löschen ({{count}})',
+      deleteWarning_one: 'Diese Mod ({{size}}) würde stattdessen endgültig gelöscht.',
+      deleteWarning_other: 'Diese {{count}} Mods ({{size}}) würden stattdessen endgültig gelöscht.',
+      total: 'Insgesamt: {{size}}',
+      close: 'Schließen',
+    },
+    done: {
+      trash_one: '{{count}} Mod wurde in den Papierkorb verschoben.',
+      trash_other: '{{count}} Mods wurden in den Papierkorb verschoben.',
+      recycle_one: '{{count}} Mod wurde in den Papierkorb verschoben.',
+      recycle_other: '{{count}} Mods wurden in den Papierkorb verschoben.',
+      delete_one: '{{count}} Mod wurde gelöscht.',
+      delete_other: '{{count}} Mods wurden gelöscht.',
+    },
+    nothingEligible: 'Keine dieser Mods kann gelöscht werden. Nichts wurde geändert.',
+  },
+  folderBusy: {
+    title: 'Warte auf einen belegten Ordner',
+    body: '„{{folder}}“ wird von einem anderen Programm benutzt, zum Beispiel einem Explorer-Fenster, einem Virenscan oder der Suchindizierung. RemMods versucht es bis zu {{limit}} s lang erneut.',
+    bodyUndo:
+      'RemMods stellt „{{folder}}“ wieder her und muss darauf warten; das lässt sich nicht abbrechen.',
+    elapsed: 'Wartet seit {{seconds}} s',
+    cancel: 'Abbrechen',
+    cancelling: 'Wird abgebrochen…',
+    holders: 'Benutzt von: {{names}}',
+  },
+  quickApply: {
+    button: 'Profil anwenden',
+    empty: 'Noch keine gespeicherten Profile',
+    last: 'Zuletzt angewendet',
+    readOnly: 'Profile können gerade nicht gespeichert werden; siehe Bereich Profile',
   },
   watch: {
     limitReached:
@@ -314,7 +392,7 @@ export const mods: LocaleShape<typeof en> = {
   rowMenu: {
     label: 'Aktionen für {{name}}',
     rename: 'Umbenennen…',
-    trash: 'In den Papierkorb',
+    trash: 'In den {{place}}',
     delete: 'Endgültig löschen…',
   },
   confirm: {
@@ -346,18 +424,24 @@ export const mods: LocaleShape<typeof en> = {
     invalid: 'Dieser Name kann nicht verwendet werden.',
   },
   trash: {
+    place: { trash: 'Papierkorb', recycleBin: 'Papierkorb' },
     confirm: {
-      title: 'In den Papierkorb verschieben?',
-      body: '„{{name}}“ ({{size}}) in den System-Papierkorb verschieben? Du kannst es dort wiederherstellen.',
-      confirm: 'In den Papierkorb',
+      title: 'In den {{place}} verschieben?',
+      body: '„{{name}}“ ({{size}}) in den {{place}} verschieben? Du kannst es dort wiederherstellen.',
+      confirm: 'In den {{place}}',
     },
     done: '„{{name}}“ wurde in den Papierkorb verschoben.',
+    doneRecycle: '„{{name}}“ wurde in den Papierkorb von Windows verschoben.',
     unavailable: {
-      title: 'Der Papierkorb ist nicht nutzbar',
+      title: 'Der {{place}} ist nicht nutzbar',
       otherDevice:
         'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb, deshalb kann er ihn nicht aufnehmen.',
       noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
-      notSupported: 'Das Verschieben in den Papierkorb ist auf diesem System noch nicht möglich.',
+      notSupported: 'Das Verschieben in den {{place}} ist in diesem Lauf nicht verfügbar.',
+      recycleRefused:
+        'Windows hat diesen Ordner nicht in den Papierkorb verschoben (der Papierkorb ist vielleicht aus oder zu klein dafür, oder das Laufwerk hat keinen).',
+      notShellSafe:
+        'Windows kann diesen Namen nicht in den Papierkorb verschieben. Benenne ihn zuerst unter Reparieren um oder lösche ihn endgültig.',
       warning: '„{{name}}“ ({{size}}) würde stattdessen endgültig gelöscht.',
       confirm: 'Endgültig löschen',
     },
@@ -366,7 +450,7 @@ export const mods: LocaleShape<typeof en> = {
     cancel: 'Abbrechen',
     confirm: {
       title: 'Endgültig löschen?',
-      body: 'Das löscht „{{name}}“ für immer, statt es in den Papierkorb zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      body: 'Das löscht „{{name}}“ für immer, statt es in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
       confirm: 'Weiter',
     },
     final: {
@@ -422,7 +506,7 @@ export const mods: LocaleShape<typeof en> = {
     },
     actions: {
       rename: 'Umbenennen…',
-      trash: 'In den Papierkorb',
+      trash: 'In den {{place}}',
       deletePermanently: 'Endgültig löschen…',
       reveal: 'Im Dateimanager zeigen',
       finishDisable: 'Ausschalten abschließen',

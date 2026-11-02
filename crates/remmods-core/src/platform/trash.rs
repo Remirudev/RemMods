@@ -2,8 +2,10 @@
 
 use std::path::PathBuf;
 
-/// Detect: walk up to the mount's top dir (FDO "$topdir", real use); Deny: never a topdir
-/// trash; Fixed: tests treat this folder as the topdir of every path below it.
+/// Detect: the real trash for the item — Linux: walk up to the mount's top dir (FDO "$topdir");
+/// Windows: the item's volume Recycle Bin through the shell. Deny: never a topdir trash (Windows:
+/// never the Recycle Bin). Fixed: tests treat this folder as the topdir of every path below it
+/// (Windows: never the Recycle Bin).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TopdirPolicy {
     Detect,
@@ -22,7 +24,8 @@ pub struct TrashEnv {
 
 impl TrashEnv {
     /// Linux: from the environment (XDG_DATA_HOME must be absolute, else ignored per XDG), the
-    /// real uid, `TopdirPolicy::Detect`. Windows and other OSes: `{ None, None, Deny }`.
+    /// real uid, `TopdirPolicy::Detect`. Windows: `{ None, None, Detect }` (the Recycle Bin).
+    /// Other OSes: `{ None, None, Deny }`.
     pub fn from_env() -> TrashEnv {
         super::imp::trash_env_from_env()
     }
@@ -30,12 +33,18 @@ impl TrashEnv {
 
 /// OtherDevice: no trash shares the item's mount and device (other drive, btrfs subvolume, …);
 /// NoUsableTrash: no usable `.Trash/$uid`, `.Trash-$uid` unsafe or not creatable, or NOREPLACE
-/// unsupported; NotSupported: no mover on this OS in this build (Windows in P3a; WG-5).
+/// unsupported; NotSupported: no mover on this OS, or (Windows) the env is not `Detect` (tests,
+/// `--smoke`); RecycleRefused: the shell would have deleted it permanently (no Recycle Bin on that
+/// drive, bin turned off or too small, network path), the sink aborted and nothing changed;
+/// NotShellSafe: Win32 would rewrite the path (trailing dot or space, device name, `.`/`..`,
+/// > 259 UTF-16 units, not a drive or UNC path), so it never reaches the shell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrashUnavailableReason {
     OtherDevice,
     NoUsableTrash,
     NotSupported,
+    RecycleRefused,
+    NotShellSafe,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,9 +52,23 @@ pub enum TrashKind {
     Home,
     TopdirShared,
     TopdirUser,
+    RecycleBin,
 }
 
-/// root: the trash folder (`…/Trash`, `$topdir/.Trash/$uid`, `$topdir/.Trash-$uid`); topdir:
+/// What `platform::recycle` did with one item.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Recycled {
+    /// In the Recycle Bin: the item is gone and the shell reported its new item for the root
+    /// (`X:\$Recycle.Bin\<SID>\$R…`). Without that report it is never Done.
+    Done { bin_path: PathBuf },
+    /// The sink refused the permanent delete the shell asked for; the item is untouched.
+    Refused,
+    /// The plain path is not one Win32 keeps as is; never handed to the shell.
+    NotShellSafe,
+}
+
+/// root: the trash folder (`…/Trash`, `$topdir/.Trash/$uid`, `$topdir/.Trash-$uid`; the Recycle
+/// Bin: the volume root, display and log only, empty when unknown); topdir:
 /// None = `Path=` absolute (home trash), Some = `Path=` relative to it; missing: the folders not
 /// there yet, outermost first (`root`, `root/files`, `root/info`), created by safe_fs.
 #[derive(Clone, Debug, PartialEq, Eq)]

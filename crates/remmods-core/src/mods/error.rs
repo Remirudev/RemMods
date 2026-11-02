@@ -43,6 +43,8 @@ pub enum ModsError {
     ModinfoAmbiguous,
     #[error("the {field} field is too long")]
     FieldTooLong { field: &'static str },
+    #[error("the bulk target list is empty, too long or names a row twice")]
+    BulkTargets,
 }
 
 impl ModsError {
@@ -63,6 +65,7 @@ impl ModsError {
             Self::DeleteToken => "delete_token",
             Self::ModinfoAmbiguous => "modinfo_ambiguous",
             Self::FieldTooLong { .. } => "field_too_long",
+            Self::BulkTargets => "bulk_targets",
         }
     }
 }

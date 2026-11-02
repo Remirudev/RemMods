@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local, TimeZone};
 use remmods_core::platform::{
-    self, TopdirPolicy, TrashEnv, TrashKind, TrashUnavailableReason, trash_location,
+    self, OsErrorClass, TopdirPolicy, TrashEnv, TrashKind, TrashUnavailableReason, trash_location,
 };
 use remmods_core::safe_fs::{
     FaultPlan, FsError, Scope, TrashReport, percent_encode_path, trashinfo_text,
@@ -397,4 +397,27 @@ fn trash_location_writes_nothing() {
     assert_eq!(user.kind, TrashKind::TopdirUser);
     assert_eq!(user.missing.len(), 3);
     assert_eq!(tree_listing(&fixture.root), before);
+}
+
+/// L1: the Recycle Bin mover exists only on Windows; nothing moves here.
+#[test]
+fn recycle_is_unsupported_on_linux() {
+    let fixture = support::fs_fixture();
+    support::write_tree(&fixture.paks, &[("Mods/Cool/Cool.pak", b"pak")]);
+    let before = tree_listing(&fixture.paks);
+    let gate = fixture.gate();
+    let guard = gate.write(fixture.scope()).expect("write guard");
+
+    for force_abort in [false, true] {
+        match guard.recycle_forced(&fixture.path("Mods/Cool"), force_abort) {
+            Err(FsError::Io { class, .. }) => assert_eq!(class, OsErrorClass::Unsupported),
+            other => panic!("expected an Unsupported io error, got {other:?}"),
+        }
+    }
+    drop(guard);
+    assert_eq!(tree_listing(&fixture.paks), before);
+    assert!(matches!(
+        platform::enter_mta_for_tests(),
+        Err(error) if platform::classify(&error) == OsErrorClass::Unsupported
+    ));
 }

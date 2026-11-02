@@ -1,4 +1,4 @@
-import type { SourceKind } from '../lib/ipc/types'
+import type { ProfileMode, SourceKind } from '../lib/ipc/types'
 
 export type UiScaleAction = 'increase' | 'decrease' | 'reset'
 
@@ -22,4 +22,19 @@ export interface InstallQueueState {
 export interface UpdateRunState {
   updating: boolean
   setUpdating: (updating: boolean) => void
+}
+
+export type TrashPlace = 'trash' | 'recycleBin'
+
+export interface QuickApplyChoice {
+  id: string
+  name: string
+  mode: ProfileMode
+  count: number
+}
+
+export interface QuickApplyState {
+  choices: QuickApplyChoice[]
+  lastAppliedId: string | null
+  readOnly: boolean
 }

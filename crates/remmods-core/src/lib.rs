@@ -20,7 +20,9 @@ pub mod settings;
 pub use error::CoreError;
 pub use paths::AppPaths;
 
+use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use platform::{TopdirPolicy, TrashEnv};
@@ -47,8 +49,11 @@ pub struct Core {
     require_marker: Option<String>,
     /// The original app's data folder (Windows only); exports never go there.
     tmm_dir: Option<PathBuf>,
-    /// Test hook: the next manage batch (rename, set-aside, profile apply, trash) runs with it.
-    fault: Mutex<Option<FaultPlan>>,
+    /// Test hook: one entry per following manage mutation (rename, set-aside, profile apply,
+    /// trash; a bulk row takes one each), in order.
+    fault: Mutex<VecDeque<Option<FaultPlan>>>,
+    /// Test hook: the final rescan of the next bulk call fails.
+    fail_final_refresh: AtomicBool,
 }
 
 /// How `Core` finds the game. `--smoke` and tests turn Steam detection off.
@@ -106,7 +111,8 @@ impl Core {
             trash_env: options.trash,
             require_marker: options.require_marker,
             tmm_dir: options.tmm_dir,
-            fault: Mutex::new(None),
+            fault: Mutex::new(VecDeque::new()),
+            fail_final_refresh: AtomicBool::new(false),
             paths,
         })
     }
@@ -115,14 +121,33 @@ impl Core {
     /// says.
     #[doc(hidden)]
     pub fn inject_batch_fault(&self, plan: FaultPlan) {
-        *self.fault.lock().unwrap_or_else(PoisonError::into_inner) = Some(plan);
+        self.inject_batch_faults(vec![Some(plan)]);
+    }
+
+    /// Test hook: one entry per following manage mutation (batch or trash call), in order;
+    /// None = no fault.
+    #[doc(hidden)]
+    pub fn inject_batch_faults(&self, plans: Vec<Option<FaultPlan>>) {
+        *self.fault.lock().unwrap_or_else(PoisonError::into_inner) = plans.into();
     }
 
     pub(crate) fn take_batch_fault(&self) -> Option<FaultPlan> {
         self.fault
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .take()
+            .pop_front()
+            .flatten()
+    }
+
+    /// Test hook: the final rescan of the next mutation fails (manage, bulk, toggle or install;
+    /// the rows of a bulk call still count).
+    #[doc(hidden)]
+    pub fn fail_next_final_refresh(&self) {
+        self.fail_final_refresh.store(true, Ordering::SeqCst);
+    }
+
+    pub(crate) fn take_final_refresh_failure(&self) -> bool {
+        self.fail_final_refresh.swap(false, Ordering::SeqCst)
     }
 
     pub(crate) fn tmm_dir(&self) -> Option<&std::path::Path> {

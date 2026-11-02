@@ -1,16 +1,18 @@
-//! P3a has no Recycle Bin mover on Windows (WG-5).
+//! W11: without `TopdirPolicy::Detect` (tests, `--smoke`, `CoreOptions::default()`) Windows never
+//! reaches the Recycle Bin. The bin itself is tested in `platform_windows_recycle.rs`.
 #![cfg(windows)]
 #![allow(clippy::disallowed_methods, clippy::expect_used)]
 
 mod support;
 
-use remmods_core::platform::{self, OsErrorClass, TrashUnavailableReason};
+use remmods_core::CoreOptions;
+use remmods_core::platform::{self, OsErrorClass, TopdirPolicy, TrashEnv, TrashUnavailableReason};
 use remmods_core::safe_fs::FsError;
 
 use support::tree_listing;
 
 #[test]
-fn trash_is_unavailable_and_changes_nothing() {
+fn deny_env_is_not_supported() {
     let fixture = support::fs_fixture();
     support::write_tree(&fixture.paks, &[("Mods/Cool/Cool.pak", b"pak")]);
     let env = support::trash_env(&fixture.root);
@@ -30,6 +32,14 @@ fn trash_is_unavailable_and_changes_nothing() {
         other => panic!("expected TrashUnavailable, got {other:?}"),
     }
     assert_eq!(tree_listing(&fixture.paks), before);
+    let fixed = TrashEnv {
+        topdirs: TopdirPolicy::Fixed(fixture.root.clone()),
+        ..env.clone()
+    };
+    for env in [env, fixed, CoreOptions::default().trash] {
+        let probe = platform::trash_location(&env, &fixture.path("Mods/Cool")).expect("probe");
+        assert_eq!(probe, Err(TrashUnavailableReason::NotSupported), "{env:?}");
+    }
 }
 
 #[test]

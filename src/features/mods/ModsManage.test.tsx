@@ -1,9 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { GameStatus, RepairList } from '../../lib/ipc/types'
+import type { GameStatus, PlatformInfo, RepairList } from '../../lib/ipc/types'
 import { useGameStatus } from '../../shared/game/queries'
-import { makeGameStatus, makeModRow, makeSnapshot } from '../../test/fixtures'
+import {
+  makeGameStatus,
+  makeModRow,
+  makeSnapshot,
+  WINDOWS_PLATFORM_INFO,
+} from '../../test/fixtures'
 import { installIpcMock } from '../../test/ipc-mock'
 import { mockElementLayout } from '../../test/layout'
 import { renderWithProviders } from '../../test/render'
@@ -28,9 +33,13 @@ const TRASHED = {
   kind: 'home',
 }
 
-function renderMods(handlers: Record<string, IpcHandler>, status: GameStatus = makeGameStatus()) {
+function renderMods(
+  handlers: Record<string, IpcHandler>,
+  status: GameStatus = makeGameStatus(),
+  platformInfo?: PlatformInfo,
+) {
   const ipc = installIpcMock(undefined, { gameStatus: status, snapshot: SNAPSHOT, handlers })
-  renderWithProviders(<Harness />, { gameStatus: status })
+  renderWithProviders(<Harness />, { gameStatus: status, platformInfo })
   return ipc
 }
 
@@ -55,7 +64,7 @@ describe('mod management in the table', () => {
     await openMenuOf(user, 'Alpha')
     await user.click(await screen.findByRole('menuitem', { name: /Move to Trash/ }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/to the system Trash/)).toBeVisible()
+    expect(within(dialog).getByText(/to the Trash\? You can restore/)).toBeVisible()
     await user.click(within(dialog).getByRole('button', { name: 'Move to Trash' }))
 
     await waitFor(() => expect(ipc.callsOf('mods_trash')).toHaveLength(1))
@@ -64,6 +73,17 @@ describe('mod management in the table', () => {
     })
     expect(ipc.callsOf('mods_delete_prepare')).toHaveLength(0)
     expect(ipc.callsOf('mods_delete_permanently')).toHaveLength(0)
+  })
+
+  it('names the Recycle Bin on Windows and the Trash elsewhere', async () => {
+    const user = userEvent.setup()
+    renderMods({}, makeGameStatus(), WINDOWS_PLATFORM_INFO)
+
+    await openMenuOf(user, 'Alpha')
+    await user.click(await screen.findByRole('menuitem', { name: /Move to Recycle Bin/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Move to Recycle Bin?' })
+    expect(within(dialog).getByText(/to the Recycle Bin\? You can restore/)).toBeVisible()
+    expect(within(dialog).getByRole('button', { name: 'Move to Recycle Bin' })).toBeVisible()
   })
 
   it('disables every action of a linked mod', async () => {

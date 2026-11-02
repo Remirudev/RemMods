@@ -62,6 +62,8 @@ export interface SnapshotListProps {
 export interface ProfileDiffModalProps {
   profile: Profile
   onClose: () => void
+  // The modal that hosts the diff, locked while the apply runs.
+  modalId?: string
 }
 
 export interface DiffSectionProps {

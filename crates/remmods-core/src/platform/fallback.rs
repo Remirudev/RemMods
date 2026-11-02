@@ -6,7 +6,7 @@ use std::path::Path;
 use std::process::Command;
 
 use super::{
-    DirTraits, MountId, NoReplace, OsErrorClass, OsKind, ProcessRecord, RegistryHive,
+    DirTraits, MountId, NoReplace, OsErrorClass, OsKind, ProcessRecord, Recycled, RegistryHive,
     RegistrySteamValues, RegistryView, RetryPolicy, SteamHints, TopdirPolicy, TrashEnv,
     TrashLocation, TrashUnavailableReason,
 };
@@ -112,5 +112,13 @@ pub(super) fn trash_location(
 }
 
 pub(super) fn mount_identity(_path: &Path) -> io::Result<MountId> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn recycle(_item: &Path, _force_abort: bool) -> io::Result<Recycled> {
+    Err(io::ErrorKind::Unsupported.into())
+}
+
+pub(super) fn enter_mta_for_tests() -> io::Result<()> {
     Err(io::ErrorKind::Unsupported.into())
 }

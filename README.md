@@ -29,8 +29,18 @@ it follow), move it to the Trash (freedesktop.org Trash, restorable from the fil
 permanently after a second confirmation, edit its metadata (`modinfo.json`), and fix leftovers of
 interrupted operations in the Repair tab. Profiles remember which mods are on: save, apply (additive or
 exclusive, with an automatic snapshot first), import the original app's `profiles.json` (only read,
-never written), and export or import RemMods profiles. **Windows: the Trash is not supported yet**
-(docs/windows-gaps.md WG-5); "Remove" there means "Delete permanently", which asks twice.
+never written), and export or import RemMods profiles. On Windows the Trash is the Recycle Bin
+(CI-tested only, see [Windows](#windows)).
+
+**Phase 3b (in progress)**: select several mods and choose "Move to Trash" (Windows: "Move to Recycle
+Bin") or "Delete permanently…" for all of them at once; when not every mod went through, a list shows
+the result for each one. Trash is the freedesktop.org Trash on Linux and the Recycle Bin on Windows
+(CI-tested only). On Windows, when another program (an Explorer
+window, an antivirus scan, the search indexer) holds a mod folder, RemMods tries again for up to 30 s
+and shows a toast with Cancel. Cancelling stops there: the mod in progress is left as it was unless its
+move had already finished, and in a bulk action mods already moved or deleted stay that way and the
+rest are skipped. Profiles can also be applied from the
+Mods header ("Apply profile"), through the same diff and confirmation as the Profiles panel.
 
 **Phase 4 (in progress)**: install mods. Drop zip, 7z or rar archives onto the window or pick them (or
 a folder) with the file picker. The preview shows the detected root, the mod name, the filename
@@ -44,8 +54,9 @@ extracted folder).
 installs each one and runs its self-test; the AUR package `remmods-bin` is built from the deb. The
 AppImage and the Windows installer can update themselves from Settings → Updates once a later release
 exists (signed updates, checked only when you click). On Linux, Settings → Graphics and a "Start in safe graphics mode" launcher
-action help when the window stays blank. **No release has been published yet**: v1.0.0 waits for the
-two release-blocking Windows gaps (WG-2, WG-5 in [docs/windows-gaps.md](docs/windows-gaps.md)).
+action help when the window stays blank. **No release has been published yet**: no release-blocking
+Windows gap is open in [docs/windows-gaps.md](docs/windows-gaps.md) (WG-2 and WG-5 were closed with
+Phase 3b, CI-tested only); v1.0.0 waits for the final test round.
 
 ## Platforms
 
@@ -149,8 +160,11 @@ Mode to manage mods, then go back to play.
 ## Windows
 
 The Windows build is **beta, CI-tested only**: CI builds it, installs it and runs its self-test, but
-it has not been tested on a real PC yet. Moving mods to the Recycle Bin is not available yet
-(removing a mod deletes it permanently after a second confirmation; WG-5).
+it has not been tested on a real PC yet. Moving mods to the Trash puts them into the drive's Recycle
+Bin, where you can restore them (CI-tested only; WG-5). When a drive has no Recycle Bin, or it is turned
+off or too small (network shares, many USB sticks), RemMods says so and deletes nothing; "Delete
+permanently" then removes the mod after a second confirmation. A mod folder that another program holds
+(an Explorer window, an antivirus scan) is retried for up to 30 s behind a toast with Cancel (WG-2).
 
 The installer is **not code-signed** yet:
 
@@ -226,6 +240,16 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 npm run bindings      # regenerates src/lib/ipc/bindings.ts; commit it when it changes
 scripts/check-cfg.sh && scripts/check-native.sh && scripts/check-commands.sh
+```
+
+The Playwright flows (Chromium only) drive the UI against a mock backend that `vite --mode e2e`
+injects (the `e2e` job in CI, which installs Playwright's own Chromium). Locally, point them at the
+system Chromium instead of downloading one:
+
+```sh
+REMMODS_E2E_CHROMIUM=/usr/bin/chromium npm run e2e        # bash, zsh
+env REMMODS_E2E_CHROMIUM=/usr/bin/chromium npm run e2e    # fish
+npm run e2e:serve     # only the mock-backed UI on http://127.0.0.1:1431, to open in a browser
 ```
 
 A separate `fs-matrix` job runs the rename, rollback and recovery tests on real tmpfs, ext4, btrfs,

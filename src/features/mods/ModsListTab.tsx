@@ -8,10 +8,12 @@ import { filterMods } from './filter-mods'
 import { ModFilters } from './ModFilters'
 import { ModTable } from './ModTable'
 import { rowSubject } from './manage-model'
+import { selectedRows } from './mod-actions'
 import { useModsUiStore } from './mods-ui-store'
 import { pruneSelection } from './selection'
 import { rowsToChange, toggleTargets } from './toggle-model'
-import type { ManageRows, ModsListTabProps, ToggleRows } from './types'
+import type { BulkAction, ManageRows, ModsListTabProps, ToggleRows } from './types'
+import { useBulkActions } from './use-bulk-actions'
 import { useManageActions } from './use-manage-actions'
 import { useToggleMods } from './use-toggle-mods'
 
@@ -23,6 +25,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   const toggle = useToggleMods()
   const { mutate } = toggle
   const manage = useManageActions()
+  const bulk = useBulkActions()
   const locale = i18n.language
   const visible = useMemo(
     () => filterMods(rows, filter, (kind) => t(($) => $.kinds[kind]), locale),
@@ -61,6 +64,15 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
     [manage],
   )
 
+  const bulkRows = useCallback(
+    (action: BulkAction) => {
+      const selected = selectedRows(visible, useModsUiStore.getState().selection)
+      if (action === 'trash') bulk.trash(selected)
+      else bulk.remove(selected)
+    },
+    [bulk, visible],
+  )
+
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -74,7 +86,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   return (
     <Stack gap="md" flex={1} mih={0}>
       <ModFilters shown={visible.length} total={rows.length} searchRef={searchRef} />
-      <ActionBar rows={visible} onToggle={toggleRows} />
+      <ActionBar rows={visible} onToggle={toggleRows} onTrash={bulk.trash} onDelete={bulk.remove} />
       {visible.length === 0 ? (
         <Stack gap="sm" align="flex-start" py="lg">
           <Text size="sm">{t(($) => $.table.noMatch)}</Text>
@@ -83,7 +95,13 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
           </Button>
         </Stack>
       ) : (
-        <ModTable rows={visible} onOpen={openDetails} onToggle={toggleRows} onManage={manageRow} />
+        <ModTable
+          rows={visible}
+          onOpen={openDetails}
+          onToggle={toggleRows}
+          onManage={manageRow}
+          onBulk={bulkRows}
+        />
       )}
     </Stack>
   )

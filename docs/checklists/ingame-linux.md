@@ -51,6 +51,8 @@ Paths below are relative to the Paks folder,
 - **P4**: one zip, one rar and one 7z mod, dropped onto RemMods, load in-game.
 - **P5**: the same check with Steam started from the AppImage build; Steam gets a clean environment
   and working directory, and your gamescope launch options still work. See "P5 steps" below.
+- **P3b**: two profiles back and forth again, one of them applied from the Mods header's quick-apply
+  menu; bulk Move to Trash with a restore, bulk Delete permanently. See "P3b steps" below.
 
 ## P1 steps (read-only phase)
 
@@ -391,3 +393,48 @@ to 9 and 12 are the P5 exit check; steps 10 and 11 follow later releases.
     `~/.config/com.remirudev.remmods/` from the backup if the graphics steps left a mode you do not
     want. The "Runs" table gets a P5 line.
     Result:
+
+## P3b steps (bulk actions and quick-apply)
+
+The first phase that trashes and deletes several mods in one action and applies profiles from the
+Mods header. Backup first, together: Claude prepares and runs the commands, you play offline Practice
+mode and report. Every command works in fish. Each step ends with a "Result:" line to fill in. Never
+run a step without the backup of step 1.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p3b-before.tsv`. Back up
+   `Paks/Mods`, `Paks/~mods`, `Paks/LogicMods` and `~/.local/share/com.remirudev.remmods/` with
+   `cp -a --reflink=auto` into `local/backup-p3b/` (the sources stay read-only), and note the backup
+   size (`du -sh local/backup-p3b`).
+   Result:
+2. Profiles **A** (additive, mod set 1) and **B** (exclusive, mod set 2) as in the P3 steps (save them
+   again if they are gone). Apply A from the **Mods header's "Apply profile" menu** (check the changes
+   listed in the diff dialog), launch, confirm set 1 is visible and set 2 is not. Quit. Apply B from the
+   same menu, launch, confirm set 2 is visible and set 1 is gone. Quit. Apply A from the Profiles panel,
+   launch, confirm. This is the P3b exit check "two profiles back and forth in-game, quick-apply
+   included".
+   Result:
+3. Copy three throwaway mods into `Mods` as `RemModsTest1`, `RemModsTest2` and `RemModsTest3`
+   (`cp -a --reflink=auto` of a folder mod from `local/backup-p3b/`), then select the three in RemMods
+   and choose "Disable" so the game never loads a copy twice. Select `RemModsTest1` plus two real mods
+   and choose "Move to Trash (3)": the confirmation lists the three; after it, the message reads
+   "Moved 3 mods to the Trash." (the list "Not everything went as planned" opens only if a row
+   failed). Launch: the two real mods are
+   gone in-game. Quit. Restore only the two real ones from Dolphin's Trash (`RemModsTest1` stays
+   there; empty it by hand after the run); RemMods shows them again after the rescan; launch, they are
+   back.
+   Result:
+4. Select exactly `RemModsTest2` and `RemModsTest3` by name and choose "Delete permanently… (2)",
+   then "Continue": the final confirmation "Delete these mods forever?" lists both with their sizes
+   and the total (its button stays disabled for a moment); choose "Delete permanently (2)". Both are gone and not in the Trash, and no hidden `_…_tmp_…`
+   folder is left (`ls -a "<Paks>/Mods"`).
+   Result:
+5. Bulk with a matrix refusal: select one loose `.pak` row and one folder row. The bar reads "Delete
+   permanently… (1)" and the first confirmation says 1 selected mod is skipped (linked, loose or
+   archive). Cancel: nothing changes.
+   Result:
+6. Game closed. `scripts/paks-snapshot.sh > local/paks-p3b-after.tsv`, then
+   `diff -u local/paks-p3b-before.tsv local/paks-p3b-after.tsv` shows only the intended changes (the
+   enable states left by step 2's last apply, folder mtimes); no `RemModsTest*` entry and no `_…_tmp_…`
+   folder. Re-apply the starting states, or restore from `local/backup-p3b/`, if anything else
+   differs, and diff again. The "Runs" table gets a P3b line.
+   Result:

@@ -21,7 +21,7 @@ export const errors: LocaleShape<typeof en> = {
     batchFailed: 'Änderungen nicht angewendet',
     invalidName: 'Name nicht erlaubt',
     manageBlocked: 'Das geht nicht',
-    trashUnavailable: 'Papierkorb nicht nutzbar',
+    trashUnavailable: '{{place}} nicht nutzbar',
     deleteTokenInvalid: 'Bestätigung abgelaufen',
     modinfoAmbiguous: 'modinfo.json ist nicht eindeutig',
     profileNotFound: 'Profil nicht gefunden',
@@ -38,6 +38,7 @@ export const errors: LocaleShape<typeof en> = {
     updateBlocked: 'Update gerade nicht möglich',
     updateFailed: 'Update fehlgeschlagen',
     unsupported: 'Auf diesem System nicht verfügbar',
+    busyCancelled: 'Warten abgebrochen',
   },
   messages: {
     busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
@@ -75,6 +76,7 @@ export const errors: LocaleShape<typeof en> = {
     installCancelled: 'Es wurde nichts installiert.',
     noSpace: 'Die Installation braucht {{needed}}, aber nur {{available}} sind frei.',
     updateNotConfigured: 'Dieser Build hat keinen Update-Kanal (Entwicklungs- oder Test-Build).',
+    busyCancelled: 'Abgebrochen. Kein Mod wurde geändert.',
   },
   updateNotAllowed: {
     appImage:
@@ -139,7 +141,7 @@ export const errors: LocaleShape<typeof en> = {
   manageBlocked: {
     action: {
       rename: 'RemMods benennt diesen Eintrag nicht um.',
-      trash: 'RemMods verschiebt diesen Eintrag nicht in den Papierkorb.',
+      trash: 'RemMods verschiebt diesen Eintrag nicht in den {{place}}.',
       delete: 'RemMods löscht diesen Eintrag nicht.',
       metadata: 'RemMods bearbeitet die Infos dieses Eintrags nicht.',
     },
@@ -158,7 +160,11 @@ export const errors: LocaleShape<typeof en> = {
   trashUnavailable: {
     otherDevice: 'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb.',
     noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
-    notSupported: 'Das Verschieben in den Papierkorb ist auf diesem System noch nicht möglich.',
+    notSupported: 'Das Verschieben in den Papierkorb ist in diesem Lauf nicht verfügbar.',
+    recycleRefused:
+      'Windows hat diesen Ordner nicht in den Papierkorb verschoben (der Papierkorb ist vielleicht aus oder zu klein, oder das Laufwerk hat keinen).',
+    notShellSafe:
+      'Windows kann diesen Namen nicht in den Papierkorb verschieben. Benenne ihn zuerst unter Reparieren um oder lösche ihn endgültig.',
   },
   importFailed: {
     tooLarge: 'Die Datei ist zu groß für eine Profilliste.',

@@ -6,7 +6,7 @@ import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef, useSta
 import { useTranslation } from 'react-i18next'
 import type { ModRow } from '../../lib/ipc/types'
 import { canManage, rowSubject } from './manage-model'
-import { spaceAction } from './mod-actions'
+import { bulkCount, spaceAction } from './mod-actions'
 import { buildModColumns, modTableFeatures } from './mod-table-model'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
@@ -31,7 +31,7 @@ function getRowId(row: ModRow): string {
   return row.modRef
 }
 
-export function ModTable({ rows, onOpen, onToggle, onManage }: ModTableProps) {
+export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableProps) {
   const { t, i18n } = useTranslation('mods')
   const locale = i18n.language
   const columns = useMemo(
@@ -123,8 +123,14 @@ export function ModTable({ rows, onOpen, onToggle, onManage }: ModTableProps) {
     if (action) onToggle(action.rows, action.enable)
   }
 
+  // Like Space: with the active row among two or more selected rows, Delete and Shift+Delete act
+  // on the selection (gated on what the selection allows, not on the active row).
   const manageActive = (action: 'rename' | 'trash' | 'delete') => {
     const id = activeRowId()
+    if (action !== 'rename' && id !== null && selection.length >= 2 && selection.includes(id)) {
+      if (bulkCount(rows, selection, action) > 0) onBulk(action)
+      return
+    }
     const row = sortedRows.find((candidate) => candidate.id === id)?.original
     if (row && canManage(rowSubject(row), action)) onManage(action, row)
   }

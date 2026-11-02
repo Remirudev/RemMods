@@ -229,6 +229,11 @@ fn trash_kinds_are_camel_case() {
             TrashKind::TopdirUser,
             "topdirUser",
         ),
+        (
+            platform::TrashKind::RecycleBin,
+            TrashKind::RecycleBin,
+            "recycleBin",
+        ),
     ];
     for (core_kind, kind, name) in cases {
         assert_eq!(TrashKind::from(core_kind), kind);
@@ -336,6 +341,16 @@ fn trash_unavailable_reasons_are_camel_case() {
             platform::TrashUnavailableReason::NotSupported,
             TrashUnavailableReason::NotSupported,
             "notSupported",
+        ),
+        (
+            platform::TrashUnavailableReason::RecycleRefused,
+            TrashUnavailableReason::RecycleRefused,
+            "recycleRefused",
+        ),
+        (
+            platform::TrashUnavailableReason::NotShellSafe,
+            TrashUnavailableReason::NotShellSafe,
+            "notShellSafe",
         ),
     ];
     for (core_reason, reason, name) in cases {

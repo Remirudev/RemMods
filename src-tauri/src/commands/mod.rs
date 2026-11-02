@@ -3,6 +3,7 @@ pub mod game;
 pub mod graphics;
 pub mod install;
 pub mod mods;
+pub mod mods_bulk;
 pub mod mods_manage;
 pub mod profiles;
 pub mod repair;

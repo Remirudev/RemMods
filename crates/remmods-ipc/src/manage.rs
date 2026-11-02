@@ -53,6 +53,7 @@ pub enum TrashKind {
     Home,
     TopdirShared,
     TopdirUser,
+    RecycleBin,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
@@ -134,6 +135,8 @@ pub enum TrashUnavailableReason {
     OtherDevice,
     NoUsableTrash,
     NotSupported,
+    RecycleRefused,
+    NotShellSafe,
 }
 
 impl From<&ModTarget> for core::ModTarget {
@@ -205,6 +208,7 @@ impl From<platform::TrashKind> for TrashKind {
             platform::TrashKind::Home => Self::Home,
             platform::TrashKind::TopdirShared => Self::TopdirShared,
             platform::TrashKind::TopdirUser => Self::TopdirUser,
+            platform::TrashKind::RecycleBin => Self::RecycleBin,
         }
     }
 }
@@ -303,6 +307,8 @@ impl From<platform::TrashUnavailableReason> for TrashUnavailableReason {
             platform::TrashUnavailableReason::OtherDevice => Self::OtherDevice,
             platform::TrashUnavailableReason::NoUsableTrash => Self::NoUsableTrash,
             platform::TrashUnavailableReason::NotSupported => Self::NotSupported,
+            platform::TrashUnavailableReason::RecycleRefused => Self::RecycleRefused,
+            platform::TrashUnavailableReason::NotShellSafe => Self::NotShellSafe,
         }
     }
 }

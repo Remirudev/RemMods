@@ -1,6 +1,7 @@
 import { Button, Group } from '@mantine/core'
 import { IconPencil, IconTrash, IconTrashX } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { canManage, rowSubject } from './manage-model'
 import type { DrawerActionsProps } from './types'
 import { useManageActions } from './use-manage-actions'
@@ -26,7 +27,7 @@ export function DrawerActions({ row }: DrawerActionsProps) {
         disabled={!canManage(subject, 'trash')}
         onClick={() => manage.trash(subject)}
       >
-        {t(($) => $.rowMenu.trash)}
+        {t(($) => $.rowMenu.trash, { place: trashPlaceWord() })}
       </Button>
       <Button
         variant="default"

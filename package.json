@@ -23,6 +23,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:serve": "vite --mode e2e --host 127.0.0.1 --port 1431 --strictPort",
     "bindings": "cargo run --locked -p remmods --bin export-bindings --features bindings"
   },
   "dependencies": {
@@ -47,6 +49,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
+    "@playwright/test": "1.64.1",
     "@tauri-apps/cli": "2.12.4",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",

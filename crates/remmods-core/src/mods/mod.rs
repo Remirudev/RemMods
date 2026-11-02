@@ -4,6 +4,8 @@
 mod api;
 mod api_manage;
 mod api_toggle;
+mod bulk;
+mod bulk_delete;
 mod conflicts;
 mod delete;
 mod delete_token;
@@ -33,6 +35,10 @@ mod trash;
 mod unmanaged;
 mod walk;
 
+pub use bulk::{
+    BULK_MAX_TARGETS, BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult,
+    BulkTrashRequest, PreparedRow,
+};
 pub use conflicts::{original_conflict_names, original_enabled};
 pub use delete::{DeleteOutcome, DeletePrepared, DeleteRequest, plan_set_aside};
 pub use delete_token::DeleteTokens;

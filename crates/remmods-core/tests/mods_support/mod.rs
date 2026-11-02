@@ -2,6 +2,7 @@
 //! `platform::fs_path`, so names Win32 would normalise (`Foo.`, `Foo `) work on Windows too.
 #![allow(dead_code, clippy::disallowed_methods, clippy::expect_used)]
 
+pub mod busy;
 pub mod manage;
 pub mod toggle;
 

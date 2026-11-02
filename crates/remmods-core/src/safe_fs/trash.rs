@@ -1,5 +1,6 @@
-//! The freedesktop.org Trash mover: renames mod items into a trash on the same mount and writes
-//! their `.trashinfo`. It never copies and never deletes item data.
+//! The trash movers: freedesktop.org (renames mod items into a trash on the same mount and writes
+//! their `.trashinfo`) and the Windows Recycle Bin (through `platform::recycle`). Neither copies
+//! nor deletes item data.
 
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -11,9 +12,10 @@ use chrono::{DateTime, Local};
 use super::FsError;
 use super::batch::{BatchError, FaultPlan, StuckOp};
 use super::gate::WriteGuard;
+use super::names;
 use super::scope::Scope;
 use crate::platform::{
-    self, NoReplace, OsErrorClass, TrashKind, TrashLocation, TrashUnavailableReason,
+    self, NoReplace, OsErrorClass, Recycled, TrashKind, TrashLocation, TrashUnavailableReason,
 };
 
 /// `name`, then `name.2` … `name.999`.
@@ -47,7 +49,8 @@ impl WriteGuard<'_> {
     }
 
     /// [`WriteGuard::trash`] with test fault injection: `fail_before: Some(k)` fails item k's
-    /// rename with the injected error, like `rename_batch`.
+    /// rename with the injected error, like `rename_batch`; `abort_recycle: Some(k)` (Recycle Bin
+    /// only) makes the shell sink refuse item k as if the shell could not recycle it.
     pub fn trash_with_fault(
         &self,
         env: &platform::TrashEnv,
@@ -64,8 +67,11 @@ impl WriteGuard<'_> {
             Ok(Err(reason)) => return Err(FsError::TrashUnavailable { reason }),
             Err(error) => return Err(FsError::io("trash_location", first, error)),
         };
-        create_missing(&location, env.uid)?;
         let fault = fault.cloned().unwrap_or_default();
+        if location.kind == TrashKind::RecycleBin {
+            return recycle_items(items, &fault);
+        }
+        create_missing(&location, env.uid)?;
         let mut done: Vec<TrashedItem> = Vec::with_capacity(items.len());
         for (index, item) in items.iter().enumerate() {
             match move_one(&location, item, now, injected(&fault, index)) {
@@ -81,7 +87,17 @@ impl WriteGuard<'_> {
     }
 }
 
-/// `[Trash Info]` with `Path=` (already percent-encoded) and the local `DeletionDate`.
+impl WriteGuard<'_> {
+    /// Tests only: `scope.check(item)`, then `platform::recycle(item, force_abort)` without the
+    /// name check of the trash path, so tests can prove the platform's own guard. Never called by
+    /// core.
+    #[doc(hidden)]
+    pub fn recycle_forced(&self, item: &Path, force_abort: bool) -> Result<Recycled, FsError> {
+        self.scope().check(item)?;
+        platform::recycle(item, force_abort).map_err(|error| FsError::io("recycle", item, error))
+    }
+}
+
 impl WriteGuard<'_> {
     /// An item that a journal record names (e.g. a live install staging folder).
     fn first_journaled(&self, items: &[PathBuf]) -> Result<Option<PathBuf>, FsError> {
@@ -94,6 +110,7 @@ impl WriteGuard<'_> {
     }
 }
 
+/// `[Trash Info]` with `Path=` (already percent-encoded) and the local `DeletionDate`.
 pub fn trashinfo_text(path_field: &str, now: DateTime<Local>) -> String {
     format!(
         "[Trash Info]\nPath={path_field}\nDeletionDate={}\n",
@@ -134,6 +151,77 @@ fn check_items<'a>(scope: &Scope, items: &'a [PathBuf]) -> Result<&'a Path, FsEr
         }
     }
     Ok(first)
+}
+
+/// Every item is checked before anything moves; then one item at a time, in order. Nothing is
+/// moved back out of the Recycle Bin: after a failure at item k ≥ 1, items 0..k stay there
+/// (restorable) and are reported as stuck. For a loose group the `.pak` went first, so what is
+/// left behind is inert.
+fn recycle_items(items: &[PathBuf], fault: &FaultPlan) -> Result<TrashReport, FsError> {
+    if !items.iter().all(|item| names::shell_safe_path(item)) {
+        return Err(FsError::TrashUnavailable {
+            reason: TrashUnavailableReason::NotShellSafe,
+        });
+    }
+    let mut done: Vec<TrashedItem> = Vec::with_capacity(items.len());
+    for (index, item) in items.iter().enumerate() {
+        let force_abort = fault.abort_recycle == Some(index);
+        match recycle_one(item, injected(fault, index), force_abort) {
+            Ok(recycled) => done.push(recycled),
+            Err(cause) if done.is_empty() => return Err(cause),
+            Err(cause) => return Err(left_in_bin(&done, index, cause)),
+        }
+    }
+    Ok(TrashReport {
+        kind: TrashKind::RecycleBin,
+        items: done,
+    })
+}
+
+/// `info` stays empty: the bin's `$I…` file is the shell's business.
+fn recycle_one(
+    item: &Path,
+    fault: Option<io::Error>,
+    force_abort: bool,
+) -> Result<TrashedItem, FsError> {
+    if let Some(error) = fault {
+        return Err(FsError::io("recycle", item, error));
+    }
+    let reason = match platform::recycle(item, force_abort) {
+        Ok(Recycled::Done { bin_path }) => {
+            return Ok(TrashedItem {
+                original: item.to_path_buf(),
+                trashed: bin_path,
+                info: PathBuf::new(),
+            });
+        }
+        Ok(Recycled::Refused) => TrashUnavailableReason::RecycleRefused,
+        Ok(Recycled::NotShellSafe) => TrashUnavailableReason::NotShellSafe,
+        Err(error) => return Err(FsError::io("recycle", item, error)),
+    };
+    Err(FsError::TrashUnavailable { reason })
+}
+
+fn left_in_bin(done: &[TrashedItem], failed: usize, cause: FsError) -> FsError {
+    for item in done {
+        log::error!(
+            "{} stays in the Recycle Bin as {} after item {failed} failed: {cause}",
+            item.original.display(),
+            item.trashed.display()
+        );
+    }
+    FsError::Batch(Box::new(BatchError {
+        failed,
+        cause,
+        rolled_back: 0,
+        stuck: done
+            .iter()
+            .map(|item| StuckOp {
+                from: item.trashed.clone(),
+                to: item.original.clone(),
+            })
+            .collect(),
+    }))
 }
 
 fn create_missing(location: &TrashLocation, uid: Option<u32>) -> Result<(), FsError> {

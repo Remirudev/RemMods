@@ -18,7 +18,7 @@ export const errors = {
     batchFailed: 'Changes were not applied',
     invalidName: 'Name not allowed',
     manageBlocked: 'This cannot be done',
-    trashUnavailable: 'The Trash cannot be used',
+    trashUnavailable: 'The {{place}} cannot be used',
     deleteTokenInvalid: 'Confirmation expired',
     modinfoAmbiguous: 'modinfo.json is ambiguous',
     profileNotFound: 'Profile not found',
@@ -35,6 +35,7 @@ export const errors = {
     updateBlocked: 'Update not possible right now',
     updateFailed: 'Update failed',
     unsupported: 'Not available on this system',
+    busyCancelled: 'Wait cancelled',
   },
   messages: {
     busy: 'Another change is still running. Try again in a moment.',
@@ -66,6 +67,7 @@ export const errors = {
     installCancelled: 'Nothing was installed.',
     noSpace: 'The install needs {{needed}}, but only {{available}} are free.',
     updateNotConfigured: 'This build has no update channel (development or test build).',
+    busyCancelled: 'Cancelled. No mod was changed.',
   },
   updateNotAllowed: {
     appImage:
@@ -126,7 +128,7 @@ export const errors = {
   manageBlocked: {
     action: {
       rename: 'RemMods does not rename this entry.',
-      trash: 'RemMods does not move this entry to the Trash.',
+      trash: 'RemMods does not move this entry to the {{place}}.',
       delete: 'RemMods does not delete this entry.',
       metadata: 'RemMods does not edit the info of this entry.',
     },
@@ -143,7 +145,11 @@ export const errors = {
   trashUnavailable: {
     otherDevice: 'This folder is on another drive than your Trash.',
     noUsableTrash: 'No usable Trash folder was found for this drive.',
-    notSupported: 'Moving to the Trash is not available on this system yet.',
+    notSupported: 'Moving to the Trash is not available in this run.',
+    recycleRefused:
+      'Windows would not move this folder to the Recycle Bin (the bin may be off or too small, or the drive has none).',
+    notShellSafe:
+      'Windows cannot move this name to the Recycle Bin. Rename it in Repair first, or delete it permanently.',
   },
   importFailed: {
     tooLarge: 'The file is too large to be a profile list.',

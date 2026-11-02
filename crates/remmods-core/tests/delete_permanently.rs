@@ -452,3 +452,21 @@ fn delete_partial_pair_refused_unchanged() {
     assert_eq!(tree(&fixture), before);
     assert!(fixture.exists("Mods/A/A.pak"));
 }
+
+#[test]
+fn single_token_from_prepare_many_works_for_one_row() {
+    let fixture = core_with_trash(COOL);
+    let target = fixture.target("Standard:Cool");
+    let prepared = fixture
+        .core
+        .mods_delete_prepare_many(std::slice::from_ref(&target))
+        .expect("prepare_many");
+    let token = prepared.token.expect("a token");
+    let outcome = fixture
+        .core
+        .mods_delete_permanently(&request(target, &token))
+        .expect("delete");
+    assert_eq!(outcome.leftover, None);
+    assert!(!fixture.exists("Mods/Cool"));
+    assert!(fixture.exists("Mods/Other/Other.pak"));
+}

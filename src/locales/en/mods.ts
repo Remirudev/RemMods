@@ -69,7 +69,81 @@ export const mods = {
     selected_other: '{{count}} selected',
     enable: 'Enable',
     disable: 'Disable',
+    trash_one: 'Move to {{place}} ({{count}})',
+    trash_other: 'Move to {{place}} ({{count}})',
+    delete_one: 'Delete permanently… ({{count}})',
+    delete_other: 'Delete permanently… ({{count}})',
     clear: 'Clear (Esc)',
+  },
+  bulk: {
+    skippedByMatrix_one: '{{count}} selected mod is skipped (linked, loose or archive).',
+    skippedByMatrix_other: '{{count}} selected mods are skipped (linked, loose or archive).',
+    trashConfirm: {
+      title: 'Move to {{place}}?',
+      body_one: 'Move {{count}} mod ({{size}}) to the {{place}}? You can restore it from there.',
+      body_other:
+        'Move {{count}} mods ({{size}}) to the {{place}}? You can restore them from there.',
+      more: 'and {{count}} more',
+      confirm: 'Move to {{place}}',
+    },
+    deleteFirst: {
+      title: 'Delete permanently?',
+      body_one:
+        'This deletes {{count}} mod for good instead of moving it to the {{place}}. You are asked once more before anything is deleted.',
+      body_other:
+        'This deletes {{count}} mods for good instead of moving them to the {{place}}. You are asked once more before anything is deleted.',
+      confirm: 'Continue',
+    },
+    deleteFinal: {
+      title: 'Delete these mods forever?',
+      body: 'These mods will be deleted permanently:',
+      skipped: 'Skipped: {{reason}}',
+      total: 'Total: {{size}}',
+      confirm: 'Delete permanently ({{count}})',
+    },
+    results: {
+      title: 'Not everything went as planned',
+      trashed: 'Moved to the Trash',
+      recycled: 'Moved to the Recycle Bin',
+      deleted: 'Deleted',
+      leftover: 'Deleted, but a hidden part is left: {{path}}. The Repair tab lists it.',
+      unavailable: 'Not moved: {{reason}}',
+      notDeletable: 'Not moved, and it cannot be deleted here: {{reason}}',
+      failed: 'Failed: {{message}}',
+      cancelled: 'Cancelled while waiting for the folder; this mod was not changed.',
+      notRun: 'Not attempted (cancelled)',
+      deleteUnavailable_one: 'Delete permanently ({{count}})',
+      deleteUnavailable_other: 'Delete permanently ({{count}})',
+      deleteWarning_one: 'This mod ({{size}}) would be deleted permanently instead.',
+      deleteWarning_other: 'These {{count}} mods ({{size}}) would be deleted permanently instead.',
+      total: 'Total: {{size}}',
+      close: 'Close',
+    },
+    done: {
+      trash_one: 'Moved {{count}} mod to the Trash.',
+      trash_other: 'Moved {{count}} mods to the Trash.',
+      recycle_one: 'Moved {{count}} mod to the Recycle Bin.',
+      recycle_other: 'Moved {{count}} mods to the Recycle Bin.',
+      delete_one: 'Deleted {{count}} mod.',
+      delete_other: 'Deleted {{count}} mods.',
+    },
+    nothingEligible: 'None of these mods can be deleted. Nothing was changed.',
+  },
+  folderBusy: {
+    title: 'Waiting for a folder in use',
+    body: '“{{folder}}” is in use by another program, for example an Explorer window, an antivirus scan or the search indexer. RemMods tries again for up to {{limit}} s.',
+    bodyUndo:
+      'RemMods is putting “{{folder}}” back and has to wait for it; this cannot be cancelled.',
+    elapsed: 'Waiting for {{seconds}} s',
+    cancel: 'Cancel',
+    cancelling: 'Cancelling…',
+    holders: 'In use by: {{names}}',
+  },
+  quickApply: {
+    button: 'Apply profile',
+    empty: 'No saved profiles yet',
+    last: 'Last applied',
+    readOnly: 'Profiles cannot be saved right now; see the Profiles panel',
   },
   watch: {
     limitReached:
@@ -298,7 +372,7 @@ export const mods = {
   rowMenu: {
     label: 'Actions for {{name}}',
     rename: 'Rename…',
-    trash: 'Move to Trash',
+    trash: 'Move to {{place}}',
     delete: 'Delete permanently…',
   },
   confirm: {
@@ -330,17 +404,23 @@ export const mods = {
     invalid: 'This name cannot be used.',
   },
   trash: {
+    place: { trash: 'Trash', recycleBin: 'Recycle Bin' },
     confirm: {
-      title: 'Move to Trash?',
-      body: 'Move “{{name}}” ({{size}}) to the system Trash? You can restore it from there.',
-      confirm: 'Move to Trash',
+      title: 'Move to {{place}}?',
+      body: 'Move “{{name}}” ({{size}}) to the {{place}}? You can restore it from there.',
+      confirm: 'Move to {{place}}',
     },
     done: 'Moved “{{name}}” to the Trash.',
+    doneRecycle: 'Moved “{{name}}” to the Recycle Bin.',
     unavailable: {
-      title: 'The Trash cannot be used',
+      title: 'The {{place}} cannot be used',
       otherDevice: 'This folder is on another drive than your Trash, so the Trash cannot take it.',
       noUsableTrash: 'No usable Trash folder was found for this drive.',
-      notSupported: 'Moving to the Trash is not available on this system yet.',
+      notSupported: 'Moving to the {{place}} is not available in this run.',
+      recycleRefused:
+        'Windows would not move this folder to the Recycle Bin (the bin may be off or too small for it, or the drive has none).',
+      notShellSafe:
+        'Windows cannot move this name to the Recycle Bin. Rename it in Repair first, or delete it permanently.',
       warning: '“{{name}}” ({{size}}) would be deleted permanently instead.',
       confirm: 'Delete permanently',
     },
@@ -349,7 +429,7 @@ export const mods = {
     cancel: 'Cancel',
     confirm: {
       title: 'Delete permanently?',
-      body: 'This deletes “{{name}}” for good instead of moving it to the Trash. You are asked once more before anything is deleted.',
+      body: 'This deletes “{{name}}” for good instead of moving it to the {{place}}. You are asked once more before anything is deleted.',
       confirm: 'Continue',
     },
     final: {
@@ -399,7 +479,7 @@ export const mods = {
     },
     actions: {
       rename: 'Rename…',
-      trash: 'Move to Trash',
+      trash: 'Move to {{place}}',
       deletePermanently: 'Delete permanently…',
       reveal: 'Show in file manager',
       finishDisable: 'Finish disabling',

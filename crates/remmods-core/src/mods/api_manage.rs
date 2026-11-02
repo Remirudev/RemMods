@@ -3,15 +3,13 @@
 
 use std::ffi::OsString;
 
-use chrono::Local;
-
 use super::error::ModsError;
 use super::listing::Lister;
 use super::manage_target::{ManageAction, Managed, plain_path, resolve_managed};
 use super::model::{ModRow, ScanContent, ScanInput};
 use super::rename::{RekeyReport, RenameOutcome, RenameRequest, new_key, plan_rename};
 use super::service::Refreshed;
-use super::trash::{TrashOutcome, TrashRequest, trash_items};
+use super::trash::{TrashOutcome, TrashRequest, trash_managed};
 use crate::safe_fs::{BatchOptions, FsError, RetryMode, Scope, WriteGuard};
 use crate::{Core, CoreError};
 
@@ -44,23 +42,10 @@ impl Core {
             let managed = resolve_managed(content, &request.target)?;
             managed.check(ManageAction::Trash)?;
             self.running_retry(request.apply_while_running)?;
-            let items = trash_items(&managed, input)?;
-            let size = match &managed {
-                Managed::Row(row) => row.size,
-                Managed::Archive(entry) => Some(entry.size),
-                Managed::Leftover(_) | Managed::Unmanaged(_) => None,
-            };
             let fault = self.take_batch_fault();
-            let report = guard
-                .trash_with_fault(&self.trash_env, &items, Local::now(), fault.as_ref())
-                .map_err(|error| match error {
-                    FsError::TrashUnavailable { reason } => {
-                        ModsError::TrashUnavailable { reason, size }
-                    }
-                    other => ModsError::Fs(other),
-                })?;
-            let count = u32::try_from(report.items.len()).unwrap_or(u32::MAX);
-            Ok((managed.key().to_owned(), count, report.kind))
+            let (count, kind) =
+                trash_managed(guard, &self.trash_env, input, &managed, fault.as_ref())?;
+            Ok((managed.key().to_owned(), count, kind))
         })?;
         Ok(TrashOutcome {
             refreshed,
@@ -83,7 +68,7 @@ impl Core {
             .refresh(&input)
             .map_err(CoreError::from)
             .and_then(|fresh| work(&guard, &input, &fresh.snapshot.content));
-        let refreshed = self.mods.refresh(&input);
+        let refreshed = self.final_refresh(&input);
         match (result, refreshed) {
             (Ok(value), Ok(refreshed)) => Ok((value, refreshed)),
             (Ok(_), Err(error)) => Err(error.into()),
@@ -94,6 +79,54 @@ impl Core {
                 Err(error)
             }
         }
+    }
+
+    /// `run_managed` for the bulk calls (spec §5.3): the same guard and scans, but a failed
+    /// final rescan after `work` succeeded is logged and gives `None`, never an error that would
+    /// hide rows already trashed or deleted. Either way a failed final rescan marks the cached
+    /// pre-mutation scan stale, so `mods_list` scans again instead of listing removed rows.
+    pub(crate) fn run_managed_bulk<T>(
+        &self,
+        work: impl FnOnce(&WriteGuard<'_>, &ScanInput, &ScanContent) -> Result<T, CoreError>,
+    ) -> Result<(T, Option<Refreshed>), CoreError> {
+        let input = self.mods_scan_input()?;
+        let guard = self.ops.write(self.manage_scope(&input)?)?;
+        self.check_marker(&input)?;
+        let result = self
+            .mods
+            .refresh(&input)
+            .map_err(CoreError::from)
+            .and_then(|fresh| work(&guard, &input, &fresh.snapshot.content));
+        let refreshed = self.final_refresh(&input);
+        match (result, refreshed) {
+            (Ok(value), Ok(refreshed)) => Ok((value, Some(refreshed))),
+            (Ok(value), Err(error)) => {
+                log::error!("refresh after a bulk manage action failed: {error}");
+                Ok((value, None))
+            }
+            (Err(error), refreshed) => {
+                if let Err(refresh_error) = refreshed {
+                    log::warn!("refresh after a failed manage action failed: {refresh_error}");
+                }
+                Err(error)
+            }
+        }
+    }
+
+    /// The rescan after a mutation (manage, bulk, toggle, install). A failed one, injected by
+    /// `fail_next_final_refresh` or real, marks the cached pre-mutation scan stale, so
+    /// `mods_list` scans again instead of listing rows in their old state.
+    pub(crate) fn final_refresh(&self, input: &ScanInput) -> Result<Refreshed, ModsError> {
+        let refreshed = if self.take_final_refresh_failure() {
+            let injected = std::io::Error::other("injected refresh failure");
+            Err(ModsError::Fs(FsError::io("scan", &input.paks, injected)))
+        } else {
+            self.mods.refresh(input)
+        };
+        if refreshed.is_err() {
+            self.mods.mark_stale();
+        }
+        refreshed
     }
 
     pub(crate) fn manage_scope(&self, input: &ScanInput) -> Result<Scope, CoreError> {

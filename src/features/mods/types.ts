@@ -2,6 +2,11 @@ import type { ReactNode, RefObject } from 'react'
 import type {
   ArchiveEntry,
   AssetEntry,
+  BulkDeletePrepared,
+  BulkDeleteRequest,
+  BulkOutcome,
+  BulkRow,
+  BulkTrashRequest,
   ConflictLink,
   ContainerSummary,
   ContentConflictLink,
@@ -19,10 +24,12 @@ import type {
   ModState,
   ModsSnapshot,
   ModTarget,
+  PreparedRow,
   RepairItem,
   RepairList,
   RootInfo,
   RunningState,
+  TrashKind,
   TrashOutcome,
   TrashRequest,
   TrashUnavailableReason,
@@ -94,7 +101,9 @@ export interface SelectionState {
   anchor: string | null
 }
 
-export type ModActionId = 'enable' | 'disable'
+export type ModActionId = 'enable' | 'disable' | 'trash' | 'delete'
+
+export type BulkAction = 'trash' | 'delete'
 
 export interface ModAction {
   id: ModActionId
@@ -196,6 +205,7 @@ export interface ModTableProps {
   onOpen: (modRef: string) => void
   onToggle: ToggleRows
   onManage: ManageRows
+  onBulk: (action: BulkAction) => void
 }
 
 export interface ToggleCellProps {
@@ -211,6 +221,8 @@ export interface RowMenuProps {
 export interface ActionBarProps {
   rows: readonly ModRow[]
   onToggle: ToggleRows
+  onTrash: (rows: readonly ModRow[]) => void
+  onDelete: (rows: readonly ModRow[]) => void
 }
 
 export interface ModRowCellProps {
@@ -340,7 +352,7 @@ export type FlowDialog =
   | { kind: 'deleteFinal'; subject: ManageSubject; name: string; size: number | null }
 
 export type FlowNotice =
-  | { kind: 'trashDone'; name: string }
+  | { kind: 'trashDone'; name: string; trash: TrashKind }
   | { kind: 'deleteDone'; name: string }
   | { kind: 'deleteExpired' }
   | { kind: 'deleteLeftover'; path: string }
@@ -371,6 +383,95 @@ export interface DeleteConfirmBodyProps {
   onConfirm: () => void
 }
 
+export interface BulkSelection {
+  subjects: ManageSubject[]
+  skipped: number
+}
+
+export interface BulkDeps {
+  api: {
+    trashMany: (request: BulkTrashRequest) => Promise<BulkOutcome>
+    prepareMany: (targets: ModTarget[]) => Promise<BulkDeletePrepared>
+    deleteMany: (request: BulkDeleteRequest) => Promise<BulkOutcome>
+  }
+  ask: (dialog: BulkDialog) => Promise<boolean>
+  askRunning: () => Promise<boolean>
+  store: (snapshot: ModsSnapshot | null) => void
+  notice: (notice: BulkNotice) => void
+  showResults: (results: BulkResults) => Promise<'deleteUnavailable' | 'close'>
+  fail: (error: unknown) => void
+}
+
+export type BulkDialog =
+  | { kind: 'bulkTrash'; subjects: ManageSubject[]; skipped: number }
+  | { kind: 'bulkDeleteFirst'; subjects: ManageSubject[]; skipped: number }
+  | { kind: 'bulkDeleteFinal'; rows: PreparedRow[] }
+
+export type BulkNotice =
+  | { kind: 'bulkTrashDone'; count: number; trash: TrashKind }
+  | { kind: 'bulkDeleteDone'; count: number }
+  | { kind: 'bulkNothingEligible' }
+  | { kind: 'deleteExpired' }
+
+/** `subjects` (trash only): the subjects sent, so the dialog can apply `canManage(…, 'delete')`. */
+export interface BulkResults {
+  action: 'trash' | 'delete'
+  rows: BulkRow[]
+  subjects?: ManageSubject[]
+}
+
+export interface BulkActions {
+  trash: (rows: readonly ModRow[]) => void
+  remove: (rows: readonly ModRow[]) => void
+}
+
+// One row of a size list: what a dialog shows before a permanent delete.
+export interface SizedName {
+  key: string
+  name: string
+  size: number | null
+  note?: string
+}
+
+export interface BulkConfirmBodyProps {
+  lines: string[]
+  names: readonly { key: string; name: string }[]
+  more: number
+  confirmLabel: string
+  danger: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface BulkFinalBodyProps {
+  rows: readonly PreparedRow[]
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface BulkDeleteWarningProps {
+  heading?: string
+  rows: readonly SizedName[]
+  footer: string
+}
+
+export interface BulkRowStatus {
+  icon: ReactNode
+  color: string
+  text: string
+}
+
+export interface BulkResultListProps {
+  rows: readonly BulkRow[]
+  subjects?: readonly ManageSubject[]
+}
+
+export interface BulkResultsBodyProps {
+  results: BulkResults
+  onClose: () => void
+  onDelete: () => void
+}
+
 export interface TrashUnavailableBodyProps {
   name: string
   size: number | null
@@ -385,8 +486,10 @@ export interface RenameDialogProps {
   currentName: string
   initialName: string
   siblings: ReadonlySet<string>
-  originalApp: boolean
+  originalApp?: boolean
   onClose: () => void
+  // The modal that hosts the dialog, locked while the rename runs.
+  modalId?: string
 }
 
 export interface ManageActions {

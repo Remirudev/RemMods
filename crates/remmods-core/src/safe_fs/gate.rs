@@ -8,6 +8,7 @@ use std::sync::{Mutex, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use super::batch::{self, BatchOptions, BatchReport, RenameOp};
+use super::busy::BusyWaits;
 use super::journal::{Journal, RecoveryReport};
 use super::preflight::Chains;
 use super::scope::Scope;
@@ -25,6 +26,8 @@ pub struct OpGate {
     /// The exclusive app lock a self-update holds from its seal until the process exits
     /// (SPEC-P5 §5.2): writes fail with Busy, scans need no app lock of their own.
     sealed: Mutex<Option<AppLock>>,
+    /// Folder-busy waits of this gate's writers (WG-2); one writer at a time, one wait.
+    busy: BusyWaits,
     /// Held exclusively for the gate's life: it tells other processes this session is alive.
     _session_file: File,
 }
@@ -63,6 +66,7 @@ impl OpGate {
             lock_path: paths.lock_file.clone(),
             journal,
             sealed: Mutex::new(None),
+            busy: BusyWaits::default(),
             _session_file: session_file,
         })
     }
@@ -97,6 +101,7 @@ impl OpGate {
         }
         let app_lock = AppLock::exclusive_within(&self.lock_path, LOCK_WAIT)?;
         let recovery = recovery::recover(&self.journal, &scope)?;
+        self.busy.clear_cancel_requested();
         Ok(WriteGuard {
             gate: self,
             scope,
@@ -104,6 +109,10 @@ impl OpGate {
             _app_lock: app_lock,
             _inner: inner,
         })
+    }
+
+    pub fn busy(&self) -> &BusyWaits {
+        &self.busy
     }
 
     pub fn is_sealed(&self) -> bool {
@@ -174,6 +183,7 @@ impl WriteGuard<'_> {
         batch::run(
             &self.scope,
             &self.gate.journal,
+            &self.gate.busy,
             ops,
             options,
             Chains::Reject,
@@ -191,6 +201,7 @@ impl WriteGuard<'_> {
         batch::run(
             &self.scope,
             &self.gate.journal,
+            &self.gate.busy,
             ops,
             options,
             Chains::AllowVacated,

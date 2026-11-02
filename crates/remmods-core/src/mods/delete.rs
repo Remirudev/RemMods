@@ -13,7 +13,9 @@ use super::manage_target::{
 use super::model::{ModRow, ScanContent, ScanInput};
 use super::service::Refreshed;
 use super::toggle_files::{FileClass, ModFiles, list_toggle_files};
-use crate::safe_fs::{FsError, RenameOp, WriteGuard, set_aside_name};
+use crate::safe_fs::{
+    BatchOptions, FaultPlan, FsError, RenameOp, RetryMode, WriteGuard, set_aside_name,
+};
 use crate::{Core, CoreError};
 
 const SET_ASIDE_LABEL: &str = "set_aside";
@@ -50,10 +52,7 @@ impl Core {
         let fresh = self.mods_refresh()?;
         let managed = resolve_managed(&fresh.snapshot.content, target)?;
         managed.check(ManageAction::Delete)?;
-        let (name, size) = match &managed {
-            Managed::Row(row) => (row.name.clone(), row.size),
-            other => (other.key().to_owned(), None),
-        };
+        let (name, size) = delete_label(&managed);
         let key = managed.key().to_owned();
         let token = self
             .delete_tokens
@@ -95,37 +94,65 @@ impl Core {
         let managed = resolve_managed(content, &request.target)?;
         managed.check(ManageAction::Delete)?;
         let retry = self.running_retry(request.apply_while_running)?;
-        let aside = match &managed {
-            Managed::Row(row) => {
-                let files = list_toggle_files(row, input)?;
-                let suffix = uuid::Uuid::new_v4().simple().to_string();
-                let (ops, aside) = plan_set_aside(row, &files, &suffix)?;
-                guard.rename_batch(&ops, &self.batch_options(SET_ASIDE_LABEL, retry))?;
-                aside
-            }
-            Managed::Leftover(entry) => plain_path(&resolve_ref(input, &entry.mod_ref)?, input)?,
-            Managed::Archive(_) | Managed::Unmanaged(_) => return Err(ModsError::Stale.into()),
+        let fault = match managed {
+            Managed::Row(_) => self.take_batch_fault(),
+            _ => None,
         };
-        let leftover = match guard.remove_aside(&aside) {
-            Ok(()) => None,
-            Err(FsError::AsideJournaled { .. }) => {
-                return Err(ModsError::ManageBlocked {
-                    key: managed.key().to_owned(),
-                    action: ManageAction::Delete,
-                    reason: ManageBlock::JournalPending,
-                }
-                .into());
-            }
-            Err(error @ (FsError::Io { .. } | FsError::Batch(_))) => {
-                log::error!("permanent delete left a hidden, inert folder behind: {error}");
-                Some(rel_display(&aside, &input.paks))
-            }
-            Err(error) => return Err(error.into()),
-        };
+        let leftover = self.delete_row(guard, input, &managed, retry, fault)?;
         if let Managed::Row(row) = managed {
             self.forget_meta(guard, content, row);
         }
         Ok(leftover)
+    }
+
+    /// One checked entry (P3 §5.4 steps 3–5): a row is set aside in its own journaled batch
+    /// (all or none), then removed; a leftover is removed directly. Once a row's set-aside went
+    /// through, the mod is hidden and inert, so a failed removal is logged and reported as the
+    /// leftover, never as an error.
+    pub(crate) fn delete_row(
+        &self,
+        guard: &WriteGuard<'_>,
+        input: &ScanInput,
+        managed: &Managed<'_>,
+        retry: RetryMode,
+        fault: Option<FaultPlan>,
+    ) -> Result<Option<String>, CoreError> {
+        let options = BatchOptions {
+            label: SET_ASIDE_LABEL,
+            retry,
+            fault,
+        };
+        let aside = match managed {
+            Managed::Row(row) => {
+                let files = list_toggle_files(row, input)?;
+                let suffix = uuid::Uuid::new_v4().simple().to_string();
+                let (ops, aside) = plan_set_aside(row, &files, &suffix)?;
+                guard.rename_batch(&ops, &options)?;
+                return Ok(match guard.remove_aside(&aside) {
+                    Ok(()) => None,
+                    Err(error) => {
+                        log::error!("permanent delete left a hidden, inert folder behind: {error}");
+                        Some(rel_display(&aside, &input.paks))
+                    }
+                });
+            }
+            Managed::Leftover(entry) => plain_path(&resolve_ref(input, &entry.mod_ref)?, input)?,
+            Managed::Archive(_) | Managed::Unmanaged(_) => return Err(ModsError::Stale.into()),
+        };
+        match guard.remove_aside(&aside) {
+            Ok(()) => Ok(None),
+            Err(FsError::AsideJournaled { .. }) => Err(ModsError::ManageBlocked {
+                key: managed.key().to_owned(),
+                action: ManageAction::Delete,
+                reason: ManageBlock::JournalPending,
+            }
+            .into()),
+            Err(error @ (FsError::Io { .. } | FsError::Batch(_))) => {
+                log::error!("permanent delete left a hidden, inert folder behind: {error}");
+                Ok(Some(rel_display(&aside, &input.paks)))
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 
     /// Drops the `mod-meta.json` entry unless another row still has the key; logged on failure.
@@ -142,6 +169,14 @@ impl Core {
         if let Err(error) = self.mods.meta().update(guard, |meta| meta.remove(&row.key)) {
             log::error!("mod-meta.json entry of a deleted mod not removed: {error}");
         }
+    }
+}
+
+/// The name and size a delete confirmation shows: a row's name and size, else the key.
+pub(crate) fn delete_label(managed: &Managed<'_>) -> (String, Option<u64>) {
+    match managed {
+        Managed::Row(row) => (row.name.clone(), row.size),
+        other => (other.key().to_owned(), None),
     }
 }
 
@@ -183,7 +218,7 @@ pub fn plan_set_aside(
 }
 
 /// `Root/name` below Paks, `/`-joined, lossy (display only).
-fn rel_display(path: &Path, paks: &Path) -> String {
+pub(crate) fn rel_display(path: &Path, paks: &Path) -> String {
     path.strip_prefix(paks)
         .unwrap_or(path)
         .components()

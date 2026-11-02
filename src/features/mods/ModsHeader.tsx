@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PanelHeader } from '../../shared/components/PanelHeader'
 import { ConflictsChip } from './ConflictsChip'
 import { GameControls } from './GameControls'
+import { QuickApplyMenu } from './QuickApplyMenu'
 import type { ModsHeaderProps } from './types'
 
 export function ModsHeader({
@@ -25,6 +26,7 @@ export function ModsHeader({
       actions={
         <Group gap="sm" align="flex-start" wrap="nowrap">
           {snapshot && <ConflictsChip rows={snapshot.rows} />}
+          {snapshot && <QuickApplyMenu />}
           <GameControls
             running={running}
             tracking={tracking}
