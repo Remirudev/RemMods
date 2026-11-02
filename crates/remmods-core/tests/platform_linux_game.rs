@@ -4,8 +4,10 @@
 mod game_support;
 mod support;
 
+use std::ffi::OsString;
 use std::fs;
 use std::io;
+use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::os::unix::fs::symlink;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
@@ -13,10 +15,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use game_support::{MANIFEST, install_game, linux_hints, make_game_named, steam_text, under};
+use remmods_core::AppPaths;
 use remmods_core::game::{
     FolderProblem, NoteCode, SteamKind, detect, game_matches, validate_game_root,
 };
-use remmods_core::platform::{host_command, processes, spawn_detached};
+use remmods_core::graphics::{self, GraphicsPaths};
+use remmods_core::platform::{host_command, host_env_plan, processes, spawn_detached};
+use remmods_core::safe_fs::{self, FsError};
 
 #[test]
 fn own_process_is_listed_with_its_argv() {
@@ -65,6 +70,50 @@ fn spawn_detached_reports_early_failures() {
     let missing =
         spawn_detached(host_command("remmods-no-such-program")).expect_err("missing program");
     assert_eq!(missing.kind(), io::ErrorKind::NotFound);
+}
+
+/// Spec P5 H10: non-UTF-8 entries outside the mount survive byte-exact.
+#[test]
+fn host_env_keeps_non_utf8_entries_byte_exact() {
+    let path = OsString::from_vec(b"/tmp/.mount_x/usr/bin:/opt/\xff\xfe/bin:/usr/bin".to_vec());
+    let lib = OsString::from_vec(b"/tmp/.mount_x/lib:/home/u/\xc3(lib".to_vec());
+    let env = vec![
+        (OsString::from("APPDIR"), OsString::from("/tmp/.mount_x")),
+        (OsString::from("PATH"), path),
+        (OsString::from("LD_LIBRARY_PATH"), lib),
+    ];
+    let plan = host_env_plan(&env, &[]);
+    let value = |name: &str| {
+        plan.set
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.as_bytes().to_vec())
+    };
+    assert_eq!(value("PATH"), Some(b"/opt/\xff\xfe/bin:/usr/bin".to_vec()));
+    assert_eq!(value("LD_LIBRARY_PATH"), Some(b"/home/u/\xc3(lib".to_vec()));
+}
+
+/// Spec P5 G19: a symlink in an app folder is never removed (nor its target).
+#[test]
+fn remove_app_file_refuses_a_symlink() {
+    let (_dir, root) = support::temp_root();
+    let app = AppPaths::under(&root);
+    fs::create_dir_all(&app.config_dir).expect("config dir");
+    let target = root.join("target.txt");
+    fs::write(&target, b"keep").expect("target");
+    let link = app.config_dir.join("graphics-pending");
+    symlink(&target, &link).expect("symlink");
+    let error = safe_fs::remove_app_file(&link, &[&app.config_dir]).expect_err("a link");
+    assert!(matches!(error, FsError::Io { .. }));
+    let paths = GraphicsPaths::from_app(&app);
+    assert!(graphics::clear_marker(&paths).is_err());
+    assert!(
+        fs::symlink_metadata(&link)
+            .expect("link stays")
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(fs::read(&target).expect("target stays"), b"keep");
 }
 
 #[test]

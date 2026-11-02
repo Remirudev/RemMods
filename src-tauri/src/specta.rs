@@ -1,6 +1,8 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
-use crate::commands::{game, install, mods, mods_manage, profiles, repair, settings, shell};
+use crate::commands::{
+    about, game, graphics, install, mods, mods_manage, profiles, repair, settings, shell, update,
+};
 use crate::events::{GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
@@ -50,6 +52,13 @@ pub fn builder() -> Builder<tauri::Wry> {
             install::install_inspect,
             install::install_start,
             install::install_cancel,
+            update::update_channel,
+            update::update_check,
+            update::update_install,
+            graphics::graphics_get,
+            graphics::graphics_set_mode,
+            graphics::graphics_ack_step,
+            about::about_notices,
         ])
         .events(collect_events![
             ModsChanged,

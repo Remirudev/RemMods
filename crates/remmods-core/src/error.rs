@@ -1,4 +1,6 @@
+use crate::app_update::AppUpdateError;
 use crate::game::GameError;
+use crate::graphics::GraphicsError;
 use crate::install::InstallError;
 use crate::mods::ModsError;
 use crate::profiles::ProfileError;
@@ -21,4 +23,8 @@ pub enum CoreError {
     Profiles(#[from] ProfileError),
     #[error(transparent)]
     Install(#[from] InstallError),
+    #[error(transparent)]
+    AppUpdate(#[from] AppUpdateError),
+    #[error(transparent)]
+    Graphics(#[from] GraphicsError),
 }

@@ -39,6 +39,13 @@ const COMMANDS: &[&str] = &[
     "install_inspect",
     "install_start",
     "install_cancel",
+    "update_channel",
+    "update_check",
+    "update_install",
+    "graphics_get",
+    "graphics_set_mode",
+    "graphics_ack_step",
+    "about_notices",
 ];
 
 fn main() {

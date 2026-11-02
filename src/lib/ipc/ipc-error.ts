@@ -30,6 +30,11 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   installCancelled: true,
   noSpace: true,
   sourceRejected: true,
+  updateNotConfigured: true,
+  updateNotAllowed: true,
+  updateBlocked: true,
+  updateFailed: true,
+  unsupported: true,
 }
 
 export class IpcError extends Error {

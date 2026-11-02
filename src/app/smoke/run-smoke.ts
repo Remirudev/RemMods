@@ -1,22 +1,33 @@
+import { Channel } from '@tauri-apps/api/core'
 import { ipc } from '../../lib/ipc'
 import { describeForLog, isIpcError } from '../../lib/ipc/ipc-error'
-import type { GameStatus, Settings, SmokeCheck } from '../../lib/ipc/types'
+import type {
+  AppUpdateProgress,
+  GameStatus,
+  PlatformInfo,
+  Settings,
+  SmokeCheck,
+} from '../../lib/ipc/types'
 import { runInstallRoundTrip } from './install-round-trip'
 import {
   checkCollectedErrors,
   checkCommand,
   checkEmptyProfiles,
   checkGameStatus,
+  checkGraphics,
   checkInstallRoundTrip,
   checkMantineCss,
   checkModsListWithoutGame,
   checkModsTable,
+  checkNotices,
   checkOnboarding,
   checkPlatformInfo,
   checkRail,
   checkSettings,
   checkTitleBar,
   checkToggleRoundTrip,
+  checkUpdateChannel,
+  checkUpdateRefused,
   failedCheck,
   passedCheck,
 } from './smoke-checks'
@@ -80,6 +91,24 @@ async function checkRemainingCommands(settings: Loaded<Settings>): Promise<Smoke
     checkCommand('appReady', appReady),
     checkCommand('settingsUpdate', settingsUpdate),
     checkCommand('setUiScale', setUiScale),
+  ]
+}
+
+// The release commands without network: a smoke build has no updater config, so both update
+// commands must refuse before they reach out; '0.0.0' is never a version the check found.
+async function checkReleaseCommands(info: Loaded<PlatformInfo>): Promise<SmokeCheck[]> {
+  const channel = await load(() => ipc.updateChannel())
+  const check = await refusalOf(() => ipc.updateCheck())
+  const install = await refusalOf(() =>
+    ipc.updateInstall('0.0.0', new Channel<AppUpdateProgress>()),
+  )
+  const graphics = await load(() => ipc.graphicsGet())
+  const notices = await load(() => ipc.aboutNotices())
+  return [
+    checkUpdateChannel(channel, info),
+    checkUpdateRefused(check, install),
+    checkGraphics(graphics, info),
+    checkNotices(notices),
   ]
 }
 
@@ -157,6 +186,7 @@ async function collectChecks(): Promise<SmokeCheck[]> {
     checkPlatformInfo(platformInfo),
     checkSettings(settings),
     ...(await checkRemainingCommands(settings)),
+    ...(await checkReleaseCommands(platformInfo)),
     ...(await checkGameChecks(gameStatus)),
     await checkNavigationRefused(),
   ]

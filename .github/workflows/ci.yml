@@ -2,6 +2,8 @@ name: ci
 
 # Merge gate (docs/PLAN.md §1, §9, §10): linux, windows, smoke (linux), smoke (windows) and policy.
 # fs-matrix (P2) joins the required checks once it is green on a pull request.
+# The package tests live in artifacts.yml: they run on packaging-path pull requests, weekly and from
+# release.yml, and are not a required check (SPEC-P5 A16).
 # Actions are pinned by full commit SHA; Dependabot bumps the SHA and the version comment together.
 
 on:
@@ -73,6 +75,11 @@ jobs:
 
       - name: npm ci
         run: npm ci
+
+      # THIRD-PARTY-NOTICES-NPM is committed; it must match package-lock.json and node_modules.
+      - name: npm notices are current
+        if: runner.os == 'Linux'
+        run: python3 -I scripts/npm-notices.py --check
 
       - name: Lint (Biome)
         run: npm run lint
@@ -188,6 +195,11 @@ jobs:
 
       - name: Build the app (debug, production assets and CSP)
         run: npm run tauri -- build --debug --no-bundle
+
+      # PLAN §10 glibc floor (2.39); the release binary is checked again in release.yml/artifacts.yml.
+      - name: glibc floor
+        if: runner.os == 'Linux'
+        run: bash scripts/check-native.sh --glibc target/debug/remmods
 
       # The smoke run keeps its data under the temp dir; pointing it at runner.temp lets the
       # failure upload below find the log folder.
@@ -319,3 +331,35 @@ jobs:
 
       - name: Native-code guard (dependency trees)
         run: bash scripts/check-native.sh
+
+      - name: Install PyYAML (workflow checks)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+
+      - name: Workflow security rules
+        run: |
+          python3 -I scripts/check-workflows.py --self-test
+          python3 -I scripts/check-workflows.py
+
+      - name: Release gate (CI mode) and release script self-tests
+        run: |
+          python3 -I scripts/release-check.py --self-test
+          python3 -I scripts/release-check.py
+          python3 -I scripts/check-latest-json.py --self-test
+          python3 -I scripts/make-latest-json.py --self-test
+          python3 -I scripts/render-pkgbuild.py --self-test
+          python3 -I scripts/inspect-bundle.py --self-test
+          bash -n scripts/seed-appimage-tools.sh
+          bash -n scripts/notices.sh
+
+      - name: Install cargo-about
+        uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
+        with:
+          tool: cargo-about@0.9.3
+          fallback: none
+
+      - name: Rust notices are current
+        run: |
+          cargo fetch --locked
+          bash scripts/notices.sh --check rust

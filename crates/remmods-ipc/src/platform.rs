@@ -28,6 +28,20 @@ pub struct PlatformInfo {
     pub webview_version: Option<String>,
     pub smoke: bool,
     pub paths: AppPathsDto,
+    pub features: PlatformFeatures,
+}
+
+/// Which Linux-first features this build supports; the rest report `unsupported`.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PlatformFeatures {
+    pub graphics_fallback: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum PlatformFeature {
+    GraphicsFallback,
 }
 
 impl From<platform::OsKind> for OsKind {

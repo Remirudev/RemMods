@@ -54,6 +54,13 @@
     "allow-pick-folder",
     "allow-install-inspect",
     "allow-install-start",
-    "allow-install-cancel"
+    "allow-install-cancel",
+    "allow-update-channel",
+    "allow-update-check",
+    "allow-update-install",
+    "allow-graphics-get",
+    "allow-graphics-set-mode",
+    "allow-graphics-ack-step",
+    "allow-about-notices"
   ]
 }

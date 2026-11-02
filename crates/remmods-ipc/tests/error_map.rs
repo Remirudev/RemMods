@@ -4,11 +4,16 @@
 use std::path::PathBuf;
 
 use remmods_core::CoreError;
+use remmods_core::app_update::{AppUpdateError, UpdateBlock as CoreUpdateBlock};
+use remmods_core::graphics::GraphicsError;
 use remmods_core::mods::{ManageAction as CoreAction, ManageBlock as CoreBlock, ModsError};
 use remmods_core::platform::TrashUnavailableReason as CoreReason;
 use remmods_core::profiles::{ImportProblem as CoreProblem, ProfileError};
 use remmods_core::safe_fs::{FsError, ScopeViolation};
-use remmods_ipc::{AppError, ImportProblem, ManageAction, ManageBlock, TrashUnavailableReason};
+use remmods_ipc::{
+    AppError, ImportProblem, ManageAction, ManageBlock, PlatformFeature, TrashUnavailableReason,
+    UpdateBlock,
+};
 use serde_json::{Value, json};
 
 fn mods(error: ModsError) -> AppError {
@@ -210,4 +215,53 @@ fn changed_diff_is_stale() {
 #[test]
 fn profile_fs_errors_map_like_fs_errors() {
     assert_eq!(profiles(ProfileError::Fs(FsError::Busy)), AppError::Busy);
+}
+
+#[test]
+fn update_blocks_keep_their_reason() {
+    let error = AppError::from(CoreError::AppUpdate(AppUpdateError::Blocked(
+        CoreUpdateBlock::JournalPending,
+    )));
+    assert_eq!(
+        to_json(&error),
+        json!({ "kind": "updateBlocked", "reason": "journalPending" })
+    );
+    for (core, ipc) in [
+        (CoreUpdateBlock::InstallRunning, UpdateBlock::InstallRunning),
+        (CoreUpdateBlock::JournalPending, UpdateBlock::JournalPending),
+        (CoreUpdateBlock::Busy, UpdateBlock::Busy),
+    ] {
+        assert_eq!(
+            AppError::from(CoreError::AppUpdate(AppUpdateError::Blocked(core))),
+            AppError::UpdateBlocked { reason: ipc }
+        );
+    }
+}
+
+#[test]
+fn update_fs_errors_map_like_fs_errors() {
+    assert_eq!(
+        AppError::from(CoreError::AppUpdate(AppUpdateError::Fs(FsError::Busy))),
+        AppError::Busy
+    );
+}
+
+#[test]
+fn graphics_errors_map_to_their_kinds() {
+    let graphics = |error| AppError::from(CoreError::Graphics(error));
+    assert_eq!(graphics(GraphicsError::ReadOnly), AppError::ReadOnly);
+    assert_eq!(graphics(GraphicsError::NoStep), AppError::Stale);
+    assert_eq!(
+        graphics(GraphicsError::Unsupported),
+        AppError::Unsupported {
+            feature: PlatformFeature::GraphicsFallback,
+        }
+    );
+    assert_eq!(
+        to_json(&graphics(GraphicsError::Unsupported)),
+        json!({ "kind": "unsupported", "feature": "graphicsFallback" })
+    );
+    let encode = serde_json::from_str::<u32>("x").expect_err("not a number");
+    assert_eq!(graphics(GraphicsError::Encode(encode)), AppError::Internal);
+    assert_eq!(graphics(GraphicsError::Fs(FsError::Busy)), AppError::Busy);
 }

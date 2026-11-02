@@ -1,9 +1,11 @@
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use remmods_core::Core;
+use remmods_core::app_update::InstallKind;
 
 use crate::install_sources::SourceRegistry;
 use crate::monitor::MonitorHandle;
@@ -20,6 +22,33 @@ pub struct AppState {
     pub last_focus_rescan: Mutex<Option<Instant>>,
     /// Picked and dropped install sources (paths stay in Rust).
     pub install_sources: Mutex<SourceRegistry>,
+    /// How this copy was installed, computed once at startup.
+    pub install_kind: InstallKind,
+    /// The updater plugin is registered (release config, not `--smoke`).
+    pub updater_configured: bool,
+    /// The last update `update_check` found; `update_install` installs only this one.
+    pub update: Mutex<Option<tauri_plugin_updater::Update>>,
+    /// One `update_install` at a time.
+    pub updating: AtomicBool,
+    /// Started on `RunEvent::Exit` (after an AppImage update or a safe-graphics restart).
+    pub relaunch: Mutex<Option<Relaunch>>,
+}
+
+/// A program the exit path starts through `platform::host_command`.
+#[derive(Clone, Debug)]
+pub struct Relaunch {
+    pub program: PathBuf,
+    pub args: Vec<OsString>,
+    /// This session runs from `--appimage-extract-and-run` (FUSE may be missing): the relaunched
+    /// AppImage gets `APPIMAGE_EXTRACT_AND_RUN=1` so its runtime extracts instead of mounting.
+    pub extract_and_run: bool,
+}
+
+/// What `on_setup` learned about the install and the updater.
+#[derive(Clone, Copy, Debug)]
+pub struct UpdateSetup {
+    pub install_kind: InstallKind,
+    pub updater_configured: bool,
 }
 
 pub struct SmokeState {
@@ -41,6 +70,7 @@ impl AppState {
         monitor: MonitorHandle,
         watcher: WatcherHandle,
         smoke: Option<SmokeState>,
+        update: UpdateSetup,
     ) -> Self {
         Self {
             core,
@@ -50,7 +80,25 @@ impl AppState {
             watcher,
             last_focus_rescan: Mutex::new(None),
             install_sources: Mutex::new(SourceRegistry::default()),
+            install_kind: update.install_kind,
+            updater_configured: update.updater_configured,
+            update: Mutex::new(None),
+            updating: AtomicBool::new(false),
+            relaunch: Mutex::new(None),
         }
+    }
+
+    /// The updater is rewriting the app (gate sealed, no relaunch stored yet). On Linux the
+    /// plugin has moved `$APPIMAGE` aside and writes the new file; exiting now would leave it
+    /// truncated, so a user close waits. A failed install unseals, a finished one stores the
+    /// relaunch first, and either ends this.
+    pub fn update_install_running(&self) -> bool {
+        self.core.is_sealed_for_update()
+            && self
+                .relaunch
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .is_none()
     }
 }
 

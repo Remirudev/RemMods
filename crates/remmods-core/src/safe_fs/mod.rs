@@ -2,6 +2,7 @@
 //! `std::fs` mutators everywhere else.
 #![allow(clippy::disallowed_methods)]
 
+mod app_files;
 mod aside;
 mod atomic;
 mod backup;
@@ -25,6 +26,7 @@ mod staging;
 mod trash;
 mod watch;
 
+pub use app_files::{live_session_exists, remove_app_file};
 pub use aside::set_aside_name;
 pub use atomic::write_atomic;
 pub use backup::backup_file;

@@ -3,7 +3,9 @@ import { commands } from './bindings'
 import { unwrapResult } from './ipc-error'
 import type {
   ApplyRequest,
+  AppUpdateProgress,
   DeleteRequest,
+  GraphicsMode,
   InspectRequest,
   InstallProgress,
   LocationChoice,
@@ -78,4 +80,14 @@ export const ipc = {
     unwrapResult('install_start', () => commands.installStart(request, progress)),
   installCancel: () => unwrapResult('install_cancel', () => commands.installCancel()),
   modsWatchStatus: () => unwrapResult('mods_watch_status', () => commands.modsWatchStatus()),
+  updateChannel: () => unwrapResult('update_channel', () => commands.updateChannel()),
+  updateCheck: () => unwrapResult('update_check', () => commands.updateCheck()),
+  updateInstall: (version: string, progress: Channel<AppUpdateProgress>) =>
+    unwrapResult('update_install', () => commands.updateInstall(version, progress)),
+  graphicsGet: () => unwrapResult('graphics_get', () => commands.graphicsGet()),
+  graphicsSetMode: (mode: GraphicsMode) =>
+    unwrapResult('graphics_set_mode', () => commands.graphicsSetMode(mode)),
+  graphicsAckStep: (revert: boolean) =>
+    unwrapResult('graphics_ack_step', () => commands.graphicsAckStep(revert)),
+  aboutNotices: () => unwrapResult('about_notices', () => commands.aboutNotices()),
 }

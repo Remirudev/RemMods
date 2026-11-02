@@ -30,6 +30,11 @@ export const errors = {
     installCancelled: 'Install cancelled',
     noSpace: 'Not enough free space',
     sourceRejected: 'This cannot be installed',
+    updateNotConfigured: 'No update channel',
+    updateNotAllowed: 'Update with your package manager',
+    updateBlocked: 'Update not possible right now',
+    updateFailed: 'Update failed',
+    unsupported: 'Not available on this system',
   },
   messages: {
     busy: 'Another change is still running. Try again in a moment.',
@@ -60,6 +65,33 @@ export const errors = {
     installBusy: 'Wait until the running install is done, then try again.',
     installCancelled: 'Nothing was installed.',
     noSpace: 'The install needs {{needed}}, but only {{available}} are free.',
+    updateNotConfigured: 'This build has no update channel (development or test build).',
+  },
+  updateNotAllowed: {
+    appImage:
+      'This AppImage cannot replace itself. Download the new version from the releases page.',
+    nsis: 'This copy cannot run the update installer. Download the new version from the releases page.',
+    deb: 'RemMods was installed from a .deb package. Install the new version with your package manager.',
+    rpm: 'RemMods was installed from an RPM package. Install the new version with your package manager.',
+    aur: 'RemMods was installed from the AUR. Update it with your AUR helper, for example paru -Syu.',
+    unknown:
+      'This copy was not installed from a release package, so it cannot update itself. Download the new version from the releases page.',
+  },
+  updateBlocked: {
+    installRunning: 'A mod install is running. Wait until it is done, then try again.',
+    journalPending:
+      'An unfinished change to the mod folders is still pending. Restart RemMods, then try again.',
+    busy: 'Another change is still running. Try again in a moment.',
+  },
+  updateFailed: {
+    check:
+      'RemMods could not check for updates. Check the internet connection and try again; the log has the details.',
+    download: 'The update could not be downloaded. Nothing was changed; try again later.',
+    verify: 'The downloaded update failed the signature check, so it was not installed.',
+    install: 'The update could not be installed. The log has the details.',
+  },
+  unsupported: {
+    graphicsFallback: 'The graphics settings are only available on Linux.',
   },
   archiveFailed: {
     notAnArchive: 'This file is not a zip, 7z or rar archive, or it is damaged.',

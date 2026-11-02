@@ -1,4 +1,6 @@
+pub mod about;
 pub mod game;
+pub mod graphics;
 pub mod install;
 pub mod mods;
 pub mod mods_manage;
@@ -6,6 +8,7 @@ pub mod profiles;
 pub mod repair;
 pub mod settings;
 pub mod shell;
+pub mod update;
 
 use std::fmt::Display;
 use std::path::PathBuf;

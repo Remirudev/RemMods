@@ -6,8 +6,9 @@ use remmods_core::AppPaths;
 use remmods_core::platform;
 use remmods_core::settings as core;
 use remmods_ipc::{
-    AppPathsDto, Appearance, AppearanceUpdate, ColorScheme, OsKind, PlatformInfo, Settings,
-    SettingsUpdate, SmokeCheck, SmokeReport, TitleBarMode,
+    AppPathsDto, Appearance, AppearanceUpdate, ColorScheme, OsKind, PlatformFeature,
+    PlatformFeatures, PlatformInfo, Settings, SettingsUpdate, SmokeCheck, SmokeReport,
+    TitleBarMode,
 };
 use serde_json::{Value, json};
 
@@ -43,6 +44,9 @@ fn platform_info_shape() {
         webview_version: None,
         smoke: true,
         paths: sample_paths(),
+        features: PlatformFeatures {
+            graphics_fallback: true,
+        },
     };
 
     let expected = json!({
@@ -51,10 +55,23 @@ fn platform_info_shape() {
         "appVersion": "0.1.0",
         "webviewVersion": null,
         "smoke": true,
-        "paths": { "config": "/c", "data": "/d", "logs": "/d/logs" }
+        "paths": { "config": "/c", "data": "/d", "logs": "/d/logs" },
+        "features": { "graphicsFallback": true }
     });
     assert_eq!(to_json(&info), expected);
     assert_eq!(from_json::<PlatformInfo>(expected), info);
+}
+
+#[test]
+fn platform_features_shape() {
+    let none = PlatformFeatures {
+        graphics_fallback: false,
+    };
+    assert_eq!(to_json(&none), json!({ "graphicsFallback": false }));
+    assert_eq!(
+        to_json(&PlatformFeature::GraphicsFallback),
+        json!("graphicsFallback")
+    );
 }
 
 #[test]

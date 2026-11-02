@@ -1,5 +1,6 @@
 //! The only `cfg` place in the shell besides `build.rs`: OS-specific glue around core.
 
+pub mod graphics;
 pub mod launch;
 pub mod navigation;
 pub mod reveal;

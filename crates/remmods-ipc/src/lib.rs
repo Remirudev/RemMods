@@ -1,9 +1,11 @@
 //! Types that cross the IPC boundary: serde + specta only, no Tauri. No `PathBuf` (display strings
 //! only) and no `u64` (JavaScript numbers lose precision past 2^53).
 
+mod about;
 mod content;
 mod error;
 mod game;
+mod graphics;
 mod install;
 mod install_convert;
 mod manage;
@@ -15,7 +17,9 @@ mod repair;
 mod settings;
 mod smoke;
 mod toggle;
+mod update;
 
+pub use about::Notices;
 pub use content::{
     AssetEntry, AssetOrigin, BaseIndexState, CharacterHint, ContainerStatus, ContainerSummary,
     ContentConflictLink, ContentSummary, ModContents, Slot, SlotHint,
@@ -26,6 +30,7 @@ pub use game::{
     LocationChoice, LocationSource, NoteCode, PickOutcome, RevealProblem, RunningState, SteamKind,
     UpdateNotice, UpdateTracking,
 };
+pub use graphics::{GraphicsMode, GraphicsState, GraphicsStep};
 pub use install::{
     ArchiveFormat, ArchiveProblem, CandidatePick, CaseClash, ClashPick, DropPhase, ExistingMatch,
     ExistingRelation, InspectRequest, Inspection, InstallBlock, InstallCandidate, InstallIssue,
@@ -44,7 +49,7 @@ pub use mods::{
     ModInfoOrigin, ModKind, ModRow, ModState, ModsSnapshot, PayloadCounts, PayloadFile,
     PayloadKind, RootInfo, RootKind, ScanProblem, ScanStats, UnmanagedEntry, UnmanagedKind,
 };
-pub use platform::{AppPathsDto, OsKind, PlatformInfo};
+pub use platform::{AppPathsDto, OsKind, PlatformFeature, PlatformFeatures, PlatformInfo};
 pub use profiles::{
     ApplyOutcome, ApplyRequest, ChangeReason, DiffChange, DiffSkip, EntryState, ExportReport,
     ImportProblem, ImportReport, LastApplied, Profile, ProfileDiff, ProfileEntryDto, ProfileMode,
@@ -58,4 +63,7 @@ pub use settings::{
 pub use smoke::{SmokeCheck, SmokeReport};
 pub use toggle::{
     SkippedRow, ToggleBlock, ToggleOutcome, ToggleRequest, ToggleTarget, WatchState, WatchStatus,
+};
+pub use update::{
+    AppInstallKind, AppUpdateChannel, AppUpdateCheck, AppUpdateProgress, UpdateBlock, UpdateStage,
 };

@@ -69,8 +69,18 @@ pub(crate) struct StoredInspection {
 #[derive(Default)]
 pub struct InstallService {
     inspections: Mutex<VecDeque<Arc<StoredInspection>>>,
-    job: Mutex<Option<CancelToken>>,
+    job: Mutex<Slot>,
     hooks: Mutex<InstallHooks>,
+}
+
+/// The one job slot. Seal and job start share this mutex, so they cannot interleave.
+#[derive(Default)]
+enum Slot {
+    #[default]
+    Idle,
+    Job(CancelToken),
+    /// A self-update holds it until the process exits (or the install fails).
+    Sealed,
 }
 
 /// Holds the job slot; frees it when dropped.
@@ -86,11 +96,7 @@ impl fmt::Debug for InstallService {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .len();
-        let busy = self
-            .job
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .is_some();
+        let busy = self.is_busy();
         f.debug_struct("InstallService")
             .field("inspections", &inspections)
             .field("busy", &busy)
@@ -120,12 +126,12 @@ impl InstallService {
     }
 
     pub(crate) fn begin_job(&self) -> Result<JobSlot<'_>, InstallError> {
-        let mut job = self.job.lock().unwrap_or_else(PoisonError::into_inner);
-        if job.is_some() {
+        let mut job = self.slot();
+        if !matches!(*job, Slot::Idle) {
             return Err(InstallError::Busy);
         }
         let cancel = CancelToken::new();
-        *job = Some(cancel.clone());
+        *job = Slot::Job(cancel.clone());
         Ok(JobSlot {
             service: self,
             cancel,
@@ -134,13 +140,41 @@ impl InstallService {
 
     /// Cancels the running job; false when none runs.
     pub(crate) fn cancel(&self) -> bool {
-        match &*self.job.lock().unwrap_or_else(PoisonError::into_inner) {
-            Some(token) => {
+        match &*self.slot() {
+            Slot::Job(token) => {
                 token.cancel();
                 true
             }
-            None => false,
+            Slot::Idle | Slot::Sealed => false,
         }
+    }
+
+    /// Idle → Sealed; false when a job runs or the slot is already sealed.
+    pub(crate) fn seal(&self) -> bool {
+        let mut job = self.slot();
+        if matches!(*job, Slot::Idle) {
+            *job = Slot::Sealed;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Sealed → Idle only; an idle slot or a running job stays as it is.
+    pub(crate) fn unseal(&self) {
+        let mut job = self.slot();
+        if matches!(*job, Slot::Sealed) {
+            *job = Slot::Idle;
+        }
+    }
+
+    /// A job runs.
+    pub(crate) fn is_busy(&self) -> bool {
+        matches!(*self.slot(), Slot::Job(_))
+    }
+
+    fn slot(&self) -> std::sync::MutexGuard<'_, Slot> {
+        self.job.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     pub(crate) fn hooks(&self) -> InstallHooks {
@@ -157,10 +191,96 @@ impl InstallService {
 
 impl Drop for JobSlot<'_> {
     fn drop(&mut self) {
-        *self
-            .service
-            .job
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner) = None;
+        let mut job = self.service.slot();
+        if matches!(*job, Slot::Job(_)) {
+            *job = Slot::Idle;
+        }
+    }
+}
+
+/// S10, S11 (SPEC-P5 §9.1): the slot API is crate-private, so these run as unit tests.
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Barrier};
+    use std::thread;
+
+    use super::{InstallService, Slot};
+
+    fn is_sealed(service: &InstallService) -> bool {
+        matches!(*service.slot(), Slot::Sealed)
+    }
+
+    #[test]
+    fn s10_a_second_seal_fails_and_unseal_leaves_idle_and_jobs_alone() {
+        let service = InstallService::default();
+        service.unseal();
+        assert!(!service.is_busy());
+        assert!(!is_sealed(&service));
+
+        let job = service.begin_job().expect("job");
+        assert!(!service.seal());
+        service.unseal();
+        assert!(service.is_busy());
+        assert!(!job.cancel.is_cancelled());
+        drop(job);
+
+        assert!(service.seal());
+        assert!(!service.seal());
+        assert!(is_sealed(&service));
+        assert!(service.begin_job().is_err());
+        assert!(is_sealed(&service));
+        service.unseal();
+        assert!(!is_sealed(&service));
+        assert!(service.begin_job().is_ok());
+    }
+
+    #[test]
+    fn s11_no_job_starts_while_the_slot_is_sealed() {
+        const ROUNDS: usize = 1000;
+        let service = Arc::new(InstallService::default());
+        let violated = Arc::new(AtomicBool::new(false));
+        let barrier = Arc::new(Barrier::new(2));
+        let jobs = {
+            let (service, violated, barrier) = (
+                Arc::clone(&service),
+                Arc::clone(&violated),
+                Arc::clone(&barrier),
+            );
+            thread::spawn(move || {
+                barrier.wait();
+                for _ in 0..ROUNDS {
+                    if let Ok(job) = service.begin_job() {
+                        if is_sealed(&service) {
+                            violated.store(true, Ordering::SeqCst);
+                        }
+                        drop(job);
+                    }
+                }
+            })
+        };
+        let seals = {
+            let (service, violated, barrier) = (
+                Arc::clone(&service),
+                Arc::clone(&violated),
+                Arc::clone(&barrier),
+            );
+            thread::spawn(move || {
+                barrier.wait();
+                for _ in 0..ROUNDS {
+                    if service.seal() {
+                        if service.is_busy() {
+                            violated.store(true, Ordering::SeqCst);
+                        }
+                        service.unseal();
+                    }
+                }
+            })
+        };
+        jobs.join().expect("job thread");
+        seals.join().expect("seal thread");
+        assert!(!violated.load(Ordering::SeqCst));
+        assert!(!service.is_busy());
+        assert!(!is_sealed(&service));
     }
 }

@@ -16,12 +16,15 @@ mod watcher;
 mod window;
 
 use std::fmt::Display;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
-use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, PoisonError};
 
 use log::LevelFilter;
+use remmods_core::app_update::{self, InstallKind};
 use remmods_core::game::GameOptions;
+use remmods_core::graphics::GraphicsMode;
 use remmods_core::platform::TrashEnv;
 use remmods_core::{AppPaths, Core, CoreOptions, paths, platform, safe_fs};
 use tauri::plugin::{Plugin, TauriPlugin};
@@ -31,14 +34,17 @@ use tauri_plugin_window_state::StateFlags;
 
 use crate::args::LaunchArgs;
 use crate::smoke::SmokeFixture;
-use crate::state::{AppState, SmokeState};
+use crate::state::{AppState, Relaunch, SmokeState, UpdateSetup};
 
 const LOG_FILE_NAME: &str = "remmods";
 const LOG_MAX_BYTES: u128 = 2 * 1024 * 1024;
 const LOG_FILES_KEPT: usize = 5;
+const SAFE_GRAPHICS_ARG: &str = "--safe-graphics";
+/// Read by the type-2 AppImage runtime: extract and run instead of a FUSE mount.
+const APPIMAGE_EXTRACT_AND_RUN: &str = "APPIMAGE_EXTRACT_AND_RUN";
 
 pub fn run() {
-    let args = LaunchArgs::parse(std::env::args_os().skip(1));
+    let args = LaunchArgs::from_env();
     let smoke = args.smoke;
     let fixture = smoke_fixture(&args);
     let smoke_root = smoke.then(|| {
@@ -51,18 +57,22 @@ pub fn run() {
         None => AppPaths::for_user()
             .unwrap_or_else(|error| fail_fast("Could not find your user folders", &error, smoke)),
     };
+    // Sets WebKit's environment, so it runs before the logger, any thread and GTK (A4).
+    os::graphics::prepare(&paths, &args);
     let smoke_state = smoke_root.map(|root| SmokeState::new(root, fixture));
     if let Err(error) = safe_fs::ensure_dir(&paths.log_dir) {
         fail_fast("Could not open the RemMods data folder", &error, smoke);
     }
     let log_plugin = log_plugin(&paths.log_dir);
     let bindings = crate::specta::builder();
+    let context = tauri::generate_context!();
+    // Only the release config carries `plugins.updater`; without it the plugin's setup fails.
+    let updater = !smoke && context.config().plugins.0.contains_key("updater");
 
     let mut builder = tauri::Builder::default();
     if !smoke {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            log::info!("second instance started with {argv:?}; focusing the main window");
-            window::focus_main_window(app);
+            on_second_instance(app, &argv);
         }));
     }
     builder = builder.plugin(log_plugin);
@@ -70,24 +80,42 @@ pub fn run() {
         builder = builder.plugin(window_state_plugin());
     }
     // No dialog:* or fs:* permission is granted: the folder picker runs from Rust only.
-    let app = builder
+    builder = builder
         .plugin(tauri_plugin_dialog::init())
-        .plugin(opener_plugin())
+        .plugin(opener_plugin());
+    // Rust-only updater: no JS package and no updater:* permission.
+    if updater {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+    let app = builder
         .invoke_handler(bindings.invoke_handler())
         .setup(move |app| {
             bindings.mount_events(app);
-            on_setup(app, &args, paths, smoke_state);
+            on_setup(app, &args, paths, smoke_state, updater);
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .unwrap_or_else(|error| fail_fast("Could not start RemMods", &error, smoke));
     app.run(on_run_event);
 }
 
 /// Runs after the plugins are set up, so the log plugin already records what core logs while it
 /// opens (settings recovery, backup paths, read errors).
-fn on_setup(app: &mut App, args: &LaunchArgs, paths: AppPaths, smoke: Option<SmokeState>) {
+fn on_setup(
+    app: &mut App,
+    args: &LaunchArgs,
+    paths: AppPaths,
+    smoke: Option<SmokeState>,
+    updater: bool,
+) {
     log_launch(app, args);
+    os::graphics::log_startup();
+    let install_kind = commands::update::detect_install_kind();
+    log::info!("install kind {install_kind:?}, updater configured {updater}");
+    let update = UpdateSetup {
+        install_kind,
+        updater_configured: updater,
+    };
     let core = Core::open_with(paths, core_options(args)).unwrap_or_else(|error| {
         fail_fast("Could not open the RemMods data folder", &error, args.smoke)
     });
@@ -96,7 +124,7 @@ fn on_setup(app: &mut App, args: &LaunchArgs, paths: AppPaths, smoke: Option<Smo
         .unwrap_or_else(|error| fail_fast("Could not start the game monitor", &error, args.smoke));
     let watcher = watcher::start(app.handle().clone(), Arc::clone(&core))
         .unwrap_or_else(|error| fail_fast("Could not start the Paks watcher", &error, args.smoke));
-    app.manage(AppState::new(core, monitor, watcher, smoke));
+    app.manage(AppState::new(core, monitor, watcher, smoke, update));
     os::webview::ensure_runtime(args.smoke);
 
     let handle = app.handle();
@@ -182,6 +210,19 @@ fn core_options(args: &LaunchArgs) -> CoreOptions {
 }
 
 fn on_run_event(app: &AppHandle, event: RunEvent) {
+    // A user-initiated exit (`code: None`) waits for the update install; `app.exit(0)` after it
+    // carries a code and still exits.
+    if let RunEvent::ExitRequested {
+        code: None, api, ..
+    } = &event
+        && app
+            .try_state::<AppState>()
+            .is_some_and(|state| state.update_install_running())
+    {
+        log::info!("exit refused while the update is being installed");
+        api.prevent_exit();
+        return;
+    }
     if let RunEvent::Exit = event {
         if let Some(state) = app.try_state::<AppState>() {
             state.monitor.stop();
@@ -189,8 +230,100 @@ fn on_run_event(app: &AppHandle, event: RunEvent) {
             if let Some(smoke_state) = state.smoke.as_ref() {
                 smoke::on_exit(smoke_state);
             }
+            os::graphics::on_exit();
+            relaunch_on_exit(app, &state);
         }
         log::logger().flush();
+    }
+}
+
+/// After an AppImage update or for a safe-graphics restart: releases the single-instance name
+/// first so the new process does not exit as a second instance, then starts it with the host's
+/// environment (no AppRun values, no RemMods graphics vars) and `$HOME` as its folder (A8).
+fn relaunch_on_exit(app: &AppHandle, state: &AppState) {
+    let relaunch = state
+        .relaunch
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .take();
+    let Some(relaunch) = relaunch else {
+        return;
+    };
+    tauri_plugin_single_instance::destroy(app);
+    let mut command = platform::host_command(&relaunch.program);
+    command.args(&relaunch.args);
+    if relaunch.extract_and_run {
+        command.env(APPIMAGE_EXTRACT_AND_RUN, "1");
+    }
+    match platform::spawn_detached(command) {
+        Ok(()) => log::info!(
+            "relaunched {} with {:?}",
+            relaunch.program.display(),
+            relaunch.args
+        ),
+        Err(error) => log::error!("relaunching {} failed: {error}", relaunch.program.display()),
+    }
+}
+
+/// A second start focuses the running window. `--safe-graphics` (the desktop file's action)
+/// instead restarts this instance in software rendering, which must work even when its window
+/// stays blank.
+fn on_second_instance(app: &AppHandle, argv: &[String]) {
+    if argv.iter().any(|arg| arg == SAFE_GRAPHICS_ARG) && restart_in_safe_graphics(app) {
+        return;
+    }
+    log::info!("second instance started with {argv:?}; focusing the main window");
+    window::focus_main_window(app);
+}
+
+fn restart_in_safe_graphics(app: &AppHandle) -> bool {
+    if !os::graphics::supported() {
+        return false;
+    }
+    let Some(state) = app.try_state::<AppState>() else {
+        return false;
+    };
+    if state.updating.load(Ordering::SeqCst) {
+        log::info!("--safe-graphics from a second instance ignored while an update runs");
+        return false;
+    }
+    if os::graphics::session().is_some_and(|session| session.effective == GraphicsMode::Software) {
+        log::info!("--safe-graphics from a second instance: already in software rendering");
+        return false;
+    }
+    if state.install_kind == InstallKind::AppImage
+        && app_update::appimage_extracted(std::env::var_os("APPDIR").as_deref())
+    {
+        // The same file extracts to the same folder, which this session's runtime deletes when
+        // it exits, so a relaunch would run from a folder that is being removed.
+        log::warn!(
+            "--safe-graphics from a second instance ignored: this session runs from \
+             --appimage-extract-and-run; restart it with --safe-graphics instead"
+        );
+        return false;
+    }
+    let Some(program) = relaunch_program(state.install_kind) else {
+        log::warn!("--safe-graphics from a second instance: no program to relaunch");
+        return false;
+    };
+    log::info!("restarting in safe graphics mode for a second instance's --safe-graphics");
+    *state
+        .relaunch
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner) = Some(Relaunch {
+        program,
+        args: vec![SAFE_GRAPHICS_ARG.into()],
+        extract_and_run: false,
+    });
+    app.exit(0);
+    true
+}
+
+fn relaunch_program(install_kind: InstallKind) -> Option<PathBuf> {
+    if install_kind == InstallKind::AppImage {
+        std::env::var_os("APPIMAGE").map(PathBuf::from)
+    } else {
+        std::env::current_exe().ok()
     }
 }
 

@@ -1,10 +1,12 @@
 //! RemMods core: all logic, synchronous, no Tauri.
 #![deny(unsafe_code)]
 
+pub mod app_update;
 pub mod archive;
 pub mod content;
 pub mod error;
 pub mod game;
+pub mod graphics;
 pub mod install;
 pub mod mods;
 pub mod navigation;

@@ -1,7 +1,8 @@
 import { Button, DataList, Group, Paper, Stack } from '@mantine/core'
 import { IconFolderOpen } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
-import { useOpenLogs, usePlatformInfo } from './queries'
+import { graphicsSupported } from './graphics-model'
+import { useGraphics, useOpenLogs, usePlatformInfo, useUpdateChannel } from './queries'
 import { SectionHeading } from './SectionHeading'
 import type { DiagnosticsRow } from './types'
 
@@ -10,6 +11,9 @@ export function DiagnosticsSection() {
   const platformInfo = usePlatformInfo()
   const openLogs = useOpenLogs()
   const info = platformInfo.data
+  const install = useUpdateChannel().data?.install
+  const linuxGraphics = graphicsSupported(info)
+  const effective = useGraphics(linuxGraphics).data?.effective
 
   const rows: DiagnosticsRow[] = [
     {
@@ -28,6 +32,18 @@ export function DiagnosticsSection() {
       label: t(($) => $.diagnostics.labels.webview),
       value: info?.webviewVersion,
     },
+    {
+      label: t(($) => $.diagnostics.labels.installedAs),
+      value: install && t(($) => $.updates.kinds[install]),
+    },
+    ...(linuxGraphics
+      ? [
+          {
+            label: t(($) => $.diagnostics.labels.graphicsMode),
+            value: effective && t(($) => $.graphics.modes[effective]),
+          },
+        ]
+      : []),
     {
       label: t(($) => $.diagnostics.labels.configDir),
       value: info?.paths.config,

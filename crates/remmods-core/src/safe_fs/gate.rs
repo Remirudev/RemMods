@@ -4,7 +4,7 @@
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::{PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Mutex, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use super::batch::{self, BatchOptions, BatchReport, RenameOp};
@@ -22,6 +22,9 @@ pub struct OpGate {
     lock: RwLock<()>,
     lock_path: PathBuf,
     journal: Journal,
+    /// The exclusive app lock a self-update holds from its seal until the process exits
+    /// (SPEC-P5 §5.2): writes fail with Busy, scans need no app lock of their own.
+    sealed: Mutex<Option<AppLock>>,
     /// Held exclusively for the gate's life: it tells other processes this session is alive.
     _session_file: File,
 }
@@ -29,7 +32,7 @@ pub struct OpGate {
 /// A scan's guard. Field order is drop order: the app lock goes first.
 #[derive(Debug)]
 pub struct ReadGuard<'a> {
-    _app_lock: AppLock,
+    _app_lock: Option<AppLock>,
     _inner: RwLockReadGuard<'a, ()>,
 }
 
@@ -59,6 +62,7 @@ impl OpGate {
             lock: RwLock::new(()),
             lock_path: paths.lock_file.clone(),
             journal,
+            sealed: Mutex::new(None),
             _session_file: session_file,
         })
     }
@@ -68,9 +72,15 @@ impl OpGate {
     }
 
     /// Scans: the in-process read lock (blocks), then the shared app lock within 2 s, else Busy.
+    /// While sealed this process already holds the exclusive app lock, which keeps other
+    /// processes' writers out, so the scan takes none.
     pub fn read(&self) -> Result<ReadGuard<'_>, FsError> {
         let inner = self.lock.read().unwrap_or_else(PoisonError::into_inner);
-        let app_lock = AppLock::shared_within(&self.lock_path, LOCK_WAIT)?;
+        let app_lock = if self.is_sealed() {
+            None
+        } else {
+            Some(AppLock::shared_within(&self.lock_path, LOCK_WAIT)?)
+        };
         Ok(ReadGuard {
             _app_lock: app_lock,
             _inner: inner,
@@ -79,8 +89,12 @@ impl OpGate {
 
     /// Mutations: the in-process write lock (blocks), then the exclusive app lock within 2 s,
     /// else Busy; then journal recovery of dead owners within `scope`.
+    /// Sealed for an update: Busy at once.
     pub fn write(&self, scope: Scope) -> Result<WriteGuard<'_>, FsError> {
         let inner = self.lock.write().unwrap_or_else(PoisonError::into_inner);
+        if self.is_sealed() {
+            return Err(FsError::Busy);
+        }
         let app_lock = AppLock::exclusive_within(&self.lock_path, LOCK_WAIT)?;
         let recovery = recovery::recover(&self.journal, &scope)?;
         Ok(WriteGuard {
@@ -91,9 +105,50 @@ impl OpGate {
             _inner: inner,
         })
     }
+
+    pub fn is_sealed(&self) -> bool {
+        self.sealed_lock().is_some()
+    }
+
+    /// Drops the held app lock. Takes the in-process write lock first, so no scan that skipped
+    /// the shared app lock is still running when other processes may write again.
+    pub fn unseal(&self) {
+        let _inner = self.lock.write().unwrap_or_else(PoisonError::into_inner);
+        if self.sealed_lock().take().is_some() {
+            log::info!("operation gate unsealed");
+        }
+    }
+
+    fn sealed_lock(&self) -> std::sync::MutexGuard<'_, Option<AppLock>> {
+        self.sealed.lock().unwrap_or_else(PoisonError::into_inner)
+    }
 }
 
 impl WriteGuard<'_> {
+    /// Seals the gate for a self-update if the journal is empty: the guard's exclusive app lock
+    /// moves into the gate and the in-process write lock is released. Any journal entry →
+    /// `Ok(false)` and the guard is dropped normally.
+    pub fn seal_gate(self) -> Result<bool, FsError> {
+        if self.journal_has_entries()? {
+            return Ok(false);
+        }
+        let WriteGuard {
+            gate,
+            _app_lock: app_lock,
+            _inner: inner,
+            ..
+        } = self;
+        *gate.sealed_lock() = Some(app_lock);
+        drop(inner);
+        log::info!("operation gate sealed for an update");
+        Ok(true)
+    }
+
+    /// Entries of any session, read under this guard.
+    pub fn journal_has_entries(&self) -> Result<bool, FsError> {
+        Ok(!self.gate.journal.entries()?.is_empty())
+    }
+
     pub fn scope(&self) -> &Scope {
         &self.scope
     }

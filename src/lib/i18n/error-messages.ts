@@ -171,6 +171,39 @@ export function describeAppError(error: AppError): ErrorDescription {
         message: t(($) => $.sourceRejected[reason]),
       }
     }
+    case 'updateNotConfigured':
+      return {
+        title: t(($) => $.titles.updateNotConfigured),
+        message: t(($) => $.messages.updateNotConfigured),
+      }
+    case 'updateNotAllowed': {
+      const install = error.install
+      return {
+        title: t(($) => $.titles.updateNotAllowed),
+        message: t(($) => $.updateNotAllowed[install]),
+      }
+    }
+    case 'updateBlocked': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.updateBlocked),
+        message: t(($) => $.updateBlocked[reason]),
+      }
+    }
+    case 'updateFailed': {
+      const stage = error.stage
+      return {
+        title: t(($) => $.titles.updateFailed),
+        message: t(($) => $.updateFailed[stage]),
+      }
+    }
+    case 'unsupported': {
+      const feature = error.feature
+      return {
+        title: t(($) => $.titles.unsupported),
+        message: t(($) => $.unsupported[feature]),
+      }
+    }
     case 'revealFailed': {
       const reason = error.reason
       return {

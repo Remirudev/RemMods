@@ -83,6 +83,18 @@ describe('isAppError kinds', () => {
     }
   })
 
+  it('knows the kinds added with the updater and the graphics fallback', () => {
+    for (const kind of [
+      'updateNotConfigured',
+      'updateNotAllowed',
+      'updateBlocked',
+      'updateFailed',
+      'unsupported',
+    ]) {
+      expect(isAppError({ kind }), kind).toBe(true)
+    }
+  })
+
   it('rejects unknown kinds and inherited property names', () => {
     expect(isAppError({ kind: 'somethingNew' })).toBe(false)
     expect(isAppError({ kind: 'constructor' })).toBe(false)

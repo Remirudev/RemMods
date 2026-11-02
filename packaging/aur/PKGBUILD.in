@@ -1,0 +1,21 @@
+# Maintainer: remirudev
+# Rendered by scripts/render-pkgbuild.py from packaging/aur/PKGBUILD.in; edit the template.
+pkgname=remmods-bin
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc='Mod manager for TEKKEN 8'
+arch=('x86_64')
+url='https://github.com/Remirudev/RemMods'
+license=('MIT')
+depends=('glibc' 'libgcc' 'webkit2gtk-4.1' 'gtk3' 'libsoup3' 'openssl' 'glib2' 'cairo' 'gdk-pixbuf2' 'dbus' 'wayland' 'hicolor-icon-theme' 'xdg-utils')
+provides=('remmods')
+conflicts=('remmods')
+options=('!strip' '!debug')
+source=(@SOURCE@)
+sha256sums=('@SHA256@')
+
+package() {
+  bsdtar -xf data.tar.gz -C "$pkgdir"
+  install -Dm644 "$pkgdir/usr/share/doc/remmods/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 /dev/stdin "$pkgdir/usr/lib/remmods/install-source" <<< 'install-source=aur'
+}

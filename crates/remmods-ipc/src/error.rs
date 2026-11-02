@@ -1,6 +1,8 @@
 use remmods_core::CoreError;
+use remmods_core::app_update::AppUpdateError;
 use remmods_core::archive::{ArchiveError, UnsupportedReason};
 use remmods_core::game::GameError;
+use remmods_core::graphics::GraphicsError;
 use remmods_core::install::InstallError;
 use remmods_core::mods::{
     ManageAction as CoreManageAction, ManageBlock as CoreManageBlock, ModsError,
@@ -15,8 +17,10 @@ use crate::game::{FolderProblem, RevealProblem};
 use crate::install::{ArchiveProblem, InstallBlock, SourceReject};
 use crate::manage::{ManageAction, ManageBlock, TrashUnavailableReason};
 use crate::mods::bytes;
+use crate::platform::PlatformFeature;
 use crate::profiles::ImportProblem;
 use crate::toggle::ToggleBlock;
+use crate::update::{AppInstallKind, UpdateBlock, UpdateStage};
 
 /// Error returned by every command. Carries no English: the UI translates by `kind`, and the raw
 /// OS error only goes to the log.
@@ -94,6 +98,21 @@ pub enum AppError {
     SourceRejected {
         reason: SourceReject,
     },
+    /// This build carries no updater config (local, dev, CI and `--smoke` builds).
+    UpdateNotConfigured,
+    /// This install kind updates through its package manager, never by itself.
+    UpdateNotAllowed {
+        install: AppInstallKind,
+    },
+    UpdateBlocked {
+        reason: UpdateBlock,
+    },
+    UpdateFailed {
+        stage: UpdateStage,
+    },
+    Unsupported {
+        feature: PlatformFeature,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -130,6 +149,8 @@ impl From<CoreError> for AppError {
             CoreError::Mods(error) => mods_error(error),
             CoreError::Profiles(error) => profile_error(error),
             CoreError::Install(error) => install_error(error),
+            CoreError::AppUpdate(error) => app_update_error(error),
+            CoreError::Graphics(error) => graphics_error(error),
         }
     }
 }
@@ -254,6 +275,27 @@ fn install_error(error: InstallError) -> AppError {
         InstallError::Source { reason } => AppError::SourceRejected {
             reason: reason.into(),
         },
+    }
+}
+
+fn app_update_error(error: AppUpdateError) -> AppError {
+    match error {
+        AppUpdateError::Blocked(block) => AppError::UpdateBlocked {
+            reason: block.into(),
+        },
+        AppUpdateError::Fs(error) => fs_error(error),
+    }
+}
+
+fn graphics_error(error: GraphicsError) -> AppError {
+    match error {
+        GraphicsError::ReadOnly => AppError::ReadOnly,
+        GraphicsError::NoStep => AppError::Stale,
+        GraphicsError::Unsupported => AppError::Unsupported {
+            feature: PlatformFeature::GraphicsFallback,
+        },
+        GraphicsError::Encode(_) => AppError::Internal,
+        GraphicsError::Fs(error) => fs_error(error),
     }
 }
 

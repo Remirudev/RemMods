@@ -1,5 +1,7 @@
-# cargo-about 0.9.3 config for THIRD-PARTY-NOTICES (docs/PLAN.md §10). Generation starts in P5:
-#   cargo about generate --workspace --locked --fail about.hbs -o THIRD-PARTY-NOTICES
+# cargo-about 0.9.3 config for THIRD-PARTY-NOTICES (docs/PLAN.md §10). Regenerate with
+# scripts/notices.sh, which runs:
+#   cargo fetch --locked
+#   cargo about generate --workspace --frozen --fail -c about.toml -o THIRD-PARTY-NOTICES about.hbs
 # Same licence policy as deny.toml; earlier entries win when a crate offers a choice.
 
 accepted = [

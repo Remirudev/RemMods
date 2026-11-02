@@ -33,6 +33,11 @@ export const errors: LocaleShape<typeof en> = {
     installCancelled: 'Installation abgebrochen',
     noSpace: 'Nicht genug freier Speicher',
     sourceRejected: 'Das lässt sich nicht installieren',
+    updateNotConfigured: 'Kein Update-Kanal',
+    updateNotAllowed: 'Update über die Paketverwaltung',
+    updateBlocked: 'Update gerade nicht möglich',
+    updateFailed: 'Update fehlgeschlagen',
+    unsupported: 'Auf diesem System nicht verfügbar',
   },
   messages: {
     busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
@@ -69,6 +74,36 @@ export const errors: LocaleShape<typeof en> = {
     installBusy: 'Warte, bis die laufende Installation fertig ist, und versuche es dann erneut.',
     installCancelled: 'Es wurde nichts installiert.',
     noSpace: 'Die Installation braucht {{needed}}, aber nur {{available}} sind frei.',
+    updateNotConfigured: 'Dieser Build hat keinen Update-Kanal (Entwicklungs- oder Test-Build).',
+  },
+  updateNotAllowed: {
+    appImage:
+      'Dieses AppImage kann sich nicht selbst ersetzen. Lade die neue Version von der Release-Seite herunter.',
+    nsis: 'Diese Kopie kann das Update-Installationsprogramm nicht starten. Lade die neue Version von der Release-Seite herunter.',
+    deb: 'RemMods wurde aus einem .deb-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
+    rpm: 'RemMods wurde aus einem RPM-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
+    aur: 'RemMods wurde aus dem AUR installiert. Aktualisiere es mit deinem AUR-Helfer, zum Beispiel paru -Syu.',
+    unknown:
+      'Diese Kopie wurde nicht aus einem Release-Paket installiert und kann sich deshalb nicht selbst aktualisieren. Lade die neue Version von der Release-Seite herunter.',
+  },
+  updateBlocked: {
+    installRunning:
+      'Eine Mod-Installation läuft. Warte, bis sie fertig ist, und versuche es dann erneut.',
+    journalPending:
+      'Eine unvollständige Änderung an den Mod-Ordnern steht noch aus. Starte RemMods neu und versuche es dann erneut.',
+    busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
+  },
+  updateFailed: {
+    check:
+      'RemMods konnte nicht nach Updates suchen. Prüfe die Internetverbindung und versuche es erneut; Details stehen im Log.',
+    download:
+      'Das Update konnte nicht heruntergeladen werden. Nichts wurde geändert; versuche es später erneut.',
+    verify:
+      'Das heruntergeladene Update hat die Signaturprüfung nicht bestanden und wurde nicht installiert.',
+    install: 'Das Update konnte nicht installiert werden. Details stehen im Log.',
+  },
+  unsupported: {
+    graphicsFallback: 'Die Grafikeinstellungen gibt es nur unter Linux.',
   },
   archiveFailed: {
     notAnArchive: 'Diese Datei ist kein zip-, 7z- oder rar-Archiv oder sie ist beschädigt.',

@@ -90,6 +90,16 @@ export const commands = {
 	installStart: (request: StartRequest, progress: Channel<InstallProgress>) => typedError<InstallOutcome, AppError>(__TAURI_INVOKE("install_start", { request, progress })),
 	/**  Cancels the running install; false when none runs. Never waits for the write lock. */
 	installCancel: () => typedError<boolean, AppError>(__TAURI_INVOKE("install_cancel")),
+	updateChannel: () => typedError<AppUpdateChannel, AppError>(__TAURI_INVOKE("update_channel")),
+	/**  Allowed for every install kind: a package user may still see that a version exists. */
+	updateCheck: () => typedError<AppUpdateCheck, AppError>(__TAURI_INVOKE("update_check")),
+	updateInstall: (version: string, progress: Channel<AppUpdateProgress>) => typedError<null, AppError>(__TAURI_INVOKE("update_install", { version, progress })),
+	graphicsGet: () => typedError<GraphicsState, AppError>(__TAURI_INVOKE("graphics_get")),
+	/**  Stores the mode for the next start. */
+	graphicsSetMode: (mode: GraphicsMode) => typedError<GraphicsState, AppError>(__TAURI_INVOKE("graphics_set_mode", { mode })),
+	/**  Keeps (`revert` false) or undoes (`revert` true) the automatic step after a crashed start. */
+	graphicsAckStep: (revert: boolean) => typedError<GraphicsState, AppError>(__TAURI_INVOKE("graphics_ack_step", { revert })),
+	aboutNotices: () => typedError<Notices, AppError>(__TAURI_INVOKE("about_notices")),
 };
 
 /** Events */
@@ -116,13 +126,38 @@ export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErr
 /**  `size` (bytes) lets the UI offer a permanent delete instead; null when unknown. */
 { kind: "trashUnavailable"; reason: TrashUnavailableReason; size: number | null } | { kind: "deleteTokenInvalid" } | { kind: "modinfoAmbiguous" } | { kind: "profileNotFound" } | { kind: "profileNameTaken" } | { kind: "importFailed"; problem: ImportProblem } | { kind: "archiveFailed"; reason: ArchiveProblem } | { kind: "installBlocked"; reason: InstallBlock } | { kind: "installBusy" } | { kind: "installCancelled" } | 
 /**  Bytes the install needs and the bytes free in the Paks file system. */
-{ kind: "noSpace"; needed: number; available: number } | { kind: "sourceRejected"; reason: SourceReject };
+{ kind: "noSpace"; needed: number; available: number } | { kind: "sourceRejected"; reason: SourceReject } | 
+/**  This build carries no updater config (local, dev, CI and `--smoke` builds). */
+{ kind: "updateNotConfigured" } | 
+/**  This install kind updates through its package manager, never by itself. */
+{ kind: "updateNotAllowed"; install: AppInstallKind } | { kind: "updateBlocked"; reason: UpdateBlock } | { kind: "updateFailed"; stage: UpdateStage } | { kind: "unsupported"; feature: PlatformFeature };
+
+/**  How this copy of RemMods was installed; only `appImage` and `nsis` update themselves. */
+export type AppInstallKind = "appImage" | "nsis" | "deb" | "rpm" | "aur" | "unknown";
 
 export type AppPathsDto = {
 	config: string,
 	data: string,
 	logs: string,
 };
+
+export type AppUpdateChannel = {
+	install: AppInstallKind,
+	/**  `install` is `appImage` or `nsis`. */
+	selfUpdate: boolean,
+	/**  The updater plugin is registered (release config, not `--smoke`). */
+	configured: boolean,
+	/**  The running app's version. */
+	current: string,
+};
+
+export type AppUpdateCheck = { kind: "upToDate" } | 
+/**  `date` is the raw `pub_date` of `latest.json`; `notes` the release body as plain text. */
+{ kind: "available"; version: string; date: string | null; notes: string | null };
+
+export type AppUpdateProgress = 
+/**  Bytes so far and the announced size (null when the server sends none). */
+{ kind: "downloading"; downloaded: number; total: number | null } | { kind: "installing" } | { kind: "restarting" };
 
 export type Appearance = {
 	scheme: ColorScheme,
@@ -338,6 +373,30 @@ export type GameStatusChanged = {
 	session: number,
 	originalApp: boolean,
 	update: UpdateNotice | null,
+};
+
+export type GraphicsMode = "auto" | "forceShm" | "software";
+
+export type GraphicsState = {
+	/**  False on Windows; then the other fields are defaults. */
+	supported: boolean,
+	/**  Stored in `graphics.json`; applies on the next start. */
+	mode: GraphicsMode,
+	/**  What this session runs with. */
+	effective: GraphicsMode,
+	/**  Started with `--safe-graphics`. */
+	safeFlag: boolean,
+	/**  The user's environment sets WebKit renderer variables. */
+	userEnv: boolean,
+	step: GraphicsStep | null,
+	/**  `graphics.json` is newer or unreadable. */
+	readOnly: boolean,
+};
+
+/**  An automatic step after a crashed start that the user has not acknowledged yet. */
+export type GraphicsStep = {
+	from: GraphicsMode,
+	to: GraphicsMode,
 };
 
 export type ImportProblem = "tooLarge" | "notJson" | "wrongShape" | "wrongFormat" | "newerVersion";
@@ -605,6 +664,13 @@ export type NameProblem = "empty" | "dotName" | "tooLong" | "forbiddenChar" | "c
 
 export type NoteCode = "steamRoot" | "noSteam" | "vdfError" | "libraryMissing" | "libraryNotAbsolute" | "manifestError" | "installIncomplete" | "gameFolderInvalid" | "pathNotUnicode" | "registryUnreadable";
 
+/**  The licence and third-party notice texts compiled into the binary (About dialog). */
+export type Notices = {
+	license: string,
+	rust: string,
+	npm: string,
+};
+
 export type OsErrorClass = "inUse" | "accessDenied" | "noSpace" | "readOnlyFs" | "crossDevice" | "nameTooLong" | "alreadyExists" | "notFound" | "unsupported" | "other";
 
 export type OsKind = "linux" | "windows" | "other";
@@ -635,6 +701,13 @@ export type PickedSource = {
 	kind: SourceKind,
 };
 
+export type PlatformFeature = "graphicsFallback";
+
+/**  Which Linux-first features this build supports; the rest report `unsupported`. */
+export type PlatformFeatures = {
+	graphicsFallback: boolean,
+};
+
 export type PlatformInfo = {
 	os: OsKind,
 	arch: string,
@@ -642,6 +715,7 @@ export type PlatformInfo = {
 	webviewVersion: string | null,
 	smoke: boolean,
 	paths: AppPathsDto,
+	features: PlatformFeatures,
 };
 
 /**  `mods` is sorted by key bytes. */
@@ -899,11 +973,15 @@ export type UnmanagedEntry = {
 
 export type UnmanagedKind = "paksFile" | "folder" | "linkedFolder" | "tempFolder";
 
+export type UpdateBlock = "installRunning" | "journalPending" | "busy";
+
 /**  Steam updated the game since the build RemMods last saw (build ids, not versions). */
 export type UpdateNotice = {
 	from: string,
 	to: string,
 };
+
+export type UpdateStage = "check" | "download" | "verify" | "install";
 
 export type UpdateTracking = "available" | "noManifest" | "unreadable";
 

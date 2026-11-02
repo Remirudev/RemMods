@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Settings } from '../lib/ipc/types'
-import { TEST_SETTINGS } from '../test/fixtures'
+import { makeGraphicsState, TEST_SETTINGS, WINDOWS_PLATFORM_INFO } from '../test/fixtures'
 import { installIpcMock } from '../test/ipc-mock'
 import { renderWithProviders } from '../test/render'
 import { App } from './App'
@@ -56,5 +56,34 @@ describe('App shell', () => {
 
     expect(await screen.findByRole('heading', { name: 'Mods' })).toBeVisible()
     expect(screen.queryByTestId('title-bar')).not.toBeInTheDocument()
+  })
+
+  it('shows the graphics step banner above the panels after a crashed start', async () => {
+    const stepped = makeGraphicsState({ step: { from: 'auto', to: 'software' } })
+    installIpcMock(undefined, { handlers: { graphics_get: () => stepped } })
+    renderWithProviders(<App />)
+
+    expect(await screen.findByTestId('graphics-step-banner')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Switch back' })).toBeVisible()
+  })
+
+  it('shows the graphics step banner only once on the Settings panel', async () => {
+    useActivePanelStore.setState({ activePanel: 'settings', visited: ['settings'] })
+    const stepped = makeGraphicsState({ step: { from: 'auto', to: 'software' } })
+    installIpcMock(undefined, { handlers: { graphics_get: () => stepped } })
+    renderWithProviders(<App />)
+
+    expect(await screen.findByTestId('graphics-step-banner')).toBeVisible()
+    expect(screen.getAllByTestId('graphics-step-banner')).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Switch back' })).toHaveLength(1)
+  })
+
+  it('never shows the graphics banner on Windows', async () => {
+    const ipc = installIpcMock()
+    renderWithProviders(<App />, { platformInfo: WINDOWS_PLATFORM_INFO })
+
+    expect(await screen.findByRole('heading', { name: 'Mods' })).toBeVisible()
+    expect(screen.queryByTestId('graphics-step-banner')).not.toBeInTheDocument()
+    expect(ipc.callsOf('graphics_get')).toHaveLength(0)
   })
 })

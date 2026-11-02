@@ -50,7 +50,7 @@ Paths below are relative to the Paks folder,
 - **P3**: two profiles applied back and forth in-game; see "P3 steps" below.
 - **P4**: one zip, one rar and one 7z mod, dropped onto RemMods, load in-game.
 - **P5**: the same check with Steam started from the AppImage build; Steam gets a clean environment
-  and working directory, and your gamescope launch options still work.
+  and working directory, and your gamescope launch options still work. See "P5 steps" below.
 
 ## P1 steps (read-only phase)
 
@@ -267,3 +267,120 @@ Nothing is written inside `Paks` except by RemMods. Each step ends with a "Resul
    `diff -u local/paks-p4-before.tsv local/paks-p4-after.tsv`: only the intended changes, else restore
    from the backup and diff again.
    Result:
+
+## P5 steps (release packaging)
+
+The first phase that runs RemMods as a package: the AppImage from the pull request's `artifacts` run
+(a CI build without the update channel). Claude never installs packages; the steps marked "(you)" are
+yours. Every command works in fish and runs from the repository folder unless it says otherwise.
+Nothing in `Paks` may change in this phase. Each step ends with a "Result:" line to fill in. Steps 1
+to 9 and 12 are the P5 exit check; steps 10 and 11 follow later releases.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-p5-before.tsv`. Back up
+   `Mods`, `~mods`, `LogicMods`, `~/.config/com.remirudev.remmods/` and
+   `~/.local/share/com.remirudev.remmods/` to `~/RemMods-backups/<date>/` (`cp -a --reflink=auto`;
+   the graphics steps below change `graphics.json`). Check that your environment sets no WebKit
+   variable: `env | string match -r '^(WEBKIT_|__NV_)'` prints nothing.
+   Result:
+2. (you) Download the artifact `bundles-linux` of the PR's `artifacts` run (Actions → artifacts → the
+   run → Artifacts) and put the AppImage into `~/Applications`:
+
+   ```fish
+   mkdir -p ~/Applications
+   cd ~/Applications
+   unzip ~/Downloads/bundles-linux.zip 'RemMods_*_amd64.AppImage'
+   chmod +x RemMods_*_amd64.AppImage
+   ```
+
+   Result:
+3. Start it (`~/Applications/RemMods_*_amd64.AppImage`). Settings → Updates shows "AppImage" and
+   "This build has no update channel (development or test build)."; Diagnostics shows "Installed as"
+   with the value "AppImage"; About → "Licences and third-party notices" shows three tabs. The log agrees:
+   `string match '*install kind*' < ~/.local/share/com.remirudev.remmods/logs/remmods.log | tail -n 1`
+   ends with `install kind AppImage, updater configured false`. Close RemMods.
+   Result:
+4. (you) Desktop integration and taskbar icon: let Gear Lever integrate the AppImage, or install its
+   own desktop file and icons for your user:
+
+   ```fish
+   cd ~/Applications
+   set app (path resolve RemMods_*_amd64.AppImage)
+   $app --appimage-extract 'usr/share/applications/*'
+   $app --appimage-extract 'usr/share/icons/*'
+   mkdir -p ~/.local/share/applications ~/.local/share/icons
+   sed "s|^Exec=remmods|Exec=$app|" squashfs-root/usr/share/applications/RemMods.desktop > ~/.local/share/applications/RemMods.desktop
+   cp -r squashfs-root/usr/share/icons/hicolor ~/.local/share/icons/
+   rm -r squashfs-root
+   ```
+
+   Start RemMods from the application menu: the taskbar shows the RemMods icon (not a generic one),
+   and a pinned launcher and the running window are one taskbar entry.
+   Result:
+5. Window class (records the UNVERIFIED item of SPEC-P5 §2.3): run
+   `qdbus6 org.kde.KWin /KWin org.kde.KWin.queryWindowInfo` and click the RemMods window (or use the
+   window menu → More Actions → Configure Special Window Settings → Detect Window Properties). It
+   shows `resourceClass: remmods`. Note the `desktopFile` value too.
+   Result:
+6. Safe graphics action: close RemMods, right-click its menu entry and choose "Start in safe graphics
+   mode". Settings → Graphics shows "This session runs in safe graphics mode (started with
+   --safe-graphics)." and the "Always use software rendering" button (do not click it). The log shows
+   the mode and the variable RemMods set:
+   `string match '*graphics: stored*' < ~/.local/share/com.remirudev.remmods/logs/remmods.log | tail -n 1`
+   contains `effective Software from Flag` and `WEBKIT_DISABLE_DMABUF_RENDERER`. (RemMods sets the
+   variable in its own process, so `/proc/<pid>/environ`, which shows only the environment a
+   process started with, does not list it.) Close RemMods.
+   Result:
+7. Crash marker: Settings → Graphics is Automatic. Close RemMods, start it from the menu and, within
+   5 s, `pkill -KILL -x remmods`. Start it again: the banner "Graphics mode changed" says "RemMods did
+   not start correctly last time, so it switched from Automatic to GPU, shared memory.", and Settings →
+   Graphics shows "GPU, shared memory". Click "Switch back": Settings → Graphics shows Automatic and
+   `string match '*"mode"*' < ~/.config/com.remirudev.remmods/graphics.json` shows `"auto"`. Wait 15 s:
+   `path filter ~/.config/com.remirudev.remmods/graphics-pending` prints nothing (the marker is
+   cleared after a good start).
+   Result:
+8. Launcher action while RemMods runs: start RemMods from the menu and note `pgrep -n -x remmods`.
+   Choose "Start in safe graphics mode" from the menu while its window is open: RemMods closes and
+   comes back with another PID, Settings → Graphics shows the safe graphics note, and the log has
+   `restarting in safe graphics mode for a second instance's --safe-graphics`. The new process got the
+   host environment, without RemMods' variables:
+   `string split0 < /proc/(pgrep -n -x remmods)/environ | string match -r '^(WEBKIT_|__NV_)'` prints
+   nothing. Close RemMods.
+   Result:
+9. Steam from the AppImage: Steam closed (`pgrep -x steam` prints nothing). Start RemMods from the
+   menu and click Launch. Once the game runs, each of these prints nothing:
+
+   ```fish
+   string split0 < /proc/(pgrep -n -x steam)/environ | string match -r '^(APPDIR|APPIMAGE|OWD|ARGV0|GTK_|GDK_PIXBUF|GIO_MODULE|GSETTINGS_SCHEMA_DIR|GI_TYPELIB_PATH|PYTHONHOME|WEBKIT_|__NV_)'
+   string split0 < /proc/(pgrep -n -x steam)/environ | string match '*.mount_*'
+   readlink /proc/(pgrep -n -x steam)/cwd | string match '*.mount_*'
+   ```
+
+   (The second covers every path list, such as `PATH` and `XDG_DATA_DIRS`. Steam's launcher changes
+   into its own folder, so its working directory is not `$HOME`; the `$HOME` working directory of
+   RemMods' child processes is tested in CI.) The game starts with your gamescope launch options as
+   before. In offline Practice, the enabled mods are visible (PLAN §9 per-phase check). Quit the game.
+   Result:
+10. AUR (you, after v1.0.0 is published): remove the user desktop file of step 4 first, it would hide
+    the package's (`rm ~/.local/share/applications/RemMods.desktop`), then `paru -S remmods-bin`.
+    Start RemMods from the menu: Settings → Updates shows "AUR package (remmods-bin)" and "Installed
+    from the AUR: update with your AUR helper, for example paru -Syu."; the taskbar icon and the
+    safe-graphics action work as in steps 4 and 6.
+    Result:
+11. First self-update (after the first patch release, before self-update is announced): the previous
+    release's AppImage in `~/Applications` (a release build, so Settings → Updates offers "Check for
+    updates"). Check, then "Install and restart"; the confirmation says "RemMods will close to install
+    the update." RemMods restarts from the same file (it keeps its old file name) and Settings →
+    Updates shows the new version. The relaunched process has none of RemMods' variables (SPEC-P5
+    A8): `string split0 < /proc/(pgrep -n -x remmods)/environ | string match -r '^(WEBKIT_|__NV_)'`
+    prints nothing. No rollback copy is left: `find /tmp ~/.cache -maxdepth 1 -name 'tauri_current_app*'`
+    prints nothing.
+    Then once more with an older AppImage started as `./RemMods_<old>_amd64.AppImage
+    --appimage-extract-and-run`: "Install and restart" brings RemMods back (extracted again, no FUSE
+    needed). In that session the desktop file's "Start in safe graphics mode" action only focuses the
+    window (the log says why).
+    Result:
+12. Game closed. `scripts/paks-snapshot.sh > local/paks-p5-after.tsv`, then
+    `diff -u local/paks-p5-before.tsv local/paks-p5-after.tsv`: no output. Restore
+    `~/.config/com.remirudev.remmods/` from the backup if the graphics steps left a mode you do not
+    want. The "Runs" table gets a P5 line.
+    Result:

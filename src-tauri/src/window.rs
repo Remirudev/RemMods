@@ -63,8 +63,17 @@ fn install_event_handler(window: &WebviewWindow) {
         WindowEvent::Focused(true) => on_focused(&app),
         WindowEvent::Focused(false) | WindowEvent::Resized(_) => update_monitor_activity(&app),
         WindowEvent::DragDrop(event) => drop::on_drag_drop(&app, event),
+        WindowEvent::CloseRequested { api, .. } if update_install_running(&app) => {
+            log::info!("window close refused while the update is being installed");
+            api.prevent_close();
+        }
         _ => {}
     });
+}
+
+fn update_install_running(app: &AppHandle) -> bool {
+    app.try_state::<AppState>()
+        .is_some_and(|state| state.update_install_running())
 }
 
 fn on_focused(app: &AppHandle) {

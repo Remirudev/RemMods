@@ -52,6 +52,15 @@ const ERRORS: AppError[] = [
   { kind: 'installCancelled' },
   { kind: 'noSpace', needed: 3 * 1024 * 1024, available: 1024 },
   { kind: 'sourceRejected', reason: 'missing' },
+  { kind: 'updateNotConfigured' },
+  { kind: 'updateNotAllowed', install: 'deb' },
+  { kind: 'updateNotAllowed', install: 'unknown' },
+  { kind: 'updateBlocked', reason: 'installRunning' },
+  { kind: 'updateBlocked', reason: 'journalPending' },
+  { kind: 'updateBlocked', reason: 'busy' },
+  { kind: 'updateFailed', stage: 'check' },
+  { kind: 'updateFailed', stage: 'verify' },
+  { kind: 'unsupported', feature: 'graphicsFallback' },
 ]
 
 describe('describeAppError', () => {

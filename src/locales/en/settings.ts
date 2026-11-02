@@ -45,6 +45,74 @@ export const settings = {
     reveal: 'Open Paks folder',
     other: 'Other installations',
   },
+  graphics: {
+    title: 'Graphics',
+    description: 'How RemMods draws its window on Linux.',
+    label: 'Rendering',
+    modes: {
+      auto: 'Automatic',
+      forceShm: 'GPU, shared memory',
+      software: 'Software',
+    },
+    hint: 'Applies after RemMods restarts. Use Software if the window stays blank or flickers.',
+    readOnly:
+      'graphics.json comes from a newer version of RemMods or could not be read, so the mode cannot be changed here.',
+    safeFlag: 'This session runs in safe graphics mode (started with --safe-graphics).',
+    alwaysSoftware: 'Always use software rendering',
+    userEnv:
+      'Your environment sets WebKit graphics variables; RemMods leaves them as they are and sets none of its own.',
+    step: {
+      title: 'Graphics mode changed',
+      body: 'RemMods did not start correctly last time, so it switched from {{from}} to {{to}}.',
+      keep: 'Keep',
+      revert: 'Switch back',
+    },
+  },
+  updates: {
+    title: 'Updates',
+    description: 'New versions of RemMods. RemMods only checks when you ask it to.',
+    labels: {
+      installedAs: 'Installed as',
+      current: 'Version',
+    },
+    kinds: {
+      appImage: 'AppImage',
+      nsis: 'Windows installer',
+      deb: 'Debian package (.deb)',
+      rpm: 'RPM package',
+      aur: 'AUR package (remmods-bin)',
+      unknown: 'Unknown',
+    },
+    check: 'Check for updates',
+    upToDate: 'RemMods {{version}} is up to date.',
+    available: 'RemMods {{version}} is available.',
+    published: 'Published on {{date}}',
+    notes: 'Release notes',
+    install: 'Install and restart',
+    confirm: {
+      title: 'Install RemMods {{version}}?',
+      body: 'RemMods will close to install the update.',
+      installer: 'The installer shows its progress and starts RemMods again.',
+      cancel: 'Cancel',
+    },
+    progress: {
+      title: 'Updating RemMods',
+      downloading: 'Downloading… {{percent}} %',
+      downloadingSize: 'Downloading… {{size}}',
+      installing: 'Installing…',
+      restarting: 'Restarting RemMods…',
+    },
+    notices: {
+      package:
+        'Installed from a package: download the new {{format}} from the releases page and install it with your package manager.',
+      aur: 'Installed from the AUR: update with your AUR helper, for example paru -Syu.',
+      unknown:
+        'This copy was not installed from a release package. Download the new version from the releases page.',
+      notConfigured: 'This build has no update channel (development or test build).',
+    },
+    releases: 'Releases page',
+    staleCheck: 'The update information is out of date. Check for updates again.',
+  },
   diagnostics: {
     title: 'Diagnostics',
     description: 'Details to include when you report a problem.',
@@ -56,6 +124,8 @@ export const settings = {
       configDir: 'Settings folder',
       dataDir: 'Data folder',
       logsDir: 'Log folder',
+      installedAs: 'Installed as',
+      graphicsMode: 'Graphics mode',
     },
     osNames: {
       linux: 'Linux',
@@ -74,5 +144,15 @@ export const settings = {
     source: 'Source code',
     copyLink: 'Copy link',
     linkCopied: 'Link copied',
+    notices: {
+      open: 'Licences and third-party notices',
+      title: 'Licences and third-party notices',
+      tabs: {
+        app: 'RemMods',
+        rust: 'Rust crates',
+        npm: 'npm packages and fonts',
+      },
+      loadFailed: 'The notices could not be loaded.',
+    },
   },
 } as const

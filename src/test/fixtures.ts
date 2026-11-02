@@ -1,13 +1,16 @@
 import type {
+  AppUpdateChannel,
   ContentSummary,
   GameCandidate,
   GameStatus,
+  GraphicsState,
   InstallInfo,
   ModContents,
   ModDetails,
   ModInfo,
   ModRow,
   ModsSnapshot,
+  Notices,
   PlatformInfo,
   Settings,
 } from '../lib/ipc/types'
@@ -34,6 +37,40 @@ export const TEST_PLATFORM_INFO: PlatformInfo = {
     data: '/home/test/.local/share/com.remirudev.remmods',
     logs: '/home/test/.local/share/com.remirudev.remmods/logs',
   },
+  features: { graphicsFallback: true },
+}
+
+export const WINDOWS_PLATFORM_INFO: PlatformInfo = {
+  ...TEST_PLATFORM_INFO,
+  os: 'windows',
+  features: { graphicsFallback: false },
+}
+
+// A local or test build: no updater config, so nothing can be checked or installed.
+export const TEST_UPDATE_CHANNEL: AppUpdateChannel = {
+  install: 'unknown',
+  selfUpdate: false,
+  configured: false,
+  current: '0.1.0',
+}
+
+export function makeGraphicsState(overrides: Partial<GraphicsState> = {}): GraphicsState {
+  return {
+    supported: true,
+    mode: 'auto',
+    effective: 'auto',
+    safeFlag: false,
+    userEnv: false,
+    step: null,
+    readOnly: false,
+    ...overrides,
+  }
+}
+
+export const TEST_NOTICES: Notices = {
+  license: 'MIT License\n\nCopyright (c) test',
+  rust: 'THIRD-PARTY NOTICES\n\nserde 1.0.0',
+  npm: 'react 19.3.0\n\nSIL OPEN FONT LICENSE Version 1.1',
 }
 
 const PAKS = '/games/steamapps/common/TEKKEN 8/Polaris/Content/Paks'

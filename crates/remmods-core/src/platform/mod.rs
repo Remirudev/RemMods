@@ -2,20 +2,26 @@
 //! OS; the per-OS files only fill in the details. Raw OS error codes collide across systems
 //! (Windows 5/32/33 are EIO/EPIPE/EDOM on Linux), so errors are classified here and nowhere else.
 
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
 mod entry;
+mod host_env;
 mod meminfo;
 mod procfs;
 mod trash;
 
 pub(crate) use entry::os_str_prefix;
 pub use entry::{FileId, RawName, file_id, fs_path, os_str_cut, os_string, raw_name};
+pub use host_env::{
+    APPIMAGE_RUNTIME_VARS, APPRUN_PATH_LISTS, APPRUN_VALUE_VARS, FALLBACK_PATH, HostEnvPlan,
+    host_env_plan, resolve_cli_path,
+};
 pub use meminfo::parse_meminfo_total;
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
 pub(crate) use trash::DirTraits;
@@ -41,6 +47,9 @@ use fallback as imp;
 /// How long `spawn_detached` watches a new child for an early failure.
 const DETACHED_EARLY_EXIT_WINDOW: Duration = Duration::from_millis(300);
 const DETACHED_POLL_INTERVAL: Duration = Duration::from_millis(20);
+
+/// The renderer variables this process set for itself (`os::graphics::prepare`).
+static OWN_ENV_VARS: OnceLock<Vec<&'static str>> = OnceLock::new();
 
 /// OS-independent meaning of an I/O error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -275,10 +284,42 @@ pub fn registry_string(
     imp::registry_string(hive, subkey, value, view)
 }
 
-/// A command for a host program: working directory = home when known, all three streams null.
+/// Records the environment variables RemMods set for itself, so host programs do not inherit
+/// them. Only the first call counts; a later one is logged and ignored.
+pub fn set_own_env_vars(vars: Vec<&'static str>) {
+    if let Err(ignored) = OWN_ENV_VARS.set(vars) {
+        log::warn!("own environment variables already recorded; ignoring {ignored:?}");
+    }
+}
+
+pub fn own_env_vars() -> &'static [&'static str] {
+    OWN_ENV_VARS.get().map_or(&[], Vec::as_slice)
+}
+
+/// A command for a host program with the environment of this process, without RemMods' own
+/// renderer variables and AppImage mount paths ([`host_env_plan`]): working directory = home when
+/// known, all three streams null.
 pub fn host_command(program: impl AsRef<OsStr>) -> Command {
+    let env: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+    host_command_in(program, &env, own_env_vars(), dirs::home_dir().as_deref())
+}
+
+/// [`host_command`] with the inherited environment, own variables and home passed in.
+pub fn host_command_in(
+    program: impl AsRef<OsStr>,
+    env: &[(OsString, OsString)],
+    own_vars: &[&str],
+    home: Option<&Path>,
+) -> Command {
+    let plan = host_env_plan(env, own_vars);
     let mut command = Command::new(program);
-    if let Some(home) = dirs::home_dir() {
+    for name in &plan.remove {
+        command.env_remove(name);
+    }
+    for (name, value) in &plan.set {
+        command.env(name, value);
+    }
+    if let Some(home) = home {
         command.current_dir(home);
     }
     command

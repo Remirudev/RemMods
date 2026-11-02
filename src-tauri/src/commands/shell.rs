@@ -1,12 +1,11 @@
 use remmods_core::platform;
 use remmods_core::settings::normalize_ui_scale;
-use remmods_ipc::{AppError, AppPathsDto, PlatformInfo, SmokeReport};
+use remmods_ipc::{AppError, AppPathsDto, PlatformFeatures, PlatformInfo, SmokeReport};
 use tauri::{AppHandle, State, WebviewWindow};
-use tauri_plugin_opener::OpenerExt;
 
 use super::internal;
 use crate::state::AppState;
-use crate::{smoke, window};
+use crate::{os, smoke, window};
 
 #[tauri::command]
 #[specta::specta]
@@ -24,6 +23,9 @@ pub async fn platform_info(
         webview_version,
         smoke: state.smoke.is_some(),
         paths: AppPathsDto::from(&state.core.paths),
+        features: PlatformFeatures {
+            graphics_fallback: os::graphics::supported(),
+        },
     })
 }
 
@@ -41,26 +43,23 @@ pub async fn set_ui_scale(webview: WebviewWindow, scale: f64) -> Result<(), AppE
 #[specta::specta]
 pub async fn app_ready(app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
     window::show_main_window_once(&app, &state, "app_ready");
+    os::graphics::on_frontend_ready(&app);
     Ok(())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn open_logs(app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
-    let log_dir = state.core.paths.log_dir.to_string_lossy().into_owned();
-    let opened =
-        tauri::async_runtime::spawn_blocking(move || app.opener().open_path(log_dir, None::<&str>))
-            .await
-            .map_err(|error| internal("open_logs task", error))?;
-    opened.map_err(|error| match error {
-        tauri_plugin_opener::Error::Io(source) => {
-            log::warn!("opening the log folder failed: {source}");
-            AppError::Io {
-                op: "open_logs".to_owned(),
-                class: platform::classify(&source).into(),
-            }
+pub async fn open_logs(state: State<'_, AppState>) -> Result<(), AppError> {
+    let log_dir = state.core.paths.log_dir.clone();
+    let opened = tauri::async_runtime::spawn_blocking(move || os::reveal::open_folder(&log_dir))
+        .await
+        .map_err(|error| internal("open_logs task", error))?;
+    opened.map_err(|error| {
+        log::warn!("opening the log folder failed: {error}");
+        AppError::Io {
+            op: "open_logs".to_owned(),
+            class: platform::classify(&error).into(),
         }
-        other => internal("open_logs", other),
     })
 }
 

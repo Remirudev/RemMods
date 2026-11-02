@@ -27,3 +27,20 @@ pub fn reveal(target: &Path) -> io::Result<()> {
         }
     }
 }
+
+/// Opens `path` (a folder) in Explorer.
+#[cfg(windows)]
+pub fn open_folder(path: &Path) -> io::Result<()> {
+    tauri_plugin_opener::open_path(path, None::<&str>).map_err(super::opener_io_error)
+}
+
+/// Opens `path` (a folder) in the file manager through xdg-open with the host environment: the
+/// opener plugin would hand the AppImage's environment to it.
+#[cfg(not(windows))]
+pub fn open_folder(path: &Path) -> io::Result<()> {
+    use remmods_core::platform;
+
+    let mut command = platform::host_command("xdg-open");
+    command.arg(path);
+    platform::spawn_detached(command)
+}

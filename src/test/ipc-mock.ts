@@ -3,11 +3,14 @@ import { applySettingsUpdate } from '../features/settings/settings-update'
 import type { Settings, SettingsUpdate } from '../lib/ipc/types'
 import {
   makeGameStatus,
+  makeGraphicsState,
   TEST_CONTENTS,
   TEST_DETAILS,
+  TEST_NOTICES,
   TEST_PLATFORM_INFO,
   TEST_SETTINGS,
   TEST_SNAPSHOT,
+  TEST_UPDATE_CHANNEL,
 } from './fixtures'
 import type { IpcCall, IpcMock, IpcMockOptions } from './types'
 
@@ -53,6 +56,12 @@ export function installIpcMock(
           return contents
         case 'mods_watch_status':
           return { state: 'active' }
+        case 'update_channel':
+          return TEST_UPDATE_CHANNEL
+        case 'graphics_get':
+          return makeGraphicsState()
+        case 'about_notices':
+          return TEST_NOTICES
         default:
           return null
       }

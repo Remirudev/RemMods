@@ -40,6 +40,13 @@ install leaves nothing behind; a mod that is already installed can be replaced (
 the Trash). Limits: no password-protected archives and no multi-volume archives (install those from an
 extracted folder).
 
+**Phase 5 (in progress)**: release packaging. CI builds the AppImage, deb, rpm and Windows installer,
+installs each one and runs its self-test; the AUR package `remmods-bin` is built from the deb. The
+AppImage and the Windows installer can update themselves from Settings → Updates once a later release
+exists (signed updates, checked only when you click). On Linux, Settings → Graphics and a "Start in safe graphics mode" launcher
+action help when the window stays blank. **No release has been published yet**: v1.0.0 waits for the
+two release-blocking Windows gaps (WG-2, WG-5 in [docs/windows-gaps.md](docs/windows-gaps.md)).
+
 ## Platforms
 
 | Platform | Support |
@@ -48,6 +55,145 @@ extracted folder).
 | Windows | Windows 10 22H2 and Windows 11, x64, with WebView2 Evergreen: **beta, CI-tested only** until it has been tested on a real PC |
 
 Not planned for v1: macOS, Flatpak and Snap packages, Steam Deck Game Mode.
+
+## Install
+
+Releases are published on the [releases page](https://github.com/Remirudev/RemMods/releases) (the
+first one will be v1.0.0). Pick one package:
+
+| Package | File or name | For | Updates |
+|---------|--------------|-----|---------|
+| AppImage | `RemMods_<version>_amd64.AppImage` | any x86_64 Linux with glibc 2.39 or newer, Steam Deck (Desktop Mode) | in the app |
+| Debian package | `RemMods_<version>_amd64.deb` (package `rem-mods`) | Ubuntu 24.04+, Linux Mint 22+, Debian 13+ | apt, by hand |
+| RPM package | `RemMods-<version>-1.x86_64.rpm` (package `rem-mods`) | Fedora 40+ | dnf, by hand |
+| AUR | `remmods-bin` | Arch Linux, CachyOS and other Arch-based distributions | your AUR helper |
+| Windows installer | `RemMods_<version>_x64-setup.exe` | Windows 10 22H2 and 11, x64 (beta, see [Windows](#windows)) | in the app |
+
+**Linux needs glibc 2.39 or newer**: Ubuntu 24.04+, Linux Mint 22+, Debian 13+, Fedora 40+, SteamOS
+3.7+, Arch and CachyOS. Ubuntu 22.04, Debian 12 and Linux Mint 21 are too old.
+
+The commands below work in bash, zsh and fish. Run them in the folder you downloaded to.
+
+- **AppImage**: make it executable and start it. Keep it in a folder you own, such as
+  `~/Applications`: it updates itself in place. If it does not start because FUSE is missing, add
+  `--appimage-extract-and-run`.
+
+  ```sh
+  mkdir -p ~/Applications
+  mv RemMods_*_amd64.AppImage ~/Applications/
+  chmod +x ~/Applications/RemMods_*_amd64.AppImage
+  ~/Applications/RemMods_*_amd64.AppImage
+  ```
+
+  For a menu entry and the taskbar icon, let an AppImage integration tool such as Gear Lever add it.
+- **deb**: `sudo apt install ./RemMods_*_amd64.deb`. Remove it with `sudo apt remove rem-mods`.
+- **rpm**: `sudo dnf install ./RemMods-*-1.x86_64.rpm`. Remove it with `sudo dnf remove rem-mods`.
+- **AUR**: `paru -S remmods-bin` (or `yay -S remmods-bin`). The AUR package repackages the release's
+  deb and checks it against its SHA-256.
+- **Windows**: run the setup. It installs for the current user only (no administrator prompt) into
+  `%LOCALAPPDATA%\RemMods` and downloads WebView2 if it is missing.
+
+Removing RemMods keeps its settings, profiles and logs (Linux: `~/.config/com.remirudev.remmods/` and
+`~/.local/share/com.remirudev.remmods/`; Windows: unless you tick "delete app data" in the
+uninstaller).
+
+**Check your download.** Every release has a `SHA256SUMS` file. Download it into the same folder,
+then on Linux:
+
+```sh
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+Each downloaded file must print `OK`. On Windows (PowerShell), compare the hash with the installer's
+line in `SHA256SUMS`:
+
+```powershell
+Get-FileHash .\RemMods_*_x64-setup.exe -Algorithm SHA256
+```
+
+Every package carries `LICENSE`, `THIRD-PARTY-NOTICES` (Rust crates) and `THIRD-PARTY-NOTICES-NPM`
+(npm packages and fonts): on Linux in `/usr/share/doc/remmods/`, on Windows as `.txt` files in the
+install folder. Settings → About shows them too.
+
+## Updates
+
+RemMods never checks for updates on its own: Settings → Updates checks when you click "Check for
+updates" (it then reads the release information from GitHub). Only stable releases are offered.
+Settings → Updates also shows how this copy was installed.
+
+| Installed as | How it updates |
+|--------------|----------------|
+| AppImage | "Install and restart" in Settings → Updates. After the confirmation "RemMods will close to install the update." it downloads the new AppImage, checks its signature, replaces the file in place and starts again. The previous version is not kept. |
+| Windows installer | The same button. RemMods closes, the installer shows its progress and starts RemMods again. |
+| deb, rpm | Settings → Updates says that a new version exists. Download the new package from the releases page and install it like the first one (`sudo apt install ./RemMods_*_amd64.deb`, `sudo dnf install ./RemMods-*-1.x86_64.rpm`). |
+| AUR | Update with your AUR helper, for example `paru -Syu`. |
+| Built from source, CI test builds | No update channel ("This build has no update channel"). |
+
+Updates are signed. RemMods installs one only after its signature matches the key built into the
+app, and not while a mod install or an unfinished mod change is pending.
+
+## Steam Deck
+
+Use the AppImage in **Desktop Mode** (SteamOS 3.7 or newer). Download it with the browser, make it
+executable (Dolphin: Properties → Permissions → "Is executable") and start it; Gear Lever (from
+Discover) adds it to the menu and keeps it in one place, so it can update itself. If it does not
+start because FUSE is missing, start it from Konsole with `--appimage-extract-and-run`:
+
+```sh
+~/Applications/RemMods_*_amd64.AppImage --appimage-extract-and-run
+```
+
+RemMods finds Steam and TEKKEN 8 as on any Linux PC. Game Mode is not supported: switch to Desktop
+Mode to manage mods, then go back to play.
+
+## Windows
+
+The Windows build is **beta, CI-tested only**: CI builds it, installs it and runs its self-test, but
+it has not been tested on a real PC yet. Moving mods to the Recycle Bin is not available yet
+(removing a mod deletes it permanently after a second confirmation; WG-5).
+
+The installer is **not code-signed** yet:
+
+- Microsoft Defender SmartScreen shows "Windows protected your PC". Choose "More info", then
+  "Run anyway".
+- **Smart App Control** blocks unsigned apps, and it has no per-app exception. With Smart App Control
+  on, RemMods cannot be installed.
+
+Each release's installer is submitted to Microsoft for analysis, and code signing is planned after
+the first release.
+
+## Graphics problems (Linux)
+
+RemMods draws its window with WebKitGTK. If the window stays blank, flickers or RemMods crashes at
+start (some NVIDIA and Wayland setups), use a safer graphics mode:
+
+- **The launcher action "Start in safe graphics mode"** (right-click RemMods in the menu or the
+  taskbar) starts RemMods with software rendering for this session. If RemMods is already running,
+  the action restarts it in safe graphics mode, which also works when its window is blank.
+- **`--safe-graphics`** on the command line does the same, for example
+  `~/Applications/RemMods_*_amd64.AppImage --safe-graphics` or `remmods --safe-graphics`.
+- **Settings → Graphics** stores the mode for every start: Automatic, "GPU, shared memory" or
+  Software. It applies after RemMods restarts. A safe-graphics session offers "Always use software
+  rendering".
+- **Automatic step**: if a start did not get as far as a working window (a crash, or the window was
+  closed before the interface loaded), the next start switches one step down (Automatic → "GPU,
+  shared memory" → Software) and shows a "Graphics mode changed" banner with "Keep" and "Switch
+  back".
+
+The environment variables RemMods sets for itself:
+
+| Mode | Variables |
+|------|-----------|
+| Automatic | none |
+| GPU, shared memory | `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` |
+| Software | `WEBKIT_DISABLE_DMABUF_RENDERER=1` |
+| any mode, NVIDIA driver on Wayland | also `__NV_DISABLE_EXPLICIT_SYNC=1` |
+
+**Your environment wins.** If you set `WEBKIT_DMABUF_RENDERER_FORCE_SHM`,
+`WEBKIT_DISABLE_DMABUF_RENDERER` or `WEBKIT_DISABLE_COMPOSITING_MODE` yourself, RemMods sets no
+WebKit variable of its own and never steps the mode; a variable you set from the table keeps your
+value. Programs RemMods starts (Steam, the file manager) never get RemMods' own variables or the
+AppImage's environment. The stored mode is in `~/.config/com.remirudev.remmods/graphics.json`.
 
 ## Development
 
@@ -110,8 +256,40 @@ python3 -I scripts/make-archive-fixtures.py /tmp/archive-fixtures
 REMMODS_ARCHIVE_FIXTURES=/tmp/archive-fixtures cargo test -p remmods-core --test archive_fixtures
 ```
 
-`npm run tauri -- build --no-bundle` builds the optimised (LTO) app in `target/release/`. Installers
-(AppImage, deb, rpm, NSIS) are built by CI from Phase 5 on.
+`npm run tauri -- build --no-bundle` builds the optimised (LTO) app in `target/release/`.
+
+### Packages and releases
+
+Locally, build and inspect only the deb and rpm (nothing is installed):
+
+```sh
+npm run tauri -- build --bundles deb,rpm
+python3 -I scripts/inspect-bundle.py --expect deb target/release/bundle/deb/RemMods_*_amd64.deb
+python3 -I scripts/inspect-bundle.py --expect rpm target/release/bundle/rpm/RemMods-*.x86_64.rpm
+```
+
+The AppImage and the Windows installer are built only in CI (`.github/workflows/artifacts.yml`, which
+also installs every package and runs `--smoke`). Never build locally with
+`src-tauri/tauri.release.conf.json`: only release builds carry the updater configuration. The AUR
+files can be rendered from a local deb and compared with makepkg:
+
+```sh
+python3 -I scripts/render-pkgbuild.py --deb target/release/bundle/deb/RemMods_0.1.0_amd64.deb --version 0.1.0 --local --out /tmp/remmods-aur
+cd /tmp/remmods-aur && makepkg --printsrcinfo | diff - .SRCINFO
+```
+
+`THIRD-PARTY-NOTICES` and `THIRD-PARTY-NOTICES-NPM` are committed and CI checks that they are
+current, so regenerate them after every `Cargo.lock` or `package-lock.json` change (it needs
+cargo-about 0.9.3: `cargo install --locked --features cli cargo-about@0.9.3`):
+
+```sh
+bash scripts/notices.sh            # or: bash scripts/notices.sh --check
+```
+
+The release gate and the workflow rules run in CI's `policy` job; locally:
+`python3 -I scripts/release-check.py` and `python3 -I scripts/check-workflows.py` (needs PyYAML).
+Releases are cut by tagging main (`.github/workflows/release.yml`); the owner's steps, including the
+signing key and the AUR account, are in [docs/release-runbook.md](docs/release-runbook.md).
 
 ## Credits and licence
 
