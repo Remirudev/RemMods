@@ -1,6 +1,8 @@
 import {
+  Badge,
   Button,
   Checkbox,
+  CloseButton,
   Group,
   MultiSelect,
   Select,
@@ -13,6 +15,7 @@ import { IconSearch } from '@tabler/icons-react'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModKind } from '../../lib/ipc/types'
+import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { ColumnsMenu } from './ColumnsMenu'
 import { isFilterActive } from './filter-mods'
 import { useModsUiStore } from './mods-ui-store'
@@ -34,6 +37,8 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
   const contentHintId = useId()
   const contentHint = t(($) => $.filters.contentConflictsHint)
   const filter = useModsUiStore((state) => state.filter)
+  const group = useGroupFilterStore((state) => state.group)
+  const clearGroup = useGroupFilterStore((state) => state.clearGroup)
   const {
     setText,
     setStateFilter,
@@ -105,10 +110,29 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
         />
       </Group>
       <Group gap="sm" h={36} ml="auto">
+        {group && (
+          <Badge
+            variant="light"
+            size="lg"
+            tt="none"
+            pr={4}
+            maw={260}
+            data-testid="group-filter"
+            rightSection={
+              <CloseButton
+                size="xs"
+                aria-label={t(($) => $.filters.clearGroup)}
+                onClick={clearGroup}
+              />
+            }
+          >
+            <bdi>{t(($) => $.filters.group, { name: group.name })}</bdi>
+          </Badge>
+        )}
         <Text size="sm" c="var(--qc-text-2)" aria-live="polite" data-testid="mods-count">
           {t(($) => $.filters.count, { count: shown, total })}
         </Text>
-        {isFilterActive(filter) && (
+        {(isFilterActive(filter) || group !== null) && (
           <Button variant="subtle" size="compact-sm" onClick={clearFilters}>
             {t(($) => $.filters.clear)}
           </Button>

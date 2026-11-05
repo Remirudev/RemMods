@@ -27,9 +27,10 @@ ship the same assets. It only reads mod files.
 **Phase 3 (in progress)**: manage mods. Rename a mod (the folder, its files and the profiles that name
 it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it
 permanently after a second confirmation, edit its metadata (`modinfo.json`), and fix leftovers of
-interrupted operations in the Repair tab. Profiles remember which mods are on: save, apply (additive or
-exclusive, with an automatic snapshot first), import the `profiles.json` of another mod manager (only
-read, never written), and export or import RemMods profiles. On Windows the Trash is the Recycle Bin
+interrupted operations in the Repair tab. Groups remember which mods are on: pick their mods or save
+the current state, switch them on (additive or exclusive, with an automatic snapshot first) or off,
+import the `profiles.json` of another mod manager (only read, never written), and export or import
+RemMods groups. On Windows the Trash is the Recycle Bin
 (CI-tested only, see [Windows](#windows)).
 
 **Phase 3b (in progress)**: select several mods and choose "Move to Trash" (Windows: "Move to Recycle
@@ -39,8 +40,8 @@ the result for each one. Trash is the freedesktop.org Trash on Linux and the Rec
 window, an antivirus scan, the search indexer) holds a mod folder, RemMods tries again for up to 30 s
 and shows a toast with Cancel. Cancelling stops there: the mod in progress is left as it was unless its
 move had already finished, and in a bulk action mods already moved or deleted stay that way and the
-rest are skipped. Profiles can also be applied from the
-Mods header ("Apply profile"), through the same diff and confirmation as the Profiles panel.
+rest are skipped. Saved sets of mods are groups, listed in a sidebar beside the mod list: one switch
+turns a group on or off, its name shows only its mods, and every switch can be undone from its toast.
 
 **Phase 4 (in progress)**: install mods. Drop zip, 7z or rar archives onto the window or pick them (or
 a folder) with the file picker. The preview shows the detected root, the mod name, the filename

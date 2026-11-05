@@ -274,6 +274,7 @@ fn profile_error(error: ProfileError) -> AppError {
         ProfileError::NotFound => AppError::ProfileNotFound,
         ProfileError::InvalidName => AppError::invalid_input("profileName"),
         ProfileError::NameTaken => AppError::ProfileNameTaken,
+        ProfileError::InvalidEntries => AppError::invalid_input("profileMods"),
         ProfileError::ReadOnly => AppError::ReadOnly,
         ProfileError::Unparsable(problem) => AppError::ImportFailed {
             problem: problem.into(),

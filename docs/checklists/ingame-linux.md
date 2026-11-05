@@ -438,3 +438,39 @@ run a step without the backup of step 1.
    folder. Re-apply the starting states, or restore from `local/backup-p3b/`, if anything else
    differs, and diff again. The "Runs" table gets a P3b line.
    Result:
+
+## Groups steps (one dashboard)
+
+Groups replace the Profiles panel: a sidebar left of the mod list with one switch per group. Backup
+first, together: Claude prepares and runs the commands, you play offline Practice mode and report.
+Every command works in fish. Each step ends with a "Result:" line to fill in. Never run a step
+without the backup of step 1.
+
+1. Game closed. Before snapshot: `scripts/paks-snapshot.sh > local/paks-groups-before.tsv`. Back up
+   `Paks/Mods`, `Paks/~mods`, `Paks/LogicMods` and `~/.local/share/com.remirudev.remmods/` with
+   `cp -a --reflink=auto` into `local/backup-groups/` (the sources stay read-only), and note the
+   backup size (`du -sh local/backup-groups`).
+   Result:
+2. In the sidebar choose "+" (New group): name it **Set 1**, set mod set 1 to On and mod set 2 to Off,
+   create it. Make **Set 2** the other way round. Groups that switch on two mods replacing the same
+   files show a warning in the dialog and a ⚠ in the sidebar; note any you see.
+   Result:
+3. Switch **Set 1** on: the change list names the mods it turns on and off; Apply. Launch, confirm set
+   1 is visible and set 2 is not. Quit.
+   Result:
+4. Switch **Set 2** on; Apply. Set 1's switch goes off by itself, Set 2's is on. Launch, confirm set 2
+   is visible and set 1 is gone. Quit.
+   Result:
+5. Switch **Set 2** off: the change list only turns off set 2's mods; Apply. Launch, confirm set 2 is
+   gone and nothing else changed. Quit. Then choose **Undo** in the toast (or Automatic snapshots… in
+   the groups menu, Restore… on the newest one): set 2 is back; launch, confirm. Quit.
+   Result:
+6. Click **Set 1**'s name: the mod list shows only its mods and a "Group: Set 1" chip; its × shows
+   all mods again.
+   Result:
+7. Game closed. `scripts/paks-snapshot.sh > local/paks-groups-after.tsv`, then
+   `diff -u local/paks-groups-before.tsv local/paks-groups-after.tsv` shows only the intended changes
+   (the enable states left by step 5, folder mtimes). Re-apply the starting states, or restore from
+   `local/backup-groups/`, if anything else differs, and diff again. The "Runs" table gets a Groups
+   line.
+   Result:

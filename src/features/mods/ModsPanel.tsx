@@ -1,4 +1,4 @@
-import { Center, Loader, Stack } from '@mantine/core'
+import { Center, Group, Loader, Stack } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { useEffect, useRef } from 'react'
 import { useDetectGame } from '../../shared/game/queries'
@@ -15,7 +15,7 @@ import type { ModsPanelProps } from './types'
 import { UpdateNotice } from './UpdateNotice'
 import { useReconcileRefs } from './use-reconcile-refs'
 
-export function ModsPanel({ status, install }: ModsPanelProps) {
+export function ModsPanel({ status, install, aside }: ModsPanelProps) {
   const snapshot = useModsSnapshot(true)
   const refresh = useRefreshMods()
   const detect = useDetectGame()
@@ -46,28 +46,31 @@ export function ModsPanel({ status, install }: ModsPanelProps) {
 
   return (
     <>
-      <Stack gap="md" flex={1} mih={0}>
-        <ModsHeader
-          snapshot={data}
-          running={status.running}
-          tracking={install.updateTracking}
-          refreshing={refresh.isPending}
-          onRefresh={startRefresh}
-        />
-        <AutoRefreshBanner />
-        {status.update && <UpdateNotice update={status.update} />}
-        {status.otherManager && <OtherManagerNotice />}
-        {data && <RootNotices roots={data.roots} />}
-        {data ? (
-          <ModsTabs snapshot={data} paks={install.paks} searchRef={searchRef} />
-        ) : snapshot.isError ? (
-          <ModsErrorAlert error={snapshot.error} onRetry={() => void snapshot.refetch()} />
-        ) : (
-          <Center flex={1}>
-            <Loader size="md" />
-          </Center>
-        )}
-      </Stack>
+      <Group gap="lg" align="stretch" wrap="nowrap" flex={1} mih={0}>
+        {aside?.(data?.rows ?? [])}
+        <Stack gap="md" flex={1} mih={0} miw={0}>
+          <ModsHeader
+            snapshot={data}
+            running={status.running}
+            tracking={install.updateTracking}
+            refreshing={refresh.isPending}
+            onRefresh={startRefresh}
+          />
+          <AutoRefreshBanner />
+          {status.update && <UpdateNotice update={status.update} />}
+          {status.otherManager && <OtherManagerNotice />}
+          {data && <RootNotices roots={data.roots} />}
+          {data ? (
+            <ModsTabs snapshot={data} paks={install.paks} searchRef={searchRef} />
+          ) : snapshot.isError ? (
+            <ModsErrorAlert error={snapshot.error} onRetry={() => void snapshot.refetch()} />
+          ) : (
+            <Center flex={1}>
+              <Loader size="md" />
+            </Center>
+          )}
+        </Stack>
+      </Group>
       <ModDetailsDrawer rows={data?.rows ?? []} />
     </>
   )

@@ -3,9 +3,17 @@
 use std::collections::BTreeMap;
 
 use super::capture::is_on;
-use super::model::{EntryState, Profile, ProfileMode};
+use super::model::{EntryState, Profile, ProfileEntry, ProfileMode};
 use crate::mods::{ModRef, ModRow, ScanContent, ToggleBlock};
 use crate::safe_fs::names::order_key;
+
+/// Which way a group switch goes: `On` applies the profile; `Off` turns off the mods it lists as
+/// on and leaves every other mod alone, whatever the profile's mode.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ApplyDirection {
+    On,
+    Off,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChangeReason {
@@ -118,6 +126,34 @@ pub fn diff_profile(profile: &Profile, content: &ScanContent) -> ProfileDiff {
         .map(|change| format!("{}{}\n", if change.enable { '+' } else { '-' }, change.key))
         .collect();
     diff
+}
+
+/// `diff_profile` in the given direction. Pure.
+pub fn diff_switch(
+    profile: &Profile,
+    content: &ScanContent,
+    direction: ApplyDirection,
+) -> ProfileDiff {
+    match direction {
+        ApplyDirection::On => diff_profile(profile, content),
+        ApplyDirection::Off => diff_profile(&switched_off(profile), content),
+    }
+}
+
+/// The profile whose apply turns off every key `profile` lists as Enabled: an Additive profile
+/// listing those keys as Disabled, under the same id.
+fn switched_off(profile: &Profile) -> Profile {
+    let mods = profile
+        .mods
+        .iter()
+        .filter(|(_, entry)| entry.state == EntryState::Enabled)
+        .map(|(key, _)| (key.clone(), ProfileEntry::new(EntryState::Disabled)))
+        .collect();
+    Profile {
+        mode: ProfileMode::Additive,
+        mods,
+        ..profile.clone()
+    }
 }
 
 fn push_change(diff: &mut ProfileDiff, row: &ModRow, wanted: EntryState, reason: ChangeReason) {

@@ -17,7 +17,10 @@ mod transfer;
 
 pub use api::{ApplyOutcome, ApplyRequest, ProfileSave, ProfileSummary, ProfilesView};
 pub use capture::capture_states;
-pub use diff::{ChangeReason, DiffChange, DiffSkip, ProfileDiff, SkipReason, diff_profile};
+pub use diff::{
+    ApplyDirection, ChangeReason, DiffChange, DiffSkip, ProfileDiff, SkipReason, diff_profile,
+    diff_switch,
+};
 pub use error::{ImportProblem, ProfileError};
 pub use import_file::IMPORT_MAX_BYTES;
 pub use import_other::{OtherManagerProfile, parse_other_manager_profiles};

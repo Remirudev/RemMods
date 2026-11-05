@@ -2,6 +2,7 @@ import type { Channel } from '@tauri-apps/api/core'
 import { commands } from './bindings'
 import { unwrapResult } from './ipc-error'
 import type {
+  ApplyDirection,
   ApplyRequest,
   AppUpdateProgress,
   BulkDeleteRequest,
@@ -76,7 +77,8 @@ export const ipc = {
     unwrapResult('profiles_save', () => commands.profilesSave(save)),
   profilesDelete: (id: string) =>
     unwrapResult('profiles_delete', () => commands.profilesDelete(id)),
-  profilesDiff: (id: string) => unwrapResult('profiles_diff', () => commands.profilesDiff(id)),
+  profilesDiff: (id: string, direction: ApplyDirection) =>
+    unwrapResult('profiles_diff', () => commands.profilesDiff(id, direction)),
   profilesApply: (request: ApplyRequest) =>
     unwrapResult('profiles_apply', () => commands.profilesApply(request)),
   profilesTransfer: (request: TransferRequest) =>

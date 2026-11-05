@@ -6,7 +6,6 @@ import { CommandPalette } from './CommandPalette'
 import { DropOverlay } from './DropOverlay'
 import { PanelHost } from './PanelHost'
 import classes from './panel-host.module.css'
-import { useProfileApplyBridge } from './profile-apply-bridge'
 import { Rail } from './rail/Rail'
 import { ResizeHandles } from './title-bar/ResizeHandles'
 import { TitleBar } from './title-bar/TitleBar'
@@ -29,7 +28,6 @@ export function App() {
   useAppReady()
   useBackendEvents()
   useFolderBusy()
-  useProfileApplyBridge()
   useUiScaleHotkeys()
 
   return (

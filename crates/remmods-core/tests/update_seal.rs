@@ -19,7 +19,9 @@ use remmods_core::app_update::{AppUpdateError, UpdateBlock};
 use remmods_core::game::GameOptions;
 use remmods_core::install::{InstallError, InstallHooks};
 use remmods_core::mods::{ModsError, RenameRequest};
-use remmods_core::profiles::{ApplyRequest, ProfileError, ProfileMode, ProfileSave};
+use remmods_core::profiles::{
+    ApplyDirection, ApplyRequest, ProfileError, ProfileMode, ProfileSave,
+};
 use remmods_core::safe_fs::{FaultPlan, FsError, OpGate, Scope};
 use remmods_core::{AppPaths, Core, CoreError, CoreOptions};
 
@@ -162,7 +164,11 @@ fn s4_s5_sealed_refuses_mutations_but_scans_and_unseal_reopens() {
         .profile
         .id
         .clone();
-    let diff = fixture.fx.core.profiles_diff(&profile).expect("diff");
+    let diff = fixture
+        .fx
+        .core
+        .profiles_diff(&profile, ApplyDirection::On)
+        .expect("diff");
     let zip = fixture.zip("Cool.zip", COOL);
     let inspection = fixture.inspect(&zip);
     let rename = RenameRequest {
@@ -186,6 +192,7 @@ fn s4_s5_sealed_refuses_mutations_but_scans_and_unseal_reopens() {
             profile_id: profile,
             fingerprint: diff.fingerprint,
             apply_while_running: false,
+            direction: ApplyDirection::On,
         })
         .expect_err("apply");
     assert!(is_busy(&applied), "{applied:?}");

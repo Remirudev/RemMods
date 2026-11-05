@@ -8,9 +8,9 @@ use std::time::{Duration, SystemTime};
 use remmods_core::mods as core_mods;
 use remmods_core::profiles as core;
 use remmods_ipc::{
-    ApplyOutcome, ApplyRequest, ChangeReason, DiffSkip, EntryState, ExportReport, ImportProblem,
-    ImportReport, Profile, ProfileDiff, ProfileEntryDto, ProfileMode, ProfileSave, ProfileSource,
-    ProfilesView, SkipReason, StoreProblem, TransferOutcome, TransferRequest,
+    ApplyDirection, ApplyOutcome, ApplyRequest, ChangeReason, DiffSkip, EntryState, ExportReport,
+    ImportProblem, ImportReport, Profile, ProfileDiff, ProfileEntryDto, ProfileMode, ProfileSave,
+    ProfileSource, ProfilesView, SkipReason, StoreProblem, TransferOutcome, TransferRequest,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -263,6 +263,56 @@ fn profile_save_is_tagged_and_converts_into_core() {
 }
 
 #[test]
+fn picked_save_keeps_the_list_order_and_converts_states() {
+    let picked: ProfileSave = from_json(json!({
+        "kind": "picked",
+        "id": null,
+        "name": "Fine",
+        "description": "",
+        "mode": "additive",
+        "mods": [
+            { "key": "Standard:B", "state": "disabled" },
+            { "key": "Standard:A", "state": "enabled" },
+        ],
+    }));
+    assert_eq!(
+        core::ProfileSave::from(&picked),
+        core::ProfileSave::Picked {
+            id: None,
+            name: "Fine".into(),
+            description: String::new(),
+            mode: core::ProfileMode::Additive,
+            mods: vec![
+                ("Standard:B".into(), core::EntryState::Disabled),
+                ("Standard:A".into(), core::EntryState::Enabled),
+            ],
+        }
+    );
+    let edit = ProfileSave::Picked {
+        id: Some("p1".into()),
+        name: "G".into(),
+        description: "x".into(),
+        mode: ProfileMode::Exclusive,
+        mods: vec![ProfileEntryDto {
+            key: "Logic:L".into(),
+            state: EntryState::Enabled,
+        }],
+    };
+    assert_eq!(
+        to_json(&edit),
+        json!({
+            "kind": "picked",
+            "id": "p1",
+            "name": "G",
+            "description": "x",
+            "mode": "exclusive",
+            "mods": [{ "key": "Logic:L", "state": "enabled" }],
+        })
+    );
+    round_trips(&edit);
+}
+
+#[test]
 fn profile_diff_converts_changes_skips_and_fingerprint() {
     let diff = core::ProfileDiff {
         profile_id: "p1".into(),
@@ -341,8 +391,13 @@ fn skip_reasons_are_camel_case() {
 }
 
 #[test]
-fn apply_request_passes_the_fingerprint_unchanged() {
-    let json = json!({ "profileId": "p1", "fingerprint": "-Mods/Y\n+Mods/X\n", "applyWhileRunning": false });
+fn apply_request_passes_the_fingerprint_and_direction_unchanged() {
+    let json = json!({
+        "profileId": "p1",
+        "fingerprint": "-Mods/Y\n+Mods/X\n",
+        "applyWhileRunning": false,
+        "direction": "off",
+    });
     let request: ApplyRequest = from_json(json.clone());
     assert_eq!(to_json(&request), json);
     assert_eq!(
@@ -351,8 +406,20 @@ fn apply_request_passes_the_fingerprint_unchanged() {
             profile_id: "p1".into(),
             fingerprint: "-Mods/Y\n+Mods/X\n".into(),
             apply_while_running: false,
+            direction: core::ApplyDirection::Off,
         }
     );
+}
+
+#[test]
+fn apply_directions_are_camel_case() {
+    for (direction, core_direction, name) in [
+        (ApplyDirection::On, core::ApplyDirection::On, "on"),
+        (ApplyDirection::Off, core::ApplyDirection::Off, "off"),
+    ] {
+        assert_eq!(to_json(&direction), json!(name));
+        assert_eq!(core::ApplyDirection::from(direction), core_direction);
+    }
 }
 
 #[test]

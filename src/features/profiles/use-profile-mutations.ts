@@ -36,11 +36,10 @@ export function useDeleteProfile() {
   })
 }
 
-// Apply renames files, so it shares the scope of every other file change. Its failures are
-// routed by the diff modal (running game, stale diff).
+// Apply renames files, so it shares the scope of every other file change. Its failures and its
+// toast (with Undo) are left to the caller: the diff modal, the sidebar switch or an undo.
 export function useApplyProfile() {
   const client = useQueryClient()
-  const { t } = useTranslation('profiles')
   return useMutation({
     scope: FS_SCOPE,
     meta: { suppressErrorToast: true },
@@ -48,15 +47,6 @@ export function useApplyProfile() {
     onSuccess: (outcome) => {
       storeModsSnapshot(client, outcome.snapshot)
       void client.invalidateQueries({ queryKey: queryKeys.profiles })
-      notifications.show({
-        message: [
-          t(($) => $.apply.done, { count: outcome.changed }),
-          outcome.snapshotId !== null ? t(($) => $.apply.snapshotSaved) : null,
-        ]
-          .filter(Boolean)
-          .join(' '),
-        autoClose: 8000,
-      })
     },
   })
 }

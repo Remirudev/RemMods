@@ -38,7 +38,7 @@ export function emitEvent(page: Page, event: string, payload: unknown): Promise<
   ] as const)
 }
 
-export function openPanel(page: Page, panel: 'mods' | 'profiles' | 'settings'): Promise<void> {
+export function openPanel(page: Page, panel: 'mods' | 'settings'): Promise<void> {
   return page
     .getByRole('navigation', { name: t('shell.rail.label') })
     .getByRole('button', { name: t(`shell.panels.${panel}.title`) })

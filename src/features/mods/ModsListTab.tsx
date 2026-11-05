@@ -3,6 +3,7 @@ import { IconPackages } from '@tabler/icons-react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../../shared/components/EmptyState'
+import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { ActionBar } from './ActionBar'
 import { filterMods } from './filter-mods'
 import { ModFilters } from './ModFilters'
@@ -22,14 +23,15 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   const filter = useModsUiStore((state) => state.filter)
   const clearFilters = useModsUiStore((state) => state.clearFilters)
   const openDetails = useModsUiStore((state) => state.openDetails)
+  const groupKeys = useGroupFilterStore((state) => state.group?.keys ?? null)
   const toggle = useToggleMods()
   const { mutate } = toggle
   const manage = useManageActions()
   const bulk = useBulkActions()
   const locale = i18n.language
   const visible = useMemo(
-    () => filterMods(rows, filter, (kind) => t(($) => $.kinds[kind]), locale),
-    [rows, filter, t, locale],
+    () => filterMods(rows, filter, (kind) => t(($) => $.kinds[kind]), locale, groupKeys),
+    [rows, filter, t, locale, groupKeys],
   )
 
   // Rows hidden by a filter or gone from the disk leave the selection, so a bulk action never

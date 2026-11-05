@@ -58,10 +58,10 @@ pub use mods::{
 };
 pub use platform::{AppPathsDto, OsKind, PlatformFeature, PlatformFeatures, PlatformInfo};
 pub use profiles::{
-    ApplyOutcome, ApplyRequest, ChangeReason, DiffChange, DiffSkip, EntryState, ExportReport,
-    ImportProblem, ImportReport, LastApplied, Profile, ProfileDiff, ProfileEntryDto, ProfileMode,
-    ProfileSave, ProfileSource, ProfileSummary, ProfilesView, SkipReason, StoreProblem,
-    TransferOutcome, TransferRequest,
+    ApplyDirection, ApplyOutcome, ApplyRequest, ChangeReason, DiffChange, DiffSkip, EntryState,
+    ExportReport, ImportProblem, ImportReport, LastApplied, Profile, ProfileDiff, ProfileEntryDto,
+    ProfileMode, ProfileSave, ProfileSource, ProfileSummary, ProfilesView, SkipReason,
+    StoreProblem, TransferOutcome, TransferRequest,
 };
 pub use repair::{RepairAction, RepairItem, RepairKind, RepairList};
 pub use settings::{

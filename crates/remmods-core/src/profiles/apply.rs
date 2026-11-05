@@ -1,8 +1,9 @@
 //! Applying a profile (spec §5.8): one batch under one write guard, after an auto snapshot.
+//! Switching a group off goes the same way; only switching on records `last_applied`.
 
 use super::api::{ApplyOutcome, ApplyRequest, position};
 use super::capture::capture_states;
-use super::diff::{DiffSkip, ProfileDiff, diff_profile};
+use super::diff::{ApplyDirection, DiffSkip, ProfileDiff, diff_switch};
 use super::error::ProfileError;
 use super::model::{
     LastApplied, Profile, ProfileMode, ProfileSource, ProfilesFile, SNAPSHOT_KEEP, now_rfc3339,
@@ -47,12 +48,15 @@ impl Core {
             .iter()
             .find(|profile| profile.id == request.profile_id)
             .ok_or(ProfileError::NotFound)?;
-        let diff = diff_profile(profile, content);
+        let diff = diff_switch(profile, content, request.direction);
         if diff.fingerprint != request.fingerprint {
             return Err(ProfileError::DiffChanged.into());
         }
+        let switching_on = request.direction == ApplyDirection::On;
         if diff.changes.is_empty() {
-            self.record_last_applied(guard, &request.profile_id);
+            if switching_on {
+                self.record_last_applied(guard, &request.profile_id);
+            }
             return Ok(Applied {
                 changed: 0,
                 snapshot_id: None,
@@ -76,7 +80,9 @@ impl Core {
         if !meta.read_only {
             self.write_records(guard, &records);
         }
-        self.record_last_applied(guard, &request.profile_id);
+        if switching_on {
+            self.record_last_applied(guard, &request.profile_id);
+        }
         Ok(Applied {
             changed: u32::try_from(diff.changes.len()).unwrap_or(u32::MAX),
             snapshot_id: Some(snapshot_id),

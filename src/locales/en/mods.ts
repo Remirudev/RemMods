@@ -33,6 +33,8 @@ export const mods = {
       'Counts only upper-body and full-body clothing that another enabled mod replaces too. Shoes, lower-body pieces and other shared files are listed in the details.',
     issuesOnly: 'Issues',
     clear: 'Clear filters',
+    group: 'Group: {{name}}',
+    clearGroup: 'Show all mods again',
     count_one: '{{count}} of {{total}} mod',
     count_other: '{{count}} of {{total}} mods',
   },
@@ -142,12 +144,6 @@ export const mods = {
     cancel: 'Cancel',
     cancelling: 'Cancelling…',
     holders: 'In use by: {{names}}',
-  },
-  quickApply: {
-    button: 'Apply profile',
-    empty: 'No saved profiles yet',
-    last: 'Last applied',
-    readOnly: 'Profiles cannot be saved right now; see the Profiles panel',
   },
   watch: {
     limitReached:

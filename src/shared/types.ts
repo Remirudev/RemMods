@@ -1,4 +1,4 @@
-import type { ProfileMode, SourceKind } from '../lib/ipc/types'
+import type { SourceKind } from '../lib/ipc/types'
 
 export type UiScaleAction = 'increase' | 'decrease' | 'reset'
 
@@ -26,15 +26,15 @@ export interface UpdateRunState {
 
 export type TrashPlace = 'trash' | 'recycleBin'
 
-export interface QuickApplyChoice {
+// A group whose mods the Mods list shows on their own: the keys the group switches on.
+export interface GroupFilter {
   id: string
   name: string
-  mode: ProfileMode
-  count: number
+  keys: readonly string[]
 }
 
-export interface QuickApplyState {
-  choices: QuickApplyChoice[]
-  lastAppliedId: string | null
-  readOnly: boolean
+export interface GroupFilterState {
+  group: GroupFilter | null
+  showGroup: (group: GroupFilter) => void
+  clearGroup: () => void
 }

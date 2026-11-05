@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use super::capture::capture_states;
-use super::diff::{DiffSkip, ProfileDiff, diff_profile};
+use super::diff::{ApplyDirection, DiffSkip, ProfileDiff, diff_profile, diff_switch};
 use super::error::ProfileError;
 use super::model::{
     EntryState, LastApplied, Profile, ProfileEntry, ProfileMode, ProfileSource, ProfilesFile,
@@ -15,8 +15,14 @@ use crate::mods::{Refreshed, ScanContent};
 use crate::safe_fs::Scope;
 use crate::{Core, CoreError};
 
+/// Longest key a picked list may hold, in bytes.
+const PICKED_KEY_MAX_BYTES: usize = 4096;
+/// Most entries a picked list may hold.
+const PICKED_MAX_ENTRIES: usize = 100_000;
+
 /// New: captures the current states; Overwrite: replaces `mods` with the current states, keeps
-/// the rest; Edit: name, description, mode only.
+/// the rest; Edit: name, description, mode only; Picked: a new profile (`id` None) or an edit of
+/// a user profile with exactly the listed mods, no scan.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ProfileSave {
     New {
@@ -32,6 +38,13 @@ pub enum ProfileSave {
         name: String,
         description: String,
         mode: ProfileMode,
+    },
+    Picked {
+        id: Option<String>,
+        name: String,
+        description: String,
+        mode: ProfileMode,
+        mods: Vec<(String, EntryState)>,
     },
 }
 
@@ -57,6 +70,7 @@ pub struct ApplyRequest {
     pub profile_id: String,
     pub fingerprint: String,
     pub apply_while_running: bool,
+    pub direction: ApplyDirection,
 }
 
 #[derive(Clone, Debug)]
@@ -85,7 +99,7 @@ impl Core {
 
     pub fn profiles_save(&self, save: &ProfileSave) -> Result<ProfilesView, CoreError> {
         let states = match save {
-            ProfileSave::Edit { .. } => None,
+            ProfileSave::Edit { .. } | ProfileSave::Picked { .. } => None,
             ProfileSave::New { .. } | ProfileSave::Overwrite { .. } => {
                 Some(capture_states(&self.mods_refresh()?.snapshot.content))
             }
@@ -110,7 +124,11 @@ impl Core {
         self.profiles_list()
     }
 
-    pub fn profiles_diff(&self, id: &str) -> Result<ProfileDiff, CoreError> {
+    pub fn profiles_diff(
+        &self,
+        id: &str,
+        direction: ApplyDirection,
+    ) -> Result<ProfileDiff, CoreError> {
         let fresh = self.mods_refresh()?;
         let loaded = self.profiles.load();
         let profile = loaded
@@ -119,7 +137,7 @@ impl Core {
             .iter()
             .find(|profile| profile.id == id)
             .ok_or(ProfileError::NotFound)?;
-        Ok(diff_profile(profile, &fresh.snapshot.content))
+        Ok(diff_switch(profile, &fresh.snapshot.content, direction))
     }
 
     /// RemMods' own folders only (store writes that need no game).
@@ -180,8 +198,72 @@ fn apply_save(
             profile.mode = *mode;
             profile.updated = now_rfc3339();
         }
+        ProfileSave::Picked {
+            id: None,
+            name,
+            description,
+            mode,
+            mods,
+        } => {
+            check_name(file, name, None)?;
+            let profile = Profile::fresh(
+                name.clone(),
+                description.clone(),
+                *mode,
+                picked_mods(mods, None)?,
+                ProfileSource::User,
+            );
+            file.profiles.push(profile);
+        }
+        ProfileSave::Picked {
+            id: Some(id),
+            name,
+            description,
+            mode,
+            mods,
+        } => {
+            let index = position(file, id)?;
+            // Snapshots only ever hold a captured state, so a picked list never replaces one.
+            if file.profiles[index].is_snapshot() {
+                return Err(ProfileError::NotFound);
+            }
+            check_name(file, name, Some(id))?;
+            let mods = picked_mods(mods, Some(&file.profiles[index].mods))?;
+            let profile = &mut file.profiles[index];
+            profile.name.clone_from(name);
+            profile.description.clone_from(description);
+            profile.mode = *mode;
+            profile.mods = mods;
+            profile.updated = now_rfc3339();
+        }
     }
     Ok(())
+}
+
+/// The map of a picked list; unknown fields of entries the profile already had survive. Empty,
+/// overlong, control-character or repeated keys refuse the whole list.
+fn picked_mods(
+    entries: &[(String, EntryState)],
+    previous: Option<&BTreeMap<String, ProfileEntry>>,
+) -> Result<BTreeMap<String, ProfileEntry>, ProfileError> {
+    if entries.len() > PICKED_MAX_ENTRIES {
+        return Err(ProfileError::InvalidEntries);
+    }
+    let mut mods = BTreeMap::new();
+    for (key, state) in entries {
+        if key.is_empty() || key.len() > PICKED_KEY_MAX_BYTES || key.chars().any(char::is_control) {
+            return Err(ProfileError::InvalidEntries);
+        }
+        let mut entry = previous
+            .and_then(|map| map.get(key))
+            .cloned()
+            .unwrap_or_else(|| ProfileEntry::new(*state));
+        entry.state = *state;
+        if mods.insert(key.clone(), entry).is_some() {
+            return Err(ProfileError::InvalidEntries);
+        }
+    }
+    Ok(mods)
 }
 
 pub(crate) fn build_view(loaded: LoadedProfiles, content: Option<&ScanContent>) -> ProfilesView {

@@ -1,6 +1,6 @@
 import { Badge, Tooltip } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
-import { outfitConflicts } from './content-conflicts'
+import { outfitConflicts } from '../../shared/outfit-conflicts'
 import type { ModRowCellProps } from './types'
 
 export function ContentConflictBadge({ row }: ModRowCellProps) {

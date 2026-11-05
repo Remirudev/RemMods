@@ -4,7 +4,8 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react'
 import type { FolderBusy, GameStatus, PlatformInfo, Settings } from '../lib/ipc/types'
 
-export type PanelId = 'mods' | 'profiles' | 'settings'
+// Groups (saved profiles) live in the Mods panel's sidebar, not in a panel of their own.
+export type PanelId = 'mods' | 'settings'
 
 // 'scroll' panels scroll as a whole; 'fill' panels get the full height and scroll inside (the mod
 // table keeps its header and filters in view).

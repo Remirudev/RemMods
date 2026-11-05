@@ -3,8 +3,8 @@ use std::path::Path;
 use remmods_core::profiles as core_profiles;
 use remmods_core::{Core, CoreError};
 use remmods_ipc::{
-    AppError, ApplyOutcome, ApplyRequest, ExportReport, ImportReport, ProfileDiff, ProfileSave,
-    ProfilesView, TransferOutcome, TransferRequest,
+    AppError, ApplyDirection, ApplyOutcome, ApplyRequest, ExportReport, ImportReport, ProfileDiff,
+    ProfileSave, ProfilesView, TransferOutcome, TransferRequest,
 };
 use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, FilePath};
@@ -50,15 +50,19 @@ pub async fn profiles_delete(
     .await
 }
 
-/// What applying the profile would change; its `fingerprint` goes back in `profiles_apply`.
+/// What switching the profile on or off would change; its `fingerprint` goes back in
+/// `profiles_apply` with the same direction.
 #[tauri::command]
 #[specta::specta]
 pub async fn profiles_diff(
     state: State<'_, AppState>,
     id: String,
+    direction: ApplyDirection,
 ) -> Result<ProfileDiff, AppError> {
+    let direction = direction.into();
     run_blocking(state.core.clone(), move |core| {
-        core.profiles_diff(&id).map(|diff| ProfileDiff::from(&diff))
+        core.profiles_diff(&id, direction)
+            .map(|diff| ProfileDiff::from(&diff))
     })
     .await
 }

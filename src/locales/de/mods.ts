@@ -36,6 +36,8 @@ export const mods: LocaleShape<typeof en> = {
       'Zählt nur Oberkörper- und Ganzkörper-Kleidung, die ein anderer aktiver Mod ebenfalls ersetzt. Schuhe, Unterkörper-Teile und andere gemeinsame Dateien stehen in den Details.',
     issuesOnly: 'Probleme',
     clear: 'Filter zurücksetzen',
+    group: 'Gruppe: {{name}}',
+    clearGroup: 'Wieder alle Mods zeigen',
     count_one: '{{count}} von {{total}} Mod',
     count_other: '{{count}} von {{total}} Mods',
   },
@@ -149,12 +151,6 @@ export const mods: LocaleShape<typeof en> = {
     cancel: 'Abbrechen',
     cancelling: 'Wird abgebrochen…',
     holders: 'Benutzt von: {{names}}',
-  },
-  quickApply: {
-    button: 'Profil anwenden',
-    empty: 'Noch keine gespeicherten Profile',
-    last: 'Zuletzt angewendet',
-    readOnly: 'Profile können gerade nicht gespeichert werden; siehe Bereich Profile',
   },
   watch: {
     limitReached:

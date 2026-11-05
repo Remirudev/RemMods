@@ -34,11 +34,27 @@ describe('App shell', () => {
     expect(await screen.findByRole('heading', { name: 'Mods' })).toBeVisible()
     expect(screen.getByTestId('rail')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Profiles' }))
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
 
-    expect(await screen.findByRole('heading', { name: 'Profiles' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Mods', hidden: true })).not.toBeVisible()
-    expect(localStorage.getItem('rmods.activePanel')).toBe('profiles')
+    expect(localStorage.getItem('rmods.activePanel')).toBe('settings')
+  })
+
+  it('shows the groups beside the mod list and has no Profiles panel any more', async () => {
+    installIpcMock()
+    renderWithProviders(<App />)
+
+    expect(await screen.findByRole('navigation', { name: 'Groups' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Profiles' })).not.toBeInTheDocument()
+  })
+
+  it('falls back to Mods when the remembered panel was the removed Profiles panel', async () => {
+    localStorage.setItem('rmods.activePanel', 'profiles')
+    vi.resetModules()
+    const { useActivePanelStore: fresh } = await import('./active-panel-store')
+
+    expect(fresh.getState().activePanel).toBe('mods')
   })
 
   it('renders the custom title bar only when the title bar setting is custom', async () => {

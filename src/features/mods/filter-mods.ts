@@ -1,5 +1,5 @@
 import type { ModRow } from '../../lib/ipc/types'
-import { outfitConflicts } from './content-conflicts'
+import { outfitConflicts } from '../../shared/outfit-conflicts'
 import { displayState } from './display-state'
 import type { KindLabel, ModFilter } from './types'
 
@@ -33,16 +33,20 @@ function matchesText(row: ModRow, needle: string, kindLabel: KindLabel, locale: 
 }
 
 // The state filter compares the display state, so `disabled` leaves out LogicMods folders that
-// are disabled by name only and still loaded.
+// are disabled by name only and still loaded. `groupKeys` (a group picked in the sidebar) keeps
+// only the rows with one of those keys; null keeps every row.
 export function filterMods(
   rows: readonly ModRow[],
   filter: ModFilter,
   kindLabel: KindLabel,
   locale: string,
+  groupKeys: readonly string[] | null = null,
 ): ModRow[] {
   const needle = filter.text.trim().toLocaleLowerCase(locale)
+  const inGroup = groupKeys === null ? null : new Set(groupKeys)
   return rows.filter(
     (row) =>
+      (inGroup === null || inGroup.has(row.key)) &&
       (filter.state === 'all' || displayState(row) === filter.state) &&
       (filter.kinds.length === 0 || filter.kinds.includes(row.kind)) &&
       (!filter.conflictsOnly || row.conflictsWith.length > 0) &&

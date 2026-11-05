@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { EMPTY_FILTER } from './filter-mods'
 import { movedRefs, repointRef } from './ref-repoint'
 import type { ModsUiState } from './types'
@@ -20,7 +21,11 @@ export const useModsUiStore = create<ModsUiState>((set) => ({
   setContentConflictsOnly: (contentConflictsOnly) =>
     set((state) => ({ filter: { ...state.filter, contentConflictsOnly } })),
   setIssuesOnly: (issuesOnly) => set((state) => ({ filter: { ...state.filter, issuesOnly } })),
-  clearFilters: () => set({ filter: EMPTY_FILTER }),
+  // A group picked in the sidebar is a filter too, so "Clear filters" drops it as well.
+  clearFilters: () => {
+    useGroupFilterStore.getState().clearGroup()
+    set({ filter: EMPTY_FILTER })
+  },
   toggleConflictsView: () =>
     set((state) => {
       const showing = state.tab === 'mods' && state.filter.conflictsOnly

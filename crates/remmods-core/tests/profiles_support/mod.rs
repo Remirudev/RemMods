@@ -4,7 +4,7 @@
 use remmods_core::CoreError;
 use remmods_core::mods::ModState;
 use remmods_core::profiles::{
-    ApplyOutcome, ApplyRequest, Profile, ProfileMode, ProfileSave, ProfilesView,
+    ApplyDirection, ApplyOutcome, ApplyRequest, Profile, ProfileMode, ProfileSave, ProfilesView,
 };
 
 use crate::mods_support::toggle::ToggleFixture;
@@ -44,11 +44,21 @@ pub fn snapshots(fixture: &ToggleFixture) -> Vec<Profile> {
 
 /// Diff, then apply with the diff's fingerprint.
 pub fn apply(fixture: &ToggleFixture, id: &str) -> Result<ApplyOutcome, CoreError> {
-    let diff = fixture.core.profiles_diff(id).expect("diff");
+    switch(fixture, id, ApplyDirection::On)
+}
+
+/// Diff in `direction`, then apply it with the diff's fingerprint.
+pub fn switch(
+    fixture: &ToggleFixture,
+    id: &str,
+    direction: ApplyDirection,
+) -> Result<ApplyOutcome, CoreError> {
+    let diff = fixture.core.profiles_diff(id, direction).expect("diff");
     fixture.core.profiles_apply(&ApplyRequest {
         profile_id: id.to_owned(),
         fingerprint: diff.fingerprint,
         apply_while_running: false,
+        direction,
     })
 }
 

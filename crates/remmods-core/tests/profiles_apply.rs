@@ -14,7 +14,7 @@ use profiles_support::{apply, by_name, custom, save, snapshots, state};
 use remmods_core::CoreError;
 use remmods_core::mods::{ModState, ModsError};
 use remmods_core::profiles::{
-    ApplyRequest, ChangeReason,
+    ApplyDirection, ApplyRequest, ChangeReason,
     EntryState::{Disabled, Enabled},
     Profile, ProfileError,
     ProfileMode::{Additive, Exclusive},
@@ -45,7 +45,10 @@ fn with_off_profile() -> (mods_support::manage::ToggleFixture, String) {
 #[test]
 fn apply_stale_fingerprint_changes_nothing() {
     let (fixture, id) = with_off_profile();
-    let diff = fixture.core.profiles_diff(&id).expect("diff");
+    let diff = fixture
+        .core
+        .profiles_diff(&id, ApplyDirection::On)
+        .expect("diff");
     fixture
         .toggle(&["Standard:A"], false)
         .expect("disk changes");
@@ -54,6 +57,7 @@ fn apply_stale_fingerprint_changes_nothing() {
         profile_id: id,
         fingerprint: diff.fingerprint,
         apply_while_running: false,
+        direction: ApplyDirection::On,
     });
     assert!(matches!(
         result,
@@ -97,11 +101,15 @@ fn apply_while_running_needs_flag() {
     let (fixture, id) = with_off_profile();
     let before = tree(&fixture);
     fixture.running.store(true, Ordering::SeqCst);
-    let diff = fixture.core.profiles_diff(&id).expect("diff");
+    let diff = fixture
+        .core
+        .profiles_diff(&id, ApplyDirection::On)
+        .expect("diff");
     let mut request = ApplyRequest {
         profile_id: id,
         fingerprint: diff.fingerprint,
         apply_while_running: false,
+        direction: ApplyDirection::On,
     };
     let refused = fixture.core.profiles_apply(&request);
     assert!(matches!(
@@ -146,7 +154,10 @@ fn apply_exclusive_disables_unlisted_on_rows() {
     ]);
     assert_eq!(state(&fixture, "Standard:A"), ModState::Partial);
     let id = custom(&fixture, "OnlyB", Exclusive, &[("Standard:B", Enabled)]);
-    let diff = fixture.core.profiles_diff(&id).expect("diff");
+    let diff = fixture
+        .core
+        .profiles_diff(&id, ApplyDirection::On)
+        .expect("diff");
     assert_eq!(diff.unchanged, 1);
     let keys: Vec<(&str, bool, ChangeReason)> = diff
         .changes

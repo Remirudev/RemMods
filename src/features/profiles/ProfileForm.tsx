@@ -1,14 +1,12 @@
-import { Button, Group, SegmentedControl, Stack, Text, Textarea, TextInput } from '@mantine/core'
+import { Button, Group, Stack, Switch, Text, TextInput } from '@mantine/core'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isIpcError } from '../../lib/ipc/ipc-error'
-import type { ProfileMode } from '../../lib/ipc/types'
 import { showErrorToast } from '../../lib/query/error-toast'
 import type { ProfileFormProps } from './types'
 import { useSaveProfile } from './use-profile-mutations'
 
 const NAME_MAX_CHARS = 100
-const MODES: readonly ProfileMode[] = ['additive', 'exclusive']
 
 type FormProblem = 'taken' | 'invalid' | null
 
@@ -19,6 +17,7 @@ function problemOf(error: unknown): FormProblem {
   return null
 }
 
+// "Save current state as a group": a name and whether the group turns every other mod off.
 export function ProfileForm({ initial, submitLabel, buildSave, onClose }: ProfileFormProps) {
   const { t } = useTranslation('profiles')
   const [values, setValues] = useState(initial)
@@ -44,6 +43,9 @@ export function ProfileForm({ initial, submitLabel, buildSave, onClose }: Profil
   return (
     <form onSubmit={submit}>
       <Stack gap="sm">
+        <Text size="sm" c="var(--qc-text-2)">
+          {t(($) => $.form.saveHint)}
+        </Text>
         <TextInput
           data-autofocus
           label={t(($) => $.form.name)}
@@ -54,30 +56,14 @@ export function ProfileForm({ initial, submitLabel, buildSave, onClose }: Profil
             setProblem(null)
           }}
         />
-        <Textarea
-          autosize
-          minRows={2}
-          maxRows={5}
-          label={t(($) => $.form.description)}
-          value={values.description}
-          onChange={(event) => setValues({ ...values, description: event.currentTarget.value })}
+        <Switch
+          label={t(($) => $.form.exclusive)}
+          description={t(($) => $.form.exclusiveHint)}
+          checked={values.mode === 'exclusive'}
+          onChange={(event) =>
+            setValues({ ...values, mode: event.currentTarget.checked ? 'exclusive' : 'additive' })
+          }
         />
-        <Stack gap={4}>
-          <Text size="sm" fw={500}>
-            {t(($) => $.form.mode)}
-          </Text>
-          <SegmentedControl
-            fullWidth
-            value={values.mode}
-            data={MODES.map((mode) => ({ value: mode, label: t(($) => $.mode[mode].label) }))}
-            onChange={(mode) =>
-              setValues({ ...values, mode: mode === 'exclusive' ? 'exclusive' : 'additive' })
-            }
-          />
-          <Text size="xs" c="var(--qc-text-2)">
-            {t(($) => $.mode[values.mode].hint)}
-          </Text>
-        </Stack>
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
             {t(($) => $.form.cancel)}

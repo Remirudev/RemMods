@@ -1,5 +1,5 @@
 import type { ModKind, ModRow } from '../../lib/ipc/types'
-import { outfitConflicts } from './content-conflicts'
+import { outfitConflicts } from '../../shared/outfit-conflicts'
 import { displayState } from './display-state'
 import type { ModColumnId, ModDisplayState } from './types'
 

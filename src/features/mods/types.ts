@@ -199,6 +199,8 @@ export interface ColumnResizeHandleProps {
 export interface ModsPanelProps {
   status: GameStatus
   install: InstallInfo
+  // Rendered left of the panel with the current rows; the app puts the groups sidebar here.
+  aside?: (rows: readonly ModRow[]) => ReactNode
 }
 
 export interface ModsHeaderProps {

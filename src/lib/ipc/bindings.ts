@@ -76,8 +76,11 @@ export const commands = {
 	profilesList: () => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_list")),
 	profilesSave: (save: ProfileSave) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_save", { save })),
 	profilesDelete: (id: string) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_delete", { id })),
-	/**  What applying the profile would change; its `fingerprint` goes back in `profiles_apply`. */
-	profilesDiff: (id: string) => typedError<ProfileDiff, AppError>(__TAURI_INVOKE("profiles_diff", { id })),
+	/**
+	 *  What switching the profile on or off would change; its `fingerprint` goes back in
+	 *  `profiles_apply` with the same direction.
+	 */
+	profilesDiff: (id: string, direction: ApplyDirection) => typedError<ProfileDiff, AppError>(__TAURI_INVOKE("profiles_diff", { id, direction })),
 	/**  Applies the shown diff as one rename batch after an automatic snapshot profile. */
 	profilesApply: (request: ApplyRequest) => typedError<ApplyOutcome, AppError>(__TAURI_INVOKE("profiles_apply", { request })),
 	/**
@@ -190,6 +193,9 @@ export type AppearanceUpdate = {
 	titleBar?: TitleBarMode | null,
 };
 
+/**  `on` applies the profile; `off` turns off the mods it lists as on and nothing else. */
+export type ApplyDirection = "on" | "off";
+
 export type ApplyOutcome = {
 	snapshot: ModsSnapshot,
 	changed: number,
@@ -201,6 +207,7 @@ export type ApplyRequest = {
 	profileId: string,
 	fingerprint: string,
 	applyWhileRunning: boolean,
+	direction: ApplyDirection,
 };
 
 export type ArchiveEntry = {
@@ -843,9 +850,10 @@ export type ProfileMode = "additive" | "exclusive";
 
 /**
  *  `new` captures the current states, `overwrite` replaces a profile's mods with them, `edit`
- *  changes name, description and mode only.
+ *  changes name, description and mode only, `picked` saves exactly the listed mods as a new
+ *  profile (`id` null) or into an existing one.
  */
-export type ProfileSave = { kind: "new"; name: string; description: string; mode: ProfileMode } | { kind: "overwrite"; id: string } | { kind: "edit"; id: string; name: string; description: string; mode: ProfileMode };
+export type ProfileSave = { kind: "new"; name: string; description: string; mode: ProfileMode } | { kind: "overwrite"; id: string } | { kind: "edit"; id: string; name: string; description: string; mode: ProfileMode } | { kind: "picked"; id: string | null; name: string; description: string; mode: ProfileMode; mods: ProfileEntryDto[] };
 
 /**  Snapshot profiles have an empty name; the UI renders their label from `of`. */
 export type ProfileSource = { kind: "user" } | { kind: "snapshot"; of: string } | { kind: "otherManager"; id: string; isDefault: boolean } | { kind: "import" };

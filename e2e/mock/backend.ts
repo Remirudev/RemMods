@@ -1,5 +1,6 @@
 import type { Channel } from '@tauri-apps/api/core'
 import type {
+  ApplyDirection,
   ApplyRequest,
   BulkDeleteRequest,
   BulkTrashRequest,
@@ -174,7 +175,7 @@ function profilesCommand(state: MockState, cmd: string, args: CommandArgs): unkn
     case 'profiles_delete':
       return deleteProfile(state, arg<string>(args, 'id'))
     case 'profiles_diff':
-      return diffProfile(state, arg<string>(args, 'id'))
+      return diffProfile(state, arg<string>(args, 'id'), arg<ApplyDirection>(args, 'direction'))
     case 'profiles_apply':
       return applyProfile(state, arg<ApplyRequest>(args, 'request'))
     case 'profiles_transfer':

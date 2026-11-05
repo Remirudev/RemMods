@@ -1,13 +1,12 @@
 import { modals } from '@mantine/modals'
 import type { ReactNode } from 'react'
 import { i18n } from '../../lib/i18n'
-import type { Profile, ProfilesView } from '../../lib/ipc/types'
-import { queryClient } from '../../lib/query/client'
-import { queryKeys } from '../../shared/query-keys'
-import { EditProfileDialog } from './EditProfileDialog'
+import type { ApplyDirection, ModRow, Profile } from '../../lib/ipc/types'
+import { GroupDialog } from './GroupDialog'
 import { ProfileDiffModal } from './ProfileDiffModal'
 import { profileTitle } from './profile-label'
 import { SaveProfileDialog } from './SaveProfileDialog'
+import { SnapshotsDialog } from './SnapshotsDialog'
 
 function openWith(
   title: string,
@@ -18,26 +17,60 @@ function openWith(
   modals.open({ modalId, title, size, children: build(() => modals.close(modalId), modalId) })
 }
 
-export function openSaveProfile(): void {
-  const t = i18n.getFixedT(null, 'profiles')
+function profilesT() {
+  return i18n.getFixedT(null, 'profiles')
+}
+
+export function unnamed(): string {
+  return profilesT()(($) => $.unnamed)
+}
+
+export function titleOf(profile: Profile): string {
+  return profileTitle(profile, unnamed())
+}
+
+// `profile` null: a new group. The dialog lists `rows` as they were when it opened.
+export function openGroupDialog(profile: Profile | null, rows: readonly ModRow[]): void {
+  const t = profilesT()
   openWith(
-    t(($) => $.form.saveTitle),
+    profile === null
+      ? t(($) => $.group.newTitle)
+      : t(($) => $.group.editTitle, { name: titleOf(profile) }),
+    (close, modalId) => (
+      <GroupDialog profile={profile} rows={rows} onClose={close} modalId={modalId} />
+    ),
+    'xl',
+  )
+}
+
+export function openSaveCurrent(): void {
+  openWith(
+    profilesT()(($) => $.form.saveTitle),
     (close) => <SaveProfileDialog onClose={close} />,
   )
 }
 
-export function openEditProfile(profile: Profile): void {
-  const t = i18n.getFixedT(null, 'profiles')
+export function openSnapshots(): void {
   openWith(
-    t(($) => $.form.editTitle),
-    (close) => <EditProfileDialog profile={profile} onClose={close} />,
+    profilesT()(($) => $.snapshots.dialogTitle),
+    () => <SnapshotsDialog />,
+    'lg',
   )
 }
 
-export function openProfileDiff(profile: Profile, title: string): void {
+// The change list before a switch. `title` names what is applied when it is not a user group
+// (a snapshot's label).
+export function openSwitchDiff(profile: Profile, direction: ApplyDirection, title?: string): void {
+  const t = profilesT()
+  const name = titleOf(profile)
   openWith(
-    title,
-    (close, modalId) => <ProfileDiffModal profile={profile} onClose={close} modalId={modalId} />,
+    title ??
+      (direction === 'on'
+        ? t(($) => $.diff.titleOn, { name })
+        : t(($) => $.diff.titleOff, { name })),
+    (close, modalId) => (
+      <ProfileDiffModal profile={profile} direction={direction} onClose={close} modalId={modalId} />
+    ),
     'lg',
   )
 }
@@ -49,33 +82,11 @@ export function confirmProfile(
   onConfirm: () => void,
   danger = false,
 ): void {
-  const t = i18n.getFixedT(null, 'profiles')
   modals.openConfirmModal({
     title,
     children: body,
-    labels: { confirm, cancel: t(($) => $.form.cancel) },
+    labels: { confirm, cancel: profilesT()(($) => $.form.cancel) },
     confirmProps: danger ? { color: 'red' } : undefined,
     onConfirm,
   })
-}
-
-export function unnamed(): string {
-  return i18n.getFixedT(null, 'profiles')(($) => $.unnamed)
-}
-
-export function titleOf(profile: Profile): string {
-  return profileTitle(profile, unnamed())
-}
-
-// Quick-apply from the Mods header: the same diff modal and title as the panel's Apply.
-export function openProfileApplyById(profileId: string): boolean {
-  const view = queryClient.getQueryData<ProfilesView>(queryKeys.profiles)
-  const profile = view?.profiles.find((summary) => summary.profile.id === profileId)?.profile
-  if (!profile) return false
-  const t = i18n.getFixedT(null, 'profiles')
-  openProfileDiff(
-    profile,
-    t(($) => $.diff.title, { name: titleOf(profile) }),
-  )
-  return true
 }

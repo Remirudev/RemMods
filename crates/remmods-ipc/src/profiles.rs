@@ -90,7 +90,8 @@ pub struct ProfilesView {
 }
 
 /// `new` captures the current states, `overwrite` replaces a profile's mods with them, `edit`
-/// changes name, description and mode only.
+/// changes name, description and mode only, `picked` saves exactly the listed mods as a new
+/// profile (`id` null) or into an existing one.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ProfileSave {
@@ -108,6 +109,21 @@ pub enum ProfileSave {
         description: String,
         mode: ProfileMode,
     },
+    Picked {
+        id: Option<String>,
+        name: String,
+        description: String,
+        mode: ProfileMode,
+        mods: Vec<ProfileEntryDto>,
+    },
+}
+
+/// `on` applies the profile; `off` turns off the mods it lists as on and nothing else.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ApplyDirection {
+    On,
+    Off,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
@@ -166,6 +182,7 @@ pub struct ApplyRequest {
     pub profile_id: String,
     pub fingerprint: String,
     pub apply_while_running: bool,
+    pub direction: ApplyDirection,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
@@ -252,6 +269,24 @@ impl From<core::EntryState> for EntryState {
         match state {
             core::EntryState::Enabled => Self::Enabled,
             core::EntryState::Disabled => Self::Disabled,
+        }
+    }
+}
+
+impl From<EntryState> for core::EntryState {
+    fn from(state: EntryState) -> Self {
+        match state {
+            EntryState::Enabled => Self::Enabled,
+            EntryState::Disabled => Self::Disabled,
+        }
+    }
+}
+
+impl From<ApplyDirection> for core::ApplyDirection {
+    fn from(direction: ApplyDirection) -> Self {
+        match direction {
+            ApplyDirection::On => Self::On,
+            ApplyDirection::Off => Self::Off,
         }
     }
 }
@@ -361,6 +396,22 @@ impl From<&ProfileSave> for core::ProfileSave {
                 description: description.clone(),
                 mode: (*mode).into(),
             },
+            ProfileSave::Picked {
+                id,
+                name,
+                description,
+                mode,
+                mods,
+            } => Self::Picked {
+                id: id.clone(),
+                name: name.clone(),
+                description: description.clone(),
+                mode: (*mode).into(),
+                mods: mods
+                    .iter()
+                    .map(|entry| (entry.key.clone(), entry.state.into()))
+                    .collect(),
+            },
         }
     }
 }
@@ -429,6 +480,7 @@ impl From<&ApplyRequest> for core::ApplyRequest {
             profile_id: request.profile_id.clone(),
             fingerprint: request.fingerprint.clone(),
             apply_while_running: request.apply_while_running,
+            direction: request.direction.into(),
         }
     }
 }

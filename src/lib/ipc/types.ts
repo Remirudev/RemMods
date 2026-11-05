@@ -5,6 +5,7 @@ export type {
   Appearance,
   AppearanceUpdate,
   AppInstallKind,
+  ApplyDirection,
   ApplyOutcome,
   ApplyRequest,
   AppPathsDto,

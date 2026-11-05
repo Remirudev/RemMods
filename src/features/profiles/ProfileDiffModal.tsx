@@ -6,15 +6,16 @@ import { isIpcError } from '../../lib/ipc/ipc-error'
 import { confirmApplyWhileRunning } from '../../shared/fs-dialogs'
 import { routeFsError } from '../../shared/fs-error-route'
 import { useModalLock } from '../../shared/use-modal-lock'
+import { showApplyToast } from './ApplyToast'
 import { DiffSection } from './DiffSection'
 import { groupDiff, keyName } from './diff-groups'
 import { useProfileDiff, useProfiles } from './queries'
 import type { ProfileDiffModalProps } from './types'
 import { useApplyProfile } from './use-profile-mutations'
 
-export function ProfileDiffModal({ profile, onClose, modalId }: ProfileDiffModalProps) {
+export function ProfileDiffModal({ profile, direction, onClose, modalId }: ProfileDiffModalProps) {
   const { t } = useTranslation('profiles')
-  const diff = useProfileDiff(profile.id)
+  const diff = useProfileDiff(profile.id, direction)
   const readOnly = useProfiles().data?.readOnly ?? false
   const apply = useApplyProfile()
   const [changedNotice, setChangedNotice] = useState(false)
@@ -25,9 +26,12 @@ export function ProfileDiffModal({ profile, onClose, modalId }: ProfileDiffModal
   const run = (applyWhileRunning: boolean) => {
     if (!data) return
     apply.mutate(
-      { profileId: profile.id, fingerprint: data.fingerprint, applyWhileRunning },
+      { profileId: profile.id, fingerprint: data.fingerprint, applyWhileRunning, direction },
       {
-        onSuccess: onClose,
+        onSuccess: (outcome) => {
+          showApplyToast(outcome)
+          onClose()
+        },
         onError: (error) => {
           const kind = isIpcError(error) ? error.appError.kind : null
           if (kind === 'stale') {
@@ -63,7 +67,9 @@ export function ProfileDiffModal({ profile, onClose, modalId }: ProfileDiffModal
 
   return (
     <Stack gap="sm" data-testid="profile-diff">
-      <Text size="sm">{t(($) => $.mode[data.mode].hint)}</Text>
+      <Text size="sm">
+        {direction === 'off' ? t(($) => $.diff.offHint) : t(($) => $.mode[data.mode].hint)}
+      </Text>
       {changedNotice && (
         <Alert color="yellow" role="status">
           {t(($) => $.diff.changed)}

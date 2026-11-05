@@ -10,6 +10,8 @@ pub enum ProfileError {
     InvalidName,
     #[error("a profile with this name exists")]
     NameTaken,
+    #[error("the picked mod list has an empty, overlong or repeated key")]
+    InvalidEntries,
     #[error("profiles.json is from a newer RemMods")]
     ReadOnly,
     #[error("the file is not a profile list ({0:?})")]
@@ -34,6 +36,7 @@ impl ProfileError {
             Self::NotFound => "not_found",
             Self::InvalidName => "invalid_name",
             Self::NameTaken => "name_taken",
+            Self::InvalidEntries => "invalid_entries",
             Self::ReadOnly => "read_only",
             Self::Unparsable(_) => "unparsable",
             Self::DiffChanged => "diff_changed",

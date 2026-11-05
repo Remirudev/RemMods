@@ -1,4 +1,5 @@
 import type {
+  ApplyDirection,
   ApplyOutcome,
   ApplyRequest,
   DiffChange,
@@ -82,6 +83,27 @@ export function saveProfile(state: MockState, save: ProfileSave): ProfilesView {
     const profile = profileById(state, save.id)
     profile.mods = captureCurrent(state)
     profile.updated = now
+  } else if (save.kind === 'picked') {
+    const mods = [...save.mods].sort((a, b) => a.key.localeCompare(b.key))
+    if (save.id === null) {
+      const name = checkName(state, save.name, null)
+      state.profiles.push(
+        makeProfile(nextId(state, 'profile'), {
+          name,
+          description: save.description,
+          mode: save.mode,
+          mods,
+          created: now,
+          updated: now,
+        }),
+      )
+    } else {
+      const profile = profileById(state, save.id)
+      profile.name = checkName(state, save.name, profile.id)
+      profile.mode = save.mode
+      profile.mods = mods
+      profile.updated = now
+    }
   } else {
     const profile = profileById(state, save.id)
     profile.name = checkName(state, save.name, profile.id)
@@ -96,6 +118,21 @@ export function deleteProfile(state: MockState, id: string): ProfilesView {
   profileById(state, id)
   state.profiles = state.profiles.filter((profile) => profile.id !== id)
   return profilesView(state)
+}
+
+// Switching off turns off what the profile lists as on and leaves everything else alone.
+function switchedOff(profile: Profile): Profile {
+  return {
+    ...profile,
+    mode: 'additive',
+    mods: profile.mods
+      .filter((entry) => entry.state === 'enabled')
+      .map((entry): ProfileEntryDto => ({ key: entry.key, state: 'disabled' })),
+  }
+}
+
+function inDirection(profile: Profile, direction: ApplyDirection): Profile {
+  return direction === 'off' ? switchedOff(profile) : profile
 }
 
 function changesFor(state: MockState, profile: Profile): DiffChange[] {
@@ -128,8 +165,8 @@ function fingerprintOf(changes: readonly DiffChange[]): string {
   return changes.map((change) => `${change.enable ? '+' : '-'}${change.key}\n`).join('')
 }
 
-export function diffProfile(state: MockState, id: string): ProfileDiff {
-  const profile = profileById(state, id)
+export function diffProfile(state: MockState, id: string, direction: ApplyDirection): ProfileDiff {
+  const profile = inDirection(profileById(state, id), direction)
   const changes = changesFor(state, profile)
   const missing = profile.mods
     .filter((entry) => !state.rows.some((row) => row.key === entry.key))
@@ -147,7 +184,8 @@ export function diffProfile(state: MockState, id: string): ProfileDiff {
 
 // The diff must still be the one the user saw; a snapshot of the current state comes first.
 export function applyProfile(state: MockState, request: ApplyRequest): ApplyOutcome {
-  const profile = profileById(state, request.profileId)
+  const stored = profileById(state, request.profileId)
+  const profile = inDirection(stored, request.direction)
   const changes = changesFor(state, profile)
   if (fingerprintOf(changes) !== request.fingerprint) fail({ kind: 'stale' })
   const now = new Date().toISOString()
@@ -158,14 +196,16 @@ export function applyProfile(state: MockState, request: ApplyRequest): ApplyOutc
       mods: captureCurrent(state),
       created: now,
       updated: now,
-      source: { kind: 'snapshot', of: profile.id },
+      source: { kind: 'snapshot', of: stored.id },
     }),
   )
   for (const change of changes) {
     const row = state.rows.find((candidate) => candidate.key === change.key)
     if (row) setEnabled(row, change.enable)
   }
-  profile.lastApplied = now
-  state.lastApplied = { profileId: profile.id, at: now }
+  if (request.direction === 'on') {
+    stored.lastApplied = now
+    state.lastApplied = { profileId: stored.id, at: now }
+  }
   return { snapshot: changed(state), changed: changes.length, snapshotId, skipped: [] }
 }

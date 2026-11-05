@@ -107,6 +107,16 @@ describe('filterMods', () => {
     expect(names({ text: 'con', conflictsOnly: true })).toEqual(['Conflicted'])
     expect(names({ text: 'zzz' })).toEqual([])
   })
+
+  it('keeps only the rows of a group picked in the sidebar, with the other criteria', () => {
+    const inGroup = (keys: readonly string[] | null, filter: Partial<ModFilter> = {}) =>
+      filterMods(ROWS, { ...EMPTY_FILTER, ...filter }, kindLabel, 'en', keys).map((row) => row.name)
+
+    expect(inGroup(['beta-key', 'gamma', 'missing'])).toEqual(['Beta', 'Gamma'])
+    expect(inGroup(['beta-key', 'gamma'], { state: 'disabled' })).toEqual(['Gamma'])
+    expect(inGroup([])).toEqual([])
+    expect(inGroup(null)).toHaveLength(ROWS.length)
+  })
 })
 
 describe('isFilterActive', () => {

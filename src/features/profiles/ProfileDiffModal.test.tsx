@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import type { ApplyDirection } from '../../lib/ipc/types'
 import { makeSnapshot } from '../../test/fixtures'
 import { installIpcMock } from '../../test/ipc-mock'
 import {
@@ -22,12 +23,14 @@ const OUTCOME = {
   skipped: [],
 }
 
-function renderModal(handlers: Record<string, IpcHandler>) {
+function renderModal(handlers: Record<string, IpcHandler>, direction: ApplyDirection = 'on') {
   const onClose = vi.fn()
   const ipc = installIpcMock(undefined, {
     handlers: { profiles_list: () => makeView([makeSummary(PROFILE)]), ...handlers },
   })
-  renderWithProviders(<ProfileDiffModal profile={PROFILE} onClose={onClose} />)
+  renderWithProviders(
+    <ProfileDiffModal profile={PROFILE} direction={direction} onClose={onClose} />,
+  )
   return { ipc, onClose }
 }
 
@@ -50,7 +53,12 @@ describe('ProfileDiffModal', () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
-      request: { profileId: 'p1', fingerprint: '+alpha\n-beta\n', applyWhileRunning: false },
+      request: {
+        profileId: 'p1',
+        fingerprint: '+alpha\n-beta\n',
+        applyWhileRunning: false,
+        direction: 'on',
+      },
     })
   })
 
@@ -76,6 +84,32 @@ describe('ProfileDiffModal', () => {
     expect(ipc.callsOf('profiles_apply')).toHaveLength(1)
     expect(ipc.callsOf('profiles_diff').length).toBeGreaterThanOrEqual(2)
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('switches off with the off diff and says what off does', async () => {
+    const user = userEvent.setup()
+    const { ipc, onClose } = renderModal(
+      {
+        profiles_diff: () =>
+          makeDiff({ changes: [makeChange('alpha', false)], fingerprint: '-alpha\n' }),
+        profiles_apply: () => OUTCOME,
+      },
+      'off',
+    )
+
+    expect(await screen.findByText(/Turns off the mods this group lists as on/)).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ id: 'p1', direction: 'off' })
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
+      request: {
+        profileId: 'p1',
+        fingerprint: '-alpha\n',
+        applyWhileRunning: false,
+        direction: 'off',
+      },
+    })
   })
 
   it('disables Apply for a read-only store', async () => {
