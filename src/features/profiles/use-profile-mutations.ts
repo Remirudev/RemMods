@@ -47,6 +47,7 @@ export function useApplyProfile() {
     onSuccess: (outcome) => {
       storeModsSnapshot(client, outcome.snapshot)
       void client.invalidateQueries({ queryKey: queryKeys.profiles })
+      if (outcome.skins) void client.invalidateQueries({ queryKey: queryKeys.skins })
     },
   })
 }

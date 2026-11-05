@@ -8,8 +8,20 @@ use game_support::{MANIFEST, install_game, make_steam_root, steam_text, text_of}
 use remmods_core::game::{SteamKind, detect};
 use remmods_core::platform::{
     OsKind, RegistryHive, RegistrySteamValues, RegistryView, SteamHints, processes,
-    registry_string, steam_hints,
+    registry_string, save_games_root, steam_hints,
 };
+
+#[test]
+fn saves_live_in_local_app_data_wherever_the_game_is() {
+    let root = save_games_root(std::path::Path::new(r"D:\Games\TEKKEN 8"), 1_778_820)
+        .expect("local app data");
+    assert!(
+        root.ends_with(r"TEKKEN 8\Saved\SaveGames"),
+        "{}",
+        root.display()
+    );
+    assert!(!root.starts_with(r"D:\Games"), "{}", root.display());
+}
 
 #[test]
 fn own_process_is_listed_by_exe_name() {

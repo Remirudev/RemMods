@@ -7,6 +7,7 @@ import { onboarding as deOnboarding } from '../../locales/de/onboarding'
 import { profiles as deProfiles } from '../../locales/de/profiles'
 import { settings as deSettings } from '../../locales/de/settings'
 import { shell as deShell } from '../../locales/de/shell'
+import { skins as deSkins } from '../../locales/de/skins'
 import { common as enCommon } from '../../locales/en/common'
 import { errors as enErrors } from '../../locales/en/errors'
 import { game as enGame } from '../../locales/en/game'
@@ -16,6 +17,7 @@ import { onboarding as enOnboarding } from '../../locales/en/onboarding'
 import { profiles as enProfiles } from '../../locales/en/profiles'
 import { settings as enSettings } from '../../locales/en/settings'
 import { shell as enShell } from '../../locales/en/shell'
+import { skins as enSkins } from '../../locales/en/skins'
 
 export const enResources = {
   common: enCommon,
@@ -27,6 +29,7 @@ export const enResources = {
   onboarding: enOnboarding,
   profiles: enProfiles,
   install: enInstall,
+  skins: enSkins,
 }
 
 export const deResources = {
@@ -39,6 +42,7 @@ export const deResources = {
   onboarding: deOnboarding,
   profiles: deProfiles,
   install: deInstall,
+  skins: deSkins,
 }
 
 export const resources = {

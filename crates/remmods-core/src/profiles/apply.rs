@@ -18,6 +18,8 @@ struct Applied {
     changed: u32,
     snapshot_id: Option<String>,
     skipped: Vec<DiffSkip>,
+    /// The group's linked skin set, when it was switched on.
+    skin_set: Option<String>,
 }
 
 impl Core {
@@ -25,11 +27,15 @@ impl Core {
         let (applied, refreshed) = self.run_managed(|guard, input, content| {
             self.apply_under_guard(guard, input, content, request)
         })?;
+        let skins = applied
+            .skin_set
+            .and_then(|id| self.switch_linked_skins(&id));
         Ok(ApplyOutcome {
             refreshed,
             changed: applied.changed,
             snapshot_id: applied.snapshot_id,
             skipped: applied.skipped,
+            skins,
         })
     }
 
@@ -53,6 +59,9 @@ impl Core {
             return Err(ProfileError::DiffChanged.into());
         }
         let switching_on = request.direction == ApplyDirection::On;
+        let skin_set = switching_on
+            .then(|| profile.skin_set().map(str::to_owned))
+            .flatten();
         if diff.changes.is_empty() {
             if switching_on {
                 self.record_last_applied(guard, &request.profile_id);
@@ -61,10 +70,18 @@ impl Core {
                 changed: 0,
                 snapshot_id: None,
                 skipped: diff.skipped,
+                skin_set,
             });
         }
+        // Undo applies this snapshot, so it remembers the skins to go back to.
+        let skins_before = skin_set.as_ref().and_then(|_| self.active_skin_set());
         let snapshot_id = self.profiles.update(guard, |file| {
-            Ok(add_snapshot(file, content, &request.profile_id))
+            Ok(add_snapshot(
+                file,
+                content,
+                &request.profile_id,
+                skins_before.as_deref(),
+            ))
         })?;
         let (enable_rows, disable_rows) = changed_rows(&diff, content);
         let meta = self.mods.meta().load();
@@ -87,6 +104,7 @@ impl Core {
             changed: u32::try_from(diff.changes.len()).unwrap_or(u32::MAX),
             snapshot_id: Some(snapshot_id),
             skipped: diff.skipped,
+            skin_set,
         })
     }
 
@@ -132,14 +150,20 @@ fn changed_rows<'a>(
 }
 
 /// An Exclusive, unnamed snapshot of the current states; keeps the newest `SNAPSHOT_KEEP`.
-fn add_snapshot(file: &mut ProfilesFile, content: &ScanContent, of: &str) -> String {
-    let snapshot = Profile::fresh(
+fn add_snapshot(
+    file: &mut ProfilesFile,
+    content: &ScanContent,
+    of: &str,
+    skins: Option<&str>,
+) -> String {
+    let mut snapshot = Profile::fresh(
         String::new(),
         String::new(),
         ProfileMode::Exclusive,
         capture_states(content),
         ProfileSource::Snapshot { of: of.to_owned() },
     );
+    snapshot.set_skin_set(skins);
     let id = snapshot.id.clone();
     file.profiles.push(snapshot);
     let mut snapshots: Vec<(String, usize)> = file

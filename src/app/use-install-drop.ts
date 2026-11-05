@@ -1,5 +1,4 @@
 import { notifications } from '@mantine/notifications'
-import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { i18n } from '../lib/i18n'
 import { onInstallDrop } from '../lib/ipc/events'
@@ -9,7 +8,6 @@ import { logError } from '../lib/log/frontend-log'
 import { showErrorToast } from '../lib/query/error-toast'
 import { queuedFromPicked } from '../shared/install-actions'
 import { useInstallQueue } from '../shared/install-queue'
-import { applyModPicture } from '../shared/mod-picture'
 import { usePictureDropStore } from '../shared/picture-drop-store'
 import { isUpdating } from '../shared/update-run-store'
 
@@ -30,27 +28,31 @@ function showRejected(rejected: readonly RejectedSource[]): void {
   })
 }
 
-function dropPicture(source: PickedSource, client: QueryClient): void {
+async function dropPictures(images: readonly PickedSource[]): Promise<void> {
   const { target } = usePictureDropStore.getState()
-  if (target) {
-    applyModPicture(client, target, source.id).catch(showErrorToast)
+  if (!target) {
+    const t = i18n.getFixedT(null, 'install')
+    notifications.show({
+      color: 'yellow',
+      title: t(($) => $.picture.noModTitle),
+      message: t(($) => $.picture.noMod),
+      autoClose: TOAST_MS,
+    })
     return
   }
-  const t = i18n.getFixedT(null, 'install')
-  notifications.show({
-    color: 'yellow',
-    title: t(($) => $.picture.noModTitle),
-    message: t(($) => $.picture.noMod),
-    autoClose: TOAST_MS,
-  })
+  try {
+    for (const image of target.many ? images : images.slice(0, 1)) await target.apply(image.id)
+  } catch (error) {
+    showErrorToast(error)
+  }
 }
 
-// Images are never installed: the first one becomes the picture of the open mod.
-function handleDropped(event: InstallDrop, client: QueryClient): void {
+// Images are never installed: they go to whatever open view takes pictures.
+function handleDropped(event: InstallDrop): void {
+  const images = event.sources.filter((source) => source.kind === 'image')
   const installable = event.sources.filter((source) => source.kind !== 'image')
-  const image = event.sources.find((source) => source.kind === 'image')
   useInstallQueue.getState().push(installable.map(queuedFromPicked))
-  if (image) dropPicture(image, client)
+  if (images.length > 0) void dropPictures(images)
   if (event.rejected.length > 0) showRejected(event.rejected)
 }
 
@@ -59,7 +61,6 @@ function handleDropped(event: InstallDrop, client: QueryClient): void {
 // drop is ignored (the sources stay unused in Rust's bounded registry).
 export function useInstallDrop(): { active: boolean; count: number; images: number } {
   const [state, setState] = useState(IDLE)
-  const client = useQueryClient()
 
   useEffect(() => {
     const subscription = onInstallDrop((event) => {
@@ -72,7 +73,7 @@ export function useInstallDrop(): { active: boolean; count: number; images: numb
         return
       }
       setState(IDLE)
-      if (event.phase === 'dropped') handleDropped(event, client)
+      if (event.phase === 'dropped') handleDropped(event)
     })
     subscription.catch((error: unknown) =>
       logError(`install drop subscription failed: ${describeForLog(error)}`),
@@ -81,7 +82,7 @@ export function useInstallDrop(): { active: boolean; count: number; images: numb
       // The listener resolves asynchronously and the event plugin can be gone already.
       subscription.then((unlisten) => Promise.resolve(unlisten())).catch(() => undefined)
     }
-  }, [client])
+  }, [])
 
   return state
 }

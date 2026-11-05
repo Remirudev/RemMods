@@ -266,6 +266,7 @@ fn s7_the_sealed_gate_holds_the_app_lock_across_processes() {
 fn s8_without_a_game_the_app_scope_is_used() {
     let (_dir, root) = support::temp_root();
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: false,
             fixed_location: None,

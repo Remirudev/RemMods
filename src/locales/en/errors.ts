@@ -31,6 +31,7 @@ export const errors = {
     noSpace: 'Not enough free space',
     sourceRejected: 'This cannot be installed',
     pictureRefused: 'This picture cannot be used',
+    skins: 'Skin sets',
     updateNotConfigured: 'No update channel',
     updateNotAllowed: 'Update with your package manager',
     updateBlocked: 'Update not possible right now',
@@ -120,6 +121,18 @@ export const errors = {
     replaceMismatch: 'The replace choice does not match the installed mods.',
     ambiguous: 'Several installed mods match the name. Resolve that in Repair first.',
     targetChanged: 'The mod folders changed while the install was prepared.',
+  },
+  skins: {
+    skinsUnavailable: 'The game’s skin saves were not found.',
+    skinSetNameTaken: 'A set with this name exists.',
+    skinSetInUse: 'This set is in the game. Switch to another one first.',
+    skinSetBroken:
+      'Files of this set are missing, so it cannot be used. Your skins in the game are unchanged.',
+    skinSwitchInterrupted: 'Finish the interrupted switch first.',
+    skinSetsReadOnly: 'This list comes from a newer RemMods, so it cannot be changed here.',
+    switchFailed:
+      'The switch did not finish and your skins may be mixed. Try again with “Finish the switch”.',
+    switchFailedRestored: 'The switch did not work. Your skins are back as they were.',
   },
   pictureRefused: {
     notAnImage: 'Only PNG, JPG and WebP pictures work.',

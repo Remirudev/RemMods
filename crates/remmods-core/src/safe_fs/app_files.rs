@@ -45,6 +45,22 @@ pub fn remove_app_file(path: &Path, app_dirs: &[&Path]) -> Result<bool, FsError>
     }
 }
 
+/// Removes one empty folder that is a direct child of `parent` (not a link). Ok(false) when it
+/// does not exist; a folder with anything left in it stays and is an error.
+pub fn remove_app_dir(path: &Path, parent: &Path) -> Result<bool, FsError> {
+    if path.parent() != Some(parent) || path.file_name().is_none() {
+        return Err(FsError::OutOfScope {
+            path: path.to_path_buf(),
+            reason: ScopeViolation::OutsideRoots,
+        });
+    }
+    match fs::remove_dir(path) {
+        Ok(()) => Ok(true),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(FsError::io("remove_app_dir", path, error)),
+    }
+}
+
 /// True when another process holds its session lock in `<data_dir>/sessions`. Read-only: a dead
 /// session's lock is released at once and its file stays. No sessions folder → false.
 pub fn live_session_exists(data_dir: &Path) -> bool {

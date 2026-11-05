@@ -4,6 +4,7 @@ import type {
   ApplyRequest,
   DiffChange,
   EntryState,
+  LinkedSkins,
   Profile,
   ProfileDiff,
   ProfileEntryDto,
@@ -40,6 +41,14 @@ function summaryOf(state: MockState, profile: Profile): ProfileSummary {
     missing: profile.mods.length - present.length,
     matchesCurrent,
   }
+}
+
+// Like core: a link to a set that is gone means nothing, and so does the set already in the game.
+function linkedSkins(state: MockState, id: string | null): LinkedSkins | null {
+  const set = state.skinSets.find((candidate) => candidate.id === id)
+  if (!set || state.activeSkinSet === set.id) return null
+  state.activeSkinSet = set.id
+  return { kind: 'switched', name: set.name }
 }
 
 export function profilesView(state: MockState): ProfilesView {
@@ -95,6 +104,7 @@ export function saveProfile(state: MockState, save: ProfileSave): ProfilesView {
           mods,
           created: now,
           updated: now,
+          skinSet: save.skins,
         }),
       )
     } else {
@@ -103,6 +113,7 @@ export function saveProfile(state: MockState, save: ProfileSave): ProfilesView {
       profile.mode = save.mode
       profile.mods = mods
       profile.updated = now
+      profile.skinSet = save.skins
     }
   } else {
     const profile = profileById(state, save.id)
@@ -207,5 +218,11 @@ export function applyProfile(state: MockState, request: ApplyRequest): ApplyOutc
     stored.lastApplied = now
     state.lastApplied = { profileId: stored.id, at: now }
   }
-  return { snapshot: changed(state), changed: changes.length, snapshotId, skipped: [] }
+  return {
+    snapshot: changed(state),
+    changed: changes.length,
+    snapshotId,
+    skipped: [],
+    skins: request.direction === 'on' ? linkedSkins(state, stored.skinSet) : null,
+  }
 }

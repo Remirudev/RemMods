@@ -93,6 +93,14 @@ are the cases only a real PC shows.
 - [ ] Only if CI ignored them (`#[ignore]` in `crates/remmods-core/tests/platform_windows_recycle.rs`):
       the W6–W10/W12 cases by hand.
 
+## Skin sets
+
+- [ ] Back up `%LOCALAPPDATA%\TEKKEN 8\Saved\SaveGames` first. Sets appear under Groups, and saving
+      and switching behaves as in "Skin sets steps" of `ingame-linux.md`, with the game's own folder
+      in place of the Proton prefix.
+- [ ] Switching right after quitting the game still works: Windows may hold a file for a moment, and
+      RemMods waits for it.
+
 ## Runs
 
 | Date | Machine (Windows version, PC or VM) | RemMods version | Result | Notes |

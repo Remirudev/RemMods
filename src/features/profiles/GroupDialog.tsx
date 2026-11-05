@@ -1,8 +1,9 @@
-import { Alert, Button, Group, Stack, Switch, TextInput } from '@mantine/core'
+import { Alert, Button, Group, Select, Stack, Switch, TextInput } from '@mantine/core'
 import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isIpcError } from '../../lib/ipc/ipc-error'
 import { showErrorToast } from '../../lib/query/error-toast'
+import { useSkinSets } from '../../shared/skin-sets'
 import { useModalLock } from '../../shared/use-modal-lock'
 import { ClashAlert } from './ClashAlert'
 import { pickEntries, pickItems, picksFromProfile, picksFromRows, withPicks } from './group-picks'
@@ -30,7 +31,9 @@ export function GroupDialog({ profile, rows, onClose, modalId }: GroupDialogProp
   const [name, setName] = useState(profile?.name ?? '')
   const [exclusive, setExclusive] = useState(profile?.mode === 'exclusive')
   const [picks, setPicks] = useState<Picks>(() => picksFromProfile(profile))
+  const [skinSet, setSkinSet] = useState(profile?.skinSet ?? null)
   const [problem, setProblem] = useState<Problem>(null)
+  const skinSets = useSkinSets().data?.sets ?? []
   const save = useSaveProfile()
   useModalLock(modalId, save.isPending)
 
@@ -65,6 +68,7 @@ export function GroupDialog({ profile, rows, onClose, modalId }: GroupDialogProp
         description: profile?.description ?? '',
         mode: exclusive ? 'exclusive' : 'additive',
         mods: pickEntries(picks),
+        skins: skinSet,
       },
       {
         onSuccess: onClose,
@@ -103,6 +107,16 @@ export function GroupDialog({ profile, rows, onClose, modalId }: GroupDialogProp
           checked={exclusive}
           onChange={(event) => setExclusive(event.currentTarget.checked)}
         />
+        {skinSets.length > 0 && (
+          <Select
+            clearable
+            label={t(($) => $.group.skinSet)}
+            description={t(($) => $.group.skinSetHint)}
+            data={skinSets.map((set) => ({ value: set.id, label: set.name }))}
+            value={skinSet}
+            onChange={setSkinSet}
+          />
+        )}
         {problem === 'mods' && (
           <Alert color="red" role="alert">
             {t(($) => $.group.modsProblem)}

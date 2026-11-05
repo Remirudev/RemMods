@@ -8,6 +8,8 @@ import type {
   PlatformInfo,
   Profile,
   Settings,
+  SkinCopy,
+  SkinSet,
   TrashKind,
   TrashUnavailableReason,
 } from '../../src/lib/ipc/types'
@@ -57,6 +59,9 @@ export interface MockState {
   deleted: string[]
   // Row key → own picture id.
   ownPictures: Record<string, string>
+  skinSets: SkinSet[]
+  skinCopies: SkinCopy[]
+  activeSkinSet: string | null
 }
 
 export type EventEmitter = (event: string, payload: unknown) => Promise<void>

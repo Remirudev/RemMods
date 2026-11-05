@@ -89,6 +89,9 @@ export const profiles: LocaleShape<typeof en> = {
     nowOff: 'gerade aus',
     notInstalled: 'nicht installiert',
     counts: 'Einschalten dieser Gruppe schaltet {{on}} ein und {{off}} aus.',
+    skinSet: 'Skin-Set',
+    skinSetHint:
+      'Beim Einschalten dieser Gruppe kommen auch diese Skins ins Spiel, damit Plätze nie auf ausgeschaltete Mods zeigen.',
     noMods: 'Keine Mods gefunden.',
     noMatch: 'Keine Mod passt zur Suche.',
     clashTitle: 'Einige dieser Mods ersetzen dieselben Teile',
@@ -133,6 +136,11 @@ export const profiles: LocaleShape<typeof en> = {
     nothing: 'Es musste nichts geändert werden.',
     skipped_one: '{{count}} Mod wurde übersprungen.',
     skipped_other: '{{count}} Mods wurden übersprungen.',
+    skins: {
+      switched: 'Skins zu {{name}} gewechselt.',
+      gameRunning: 'Die Skins bleiben, solange das Spiel läuft: Wechsle danach zu {{name}}.',
+      failed: 'Das Skin-Set {{name}} ließ sich nicht wechseln.',
+    },
     undo: 'Rückgängig',
   },
   snapshots: {

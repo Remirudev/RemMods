@@ -172,6 +172,22 @@ export function describeAppError(error: AppError): ErrorDescription {
         message: t(($) => $.sourceRejected[reason]),
       }
     }
+    case 'skinsUnavailable':
+    case 'skinSetNameTaken':
+    case 'skinSetInUse':
+    case 'skinSetBroken':
+    case 'skinSwitchInterrupted':
+    case 'skinSetsReadOnly': {
+      const kind = error.kind
+      return { title: t(($) => $.titles.skins), message: t(($) => $.skins[kind]) }
+    }
+    case 'skinSwitchFailed':
+      return {
+        title: t(($) => $.titles.skins),
+        message: error.restored
+          ? t(($) => $.skins.switchFailedRestored)
+          : t(($) => $.skins.switchFailed),
+      }
     case 'pictureRefused': {
       const reason = error.reason
       return {

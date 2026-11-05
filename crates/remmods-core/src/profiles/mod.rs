@@ -24,6 +24,7 @@ pub use diff::{
 pub use error::{ImportProblem, ProfileError};
 pub use import_file::IMPORT_MAX_BYTES;
 pub use import_other::{OtherManagerProfile, parse_other_manager_profiles};
+pub(crate) use model::now_rfc3339;
 pub use model::{
     EntryState, LastApplied, PROFILE_NAME_MAX_CHARS, PROFILES_FILE, PROFILES_VERSION, Profile,
     ProfileEntry, ProfileMode, ProfileSource, ProfilesFile, SNAPSHOT_KEEP,

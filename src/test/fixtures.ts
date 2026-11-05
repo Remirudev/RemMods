@@ -22,6 +22,8 @@ import type {
   PlatformInfo,
   PreparedRow,
   Settings,
+  SkinSet,
+  SkinsView,
 } from '../lib/ipc/types'
 
 export const TEST_SETTINGS: Settings = {
@@ -78,6 +80,28 @@ export function makeGraphicsState(overrides: Partial<GraphicsState> = {}): Graph
 }
 
 export const TEST_ASSETS_STATUS: AssetsStatus = { pictures: 0, bytes: 0, names: 0, failed: 0 }
+
+export const TEST_SKINS_VIEW: SkinsView = {
+  account: '76561198000000001',
+  available: true,
+  sets: [],
+  active: null,
+  interrupted: null,
+  readOnly: false,
+}
+
+export function makeSkinSet(name: string, overrides: Partial<SkinSet> = {}): SkinSet {
+  return {
+    id: name.toLowerCase(),
+    name,
+    notes: '',
+    created: '2026-11-05T12:00:00.000Z',
+    updated: '2026-11-05T12:00:00.000Z',
+    screenshots: [],
+    bytes: 42_000_000,
+    ...overrides,
+  }
+}
 
 // `<character>_<slot>_<name>`: the codes decide the hints, Kunimitsu and upper body by default.
 export function makeModItem(key: string, overrides: Partial<ModItem> = {}): ModItem {

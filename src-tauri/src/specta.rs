@@ -2,7 +2,7 @@ use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events}
 
 use crate::commands::{
     about, assets, game, graphics, install, mods, mods_bulk, mods_manage, profiles, repair,
-    settings, shell, update,
+    settings, shell, skins, update,
 };
 use crate::events::{
     AssetsChanged, FolderBusy, GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged,
@@ -41,6 +41,17 @@ pub fn builder() -> Builder<tauri::Wry> {
             assets::pick_picture,
             assets::mods_set_picture,
             assets::mods_clear_picture,
+            skins::skins_view,
+            skins::skins_save_new,
+            skins::skins_switch,
+            skins::skins_put_back,
+            skins::skins_copies,
+            skins::skins_keep_copy,
+            skins::skins_edit,
+            skins::skins_delete,
+            skins::pick_screenshots,
+            skins::skins_add_screenshot,
+            skins::skins_remove_screenshot,
             mods::mods_reveal,
             mods::mods_toggle,
             mods::mods_disable_all,

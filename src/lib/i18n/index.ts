@@ -28,6 +28,7 @@ void i18next.use(initReactI18next).init({
     'onboarding',
     'profiles',
     'install',
+    'skins',
   ],
   defaultNS: 'common',
   interpolation: { escapeValue: false },

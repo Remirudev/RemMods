@@ -83,6 +83,9 @@ export const profiles = {
     nowOff: 'off now',
     notInstalled: 'not installed',
     counts: 'Switching this group on turns {{on}} on and {{off}} off.',
+    skinSet: 'Skin set',
+    skinSetHint:
+      'Switching this group on also puts these skins into the game, so slots never point at mods that are off.',
     noMods: 'No mods found.',
     noMatch: 'No mod matches the search.',
     clashTitle: 'Some of these mods replace the same items',
@@ -125,6 +128,11 @@ export const profiles = {
     nothing: 'Nothing needed to change.',
     skipped_one: '{{count}} mod was skipped.',
     skipped_other: '{{count}} mods were skipped.',
+    skins: {
+      switched: 'Skins switched to {{name}}.',
+      gameRunning: 'Skins stay as they are while the game runs: switch to {{name}} afterwards.',
+      failed: 'The skin set {{name}} could not be switched.',
+    },
     undo: 'Undo',
   },
   snapshots: {

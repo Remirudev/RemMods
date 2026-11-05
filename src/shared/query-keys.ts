@@ -16,6 +16,8 @@ export const queryKeys = {
   modItemsAll: ['mods', 'details', 'items'] as const,
   modItems: (modRef: string, language: string) =>
     ['mods', 'details', 'items', modRef, language] as const,
+  skins: ['skins'] as const,
+  skinCopies: ['skins', 'copies'] as const,
   assets: ['assets'] as const,
   assetsStatus: (language: string) => ['assets', 'status', language] as const,
   // Outside `assets`: a picture never changes, so "assets changed" need not load it again.

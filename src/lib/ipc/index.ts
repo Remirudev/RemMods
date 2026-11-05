@@ -60,6 +60,22 @@ export const ipc = {
     unwrapResult('mods_set_picture', () => commands.modsSetPicture(target, source)),
   modsClearPicture: (target: ModTarget) =>
     unwrapResult('mods_clear_picture', () => commands.modsClearPicture(target)),
+  skinsView: () => unwrapResult('skins_view', () => commands.skinsView()),
+  skinsSaveNew: (name: string) => unwrapResult('skins_save_new', () => commands.skinsSaveNew(name)),
+  skinsSwitch: (id: string) => unwrapResult('skins_switch', () => commands.skinsSwitch(id)),
+  skinsPutBack: (id: string) => unwrapResult('skins_put_back', () => commands.skinsPutBack(id)),
+  skinsCopies: () => unwrapResult('skins_copies', () => commands.skinsCopies()),
+  skinsKeepCopy: (copy: string, name: string) =>
+    unwrapResult('skins_keep_copy', () => commands.skinsKeepCopy(copy, name)),
+  skinsEdit: (id: string, name: string, notes: string) =>
+    unwrapResult('skins_edit', () => commands.skinsEdit(id, name, notes)),
+  skinsDelete: (id: string) => unwrapResult('skins_delete', () => commands.skinsDelete(id)),
+  pickScreenshots: (title: string) =>
+    unwrapResult('pick_screenshots', () => commands.pickScreenshots(title)),
+  skinsAddScreenshot: (id: string, source: string) =>
+    unwrapResult('skins_add_screenshot', () => commands.skinsAddScreenshot(id, source)),
+  skinsRemoveScreenshot: (id: string, shot: string) =>
+    unwrapResult('skins_remove_screenshot', () => commands.skinsRemoveScreenshot(id, shot)),
   modsReveal: (modRef: string) => unwrapResult('mods_reveal', () => commands.modsReveal(modRef)),
   modsToggle: (request: ToggleRequest) =>
     unwrapResult('mods_toggle', () => commands.modsToggle(request)),

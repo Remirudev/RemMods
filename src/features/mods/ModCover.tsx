@@ -1,8 +1,10 @@
 import { Button, Group, Stack, Text } from '@mantine/core'
 import { IconPhotoPlus, IconTrash } from '@tabler/icons-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ItemPicture } from '../../shared/components/ItemPicture'
+import { applyModPicture } from '../../shared/mod-picture'
 import { usePictureDropStore } from '../../shared/picture-drop-store'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
@@ -16,6 +18,7 @@ const COVER_HEIGHT = 220
 // mounted, an image dropped on the window lands here.
 export function ModCover({ row }: ModCoverProps) {
   const { t, i18n } = useTranslation('mods')
+  const client = useQueryClient()
   const items = useModItems(row.modRef, i18n.language).data
   const wanted = useModsUiStore((state) => state.detailsCharacter)
   const target = useMemo(() => ({ modRef: row.modRef, key: row.key }), [row.modRef, row.key])
@@ -27,11 +30,17 @@ export function ModCover({ row }: ModCoverProps) {
     return listPicture(items, chosenCharacter(characters, wanted))
   }, [items, wanted, i18n.language])
 
+  const dropLabel = t(($) => $.cover.dropLabel, { name: row.name })
+
   useEffect(() => {
     const { setTarget, clearTarget } = usePictureDropStore.getState()
-    setTarget(target, row.name)
+    setTarget({
+      label: dropLabel,
+      many: false,
+      apply: (sourceId) => applyModPicture(client, target, sourceId),
+    })
     return clearTarget
-  }, [target, row.name])
+  }, [client, target, dropLabel])
 
   return (
     <Stack gap="xs">

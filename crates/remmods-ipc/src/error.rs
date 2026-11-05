@@ -11,6 +11,7 @@ use remmods_core::platform;
 use remmods_core::profiles::ProfileError;
 use remmods_core::safe_fs::{BatchError, FsError};
 use remmods_core::settings::SettingsError;
+use remmods_core::skins::SkinsError;
 use serde::{Deserialize, Serialize};
 
 use crate::assets::PictureProblem;
@@ -102,6 +103,20 @@ pub enum AppError {
     PictureRefused {
         reason: PictureProblem,
     },
+    /// The game's skin save files were not found.
+    SkinsUnavailable,
+    SkinSetNameTaken,
+    /// The set in the game can't be deleted.
+    SkinSetInUse,
+    /// A stored set lost files.
+    SkinSetBroken,
+    /// An earlier switch has to be finished first.
+    SkinSwitchInterrupted,
+    /// `restored`: the game's old files are back in place.
+    SkinSwitchFailed {
+        restored: bool,
+    },
+    SkinSetsReadOnly,
     /// This build carries no updater config (local, dev, CI and `--smoke` builds).
     UpdateNotConfigured,
     /// This install kind updates through its package manager, never by itself.
@@ -164,6 +179,25 @@ pub(crate) fn quiet(error: CoreError) -> AppError {
         CoreError::Install(error) => install_error(error),
         CoreError::AppUpdate(error) => app_update_error(error),
         CoreError::Graphics(error) => graphics_error(error),
+        CoreError::Skins(error) => skins_error(error),
+    }
+}
+
+fn skins_error(error: SkinsError) -> AppError {
+    match error {
+        SkinsError::Fs(error) => fs_error(error),
+        SkinsError::NoSaves => AppError::SkinsUnavailable,
+        SkinsError::GameRunning => AppError::GameRunning,
+        SkinsError::UnknownSet => AppError::Stale,
+        SkinsError::NameTaken => AppError::SkinSetNameTaken,
+        SkinsError::InvalidName => AppError::invalid_input("skinSetName"),
+        SkinsError::NotesTooLong => AppError::invalid_input("skinSetNotes"),
+        SkinsError::SetInUse => AppError::SkinSetInUse,
+        SkinsError::BrokenSet => AppError::SkinSetBroken,
+        SkinsError::Interrupted => AppError::SkinSwitchInterrupted,
+        SkinsError::SwitchFailed { restored } => AppError::SkinSwitchFailed { restored },
+        SkinsError::ReadOnly => AppError::SkinSetsReadOnly,
+        SkinsError::Encode(_) => AppError::Internal,
     }
 }
 

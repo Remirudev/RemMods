@@ -13,6 +13,7 @@ use super::model::{
 use super::store::{LoadedProfiles, StoreProblem};
 use crate::mods::{Refreshed, ScanContent};
 use crate::safe_fs::Scope;
+use crate::skins::LinkedSkins;
 use crate::{Core, CoreError};
 
 /// Longest key a picked list may hold, in bytes.
@@ -45,6 +46,8 @@ pub enum ProfileSave {
         description: String,
         mode: ProfileMode,
         mods: Vec<(String, EntryState)>,
+        /// The skin set this group brings along.
+        skins: Option<String>,
     },
 }
 
@@ -79,6 +82,8 @@ pub struct ApplyOutcome {
     pub changed: u32,
     pub snapshot_id: Option<String>,
     pub skipped: Vec<DiffSkip>,
+    /// What the group's linked skin set did; `None` without a link or with nothing to do.
+    pub skins: Option<LinkedSkins>,
 }
 
 impl Core {
@@ -204,15 +209,17 @@ fn apply_save(
             description,
             mode,
             mods,
+            skins,
         } => {
             check_name(file, name, None)?;
-            let profile = Profile::fresh(
+            let mut profile = Profile::fresh(
                 name.clone(),
                 description.clone(),
                 *mode,
                 picked_mods(mods, None)?,
                 ProfileSource::User,
             );
+            profile.set_skin_set(skins.as_deref());
             file.profiles.push(profile);
         }
         ProfileSave::Picked {
@@ -221,6 +228,7 @@ fn apply_save(
             description,
             mode,
             mods,
+            skins,
         } => {
             let index = position(file, id)?;
             // Snapshots only ever hold a captured state, so a picked list never replaces one.
@@ -230,6 +238,7 @@ fn apply_save(
             check_name(file, name, Some(id))?;
             let mods = picked_mods(mods, Some(&file.profiles[index].mods))?;
             let profile = &mut file.profiles[index];
+            profile.set_skin_set(skins.as_deref());
             profile.name.clone_from(name);
             profile.description.clone_from(description);
             profile.mode = *mode;

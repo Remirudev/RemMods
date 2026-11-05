@@ -160,6 +160,12 @@ pub fn retry_policy(class: OsErrorClass) -> RetryPolicy {
     imp::retry_policy(class)
 }
 
+/// The folder holding the game's `SaveGames/<id>` folders: under Proton in the prefix of the
+/// library `game_root` sits in, on Windows in the user's local app data.
+pub fn save_games_root(game_root: &Path, app_id: u32) -> Option<PathBuf> {
+    imp::save_games_root(game_root, app_id)
+}
+
 /// Policy for replacing an existing file (the rename that ends `write_atomic`). On Windows a
 /// target held open without `FILE_SHARE_DELETE` (scanner, indexer, sync tool, editor) makes the
 /// replace fail with ACCESS_DENIED, so there that class means "in use" as well.

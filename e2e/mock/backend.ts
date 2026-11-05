@@ -29,6 +29,17 @@ import { deleteMany, deletePrepareMany, trashMany } from './bulk'
 import { inspect, releaseInstall, start } from './install-flow'
 import * as mods from './mods'
 import { applyProfile, deleteProfile, diffProfile, profilesView, saveProfile } from './profiles'
+import {
+  addSkinShot,
+  deleteSkinSet,
+  editSkinSet,
+  keepSkinCopy,
+  putBackSkinSet,
+  removeSkinShot,
+  saveSkinSet,
+  skinsView,
+  switchSkinSet,
+} from './skins'
 import { DETECTED, fail, snapshotOf } from './state'
 import type { Backend, CommandArgs, E2eHandle, EventEmitter, MockState } from './types'
 
@@ -98,6 +109,33 @@ function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unkn
       return TINY_PICTURE
     case 'pick_picture':
       return { id: 'src-picture', name: 'look.png', kind: 'image' }
+    case 'pick_screenshots':
+      return [{ id: 'src-shot', name: 'slots.png', kind: 'image' }]
+    case 'skins_view':
+      return skinsView(state)
+    case 'skins_save_new':
+      return saveSkinSet(state, arg<string>(args, 'name'))
+    case 'skins_switch':
+      return switchSkinSet(state, arg<string>(args, 'id'))
+    case 'skins_put_back':
+      return putBackSkinSet(state)
+    case 'skins_copies':
+      return state.skinCopies
+    case 'skins_keep_copy':
+      return keepSkinCopy(state, arg<string>(args, 'name'))
+    case 'skins_edit':
+      return editSkinSet(
+        state,
+        arg<string>(args, 'id'),
+        arg<string>(args, 'name'),
+        arg<string>(args, 'notes'),
+      )
+    case 'skins_delete':
+      return deleteSkinSet(state, arg<string>(args, 'id'))
+    case 'skins_add_screenshot':
+      return addSkinShot(state, arg<string>(args, 'id'))
+    case 'skins_remove_screenshot':
+      return removeSkinShot(state, arg<string>(args, 'id'), arg<string>(args, 'shot'))
     case 'about_notices':
       return TEST_NOTICES
     case 'set_ui_scale':

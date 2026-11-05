@@ -7,6 +7,7 @@ use std::time::{Duration, SystemTime};
 
 use remmods_core::mods as core_mods;
 use remmods_core::profiles as core;
+use remmods_core::skins::LinkedSkins;
 use remmods_ipc::{
     ApplyDirection, ApplyOutcome, ApplyRequest, ChangeReason, DiffSkip, EntryState, ExportReport,
     ImportProblem, ImportReport, Profile, ProfileDiff, ProfileEntryDto, ProfileMode, ProfileSave,
@@ -113,6 +114,7 @@ fn profile_mods_map_becomes_a_list_sorted_by_key_bytes_without_extra() {
             "id": "p1",
             "name": "Tournament",
             "description": "d",
+            "skinSet": null,
             "mode": "exclusive",
             "mods": [
                 { "key": "LogicMods/a", "state": "enabled" },
@@ -274,6 +276,7 @@ fn picked_save_keeps_the_list_order_and_converts_states() {
             { "key": "Standard:B", "state": "disabled" },
             { "key": "Standard:A", "state": "enabled" },
         ],
+        "skins": null,
     }));
     assert_eq!(
         core::ProfileSave::from(&picked),
@@ -286,6 +289,7 @@ fn picked_save_keeps_the_list_order_and_converts_states() {
                 ("Standard:B".into(), core::EntryState::Disabled),
                 ("Standard:A".into(), core::EntryState::Enabled),
             ],
+            skins: None,
         }
     );
     let edit = ProfileSave::Picked {
@@ -297,6 +301,7 @@ fn picked_save_keeps_the_list_order_and_converts_states() {
             key: "Logic:L".into(),
             state: EntryState::Enabled,
         }],
+        skins: Some("s1".into()),
     };
     assert_eq!(
         to_json(&edit),
@@ -307,6 +312,7 @@ fn picked_save_keeps_the_list_order_and_converts_states() {
             "description": "x",
             "mode": "exclusive",
             "mods": [{ "key": "Logic:L", "state": "enabled" }],
+            "skins": "s1",
         })
     );
     round_trips(&edit);
@@ -434,8 +440,10 @@ fn apply_outcome_converts_snapshot_and_skips() {
             wanted: core::EntryState::Enabled,
             reason: core::SkipReason::Ambiguous,
         }],
+        skins: Some(LinkedSkins::GameRunning { name: "A".into() }),
     });
     let json = to_json(&outcome);
+    assert_eq!(json["skins"], json!({ "kind": "gameRunning", "name": "A" }));
     assert_eq!(json["snapshot"]["revision"], json!(3));
     assert_eq!(json["changed"], json!(2));
     assert_eq!(json["snapshotId"], json!("s1"));

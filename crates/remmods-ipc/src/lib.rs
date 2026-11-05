@@ -18,6 +18,7 @@ mod platform;
 mod profiles;
 mod repair;
 mod settings;
+mod skins;
 mod smoke;
 mod toggle;
 mod update;
@@ -69,6 +70,7 @@ pub use repair::{RepairAction, RepairItem, RepairKind, RepairList};
 pub use settings::{
     Appearance, AppearanceUpdate, ColorScheme, Settings, SettingsUpdate, TitleBarMode,
 };
+pub use skins::{LinkedSkins, SkinCopy, SkinSet, SkinsView};
 pub use smoke::{SmokeCheck, SmokeReport};
 pub use toggle::{
     SkippedRow, ToggleBlock, ToggleOutcome, ToggleRequest, ToggleTarget, WatchState, WatchStatus,

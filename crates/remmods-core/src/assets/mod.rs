@@ -17,4 +17,5 @@ pub(crate) use game_files::GameFiles;
 pub use model::{
     AssetsStatus, ItemNameSource, ModItem, ModItems, NAME_LANGUAGES, PICTURE_EDGE, PictureProblem,
 };
+pub(crate) use own_picture::read_own_picture;
 pub use store::AssetStore;

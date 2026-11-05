@@ -245,6 +245,7 @@ export const mods = {
     change: 'Change picture…',
     remove: 'Remove picture',
     pickTitle: 'Choose a picture for this mod',
+    dropLabel: 'Drop to use as the picture of {{name}}',
     dropHint: 'Or drop a PNG, JPG or WebP picture here.',
   },
   replaces: {

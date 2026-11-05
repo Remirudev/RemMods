@@ -6,9 +6,10 @@ tools leave behind. Built with Tauri 2, Rust and React. It follows the usual TEK
 conventions (`Mods`, `~mods`, `LogicMods`, `.disabled_` folders, `-x` files, `modinfo.json`), so
 existing mod folders keep working.
 
-RemMods only ever writes inside the three mod folders, its own app folders and the Trash. Steam's
-files are read-only to it. Removing a mod moves it to the Trash; deleting it permanently needs a second
-confirmation.
+RemMods writes inside the three mod folders, its own app folders and the Trash. Steam's files are
+read-only to it. Removing a mod moves it to the Trash; deleting it permanently needs a second
+confirmation. Its one write in the game's saves is skin sets (below): exactly the five skin files, as
+whole files, with the game closed. No other save is ever written, and RemMods never looks inside one.
 
 ## Status
 
@@ -30,6 +31,15 @@ A mod's details show what it replaces, character by character, with the game's p
 mod's, and a mod can have a picture of your own: choose one, or drop it on the open details. The mod
 list shows these pictures in its table or as a grid of cards, and can be narrowed to one character;
 "Hide pictures" in Settings turns them all off.
+
+Skin sets get past the game's slot limit. A set is a stored copy of your five skin files
+(`customize_save_data_{0..4}_1.sav`, about 42 MB), named by you, kept per Steam account in RemMods' data
+folder (`skin-sets`). With the game closed, Switch stores the files in the set they belong to and puts
+the other set's files in and compares them byte by byte; Fight Money, items and replays live in other
+files and stay as they are. Automatic copies are made along the way: if skins go missing, keep one of
+them as a set and switch to it, or put the set in the game back from its dialog. RemMods can't read a
+set, so it shows your notes and screenshots of the slot pages. A group can link a set, so one switch
+changes mods and skins together.
 
 **Phase 3 (in progress)**: manage mods. Rename a mod (the folder, its files and the profiles that name
 it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it

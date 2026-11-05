@@ -44,6 +44,7 @@ impl Fixture {
 
     fn core(&self, detection: bool) -> Core {
         let options = CoreOptions {
+            save_root: None,
             game: GameOptions {
                 steam_detection: detection,
                 fixed_location: None,
@@ -253,6 +254,7 @@ fn fixed_location_is_ready_and_not_stored() {
     let game = fx.root.join("Fixture").join("TEKKEN 8");
     make_game(&game);
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: true,
             fixed_location: Some(under(&game, &["Polaris", "Content", "Paks"])),

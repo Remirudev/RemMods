@@ -521,3 +521,58 @@ Only looking: nothing in Paks changes and the game stays closed. Each step ends 
    Result:
 5. In Settings turn "Hide pictures" on: the list and the details show empty tiles. Turn it off again.
    Result:
+
+## Skin sets steps (saves)
+
+This is the first test that writes in the game's save folder, and it only touches the five skin files.
+Backup first, together: Claude prepares and runs the commands, you play offline Practice mode and
+report. Every command works in fish. Each step ends with a "Result:" line. Never run a step without the
+backup of step 1. RemMods must be the build with skin sets, and Steam Cloud stays as it is.
+
+If the game ever says the character customization data is corrupted: choose **Return to title**, never
+"Delete saved data", quit, and stop here. Claude restores the backup. If Steam shows a cloud conflict
+window, stop and ask before choosing anything.
+
+1. Game closed. Claude copies the whole `SaveGames` folder to `~/RemMods-backups/<date>-skinsets/` and
+   to `/mnt/SSD/RemMods-backups/<date>-skinsets/`, then compares hashes of both copies with the
+   originals. Note your Fight Money, one item you own and the number of replays.
+   Result:
+2. In RemMods the sidebar has "Skin sets" under Groups. Choose **Save my skins** and name the set
+   **Set A**. It shows "In the game". Claude compares the set's five files with the game's: identical.
+   `global1.sav` has not changed.
+   Result:
+3. Start the game, change one slot of a character so you can tell it apart (note which), and save it.
+   Quit. Choose "+" in Skin sets and name the set **Set B**: B is now in the game.
+   Result:
+4. Choose **Switch** on Set A. The notice says your skins switched, and A shows "In the game". Claude
+   compares: the game's five files equal Set A, every other save file is unchanged.
+   Result:
+5. Start the game: the slot from step 3 is back as it was, with no warning. Fight Money, the item,
+   replays and ghosts are unchanged. Quit. Start it a second time and check again. Quit.
+   Result:
+6. Switch to Set B, start the game: the changed slot from step 3 is there, the same things are
+   unchanged. Quit. Steam shows no conflict window, and Cloud syncs normally.
+   Result:
+7. Start the game and press **Switch** in RemMods while it runs: it refuses and nothing changes. Quit.
+   Result:
+8. In the game press F12 on a slot page, quit, open Set B in RemMods and use **Add screenshots…**.
+   The picker opens at Steam's screenshot folder, the picture shows in the set, and notes are kept
+   after a restart of RemMods. Send Claude one screenshot exactly as Steam saved it: it decides whether
+   cutting pages into single slots can be built.
+   Result:
+9. Start the game, change one slot (note which), quit. Open **Set B** in RemMods and choose **Put back
+   in the game**, then confirm. Start the game: the slot is as it was before this step. Quit.
+   Result:
+10. Choose **Automatic copies** (the clock next to "+"). The newest line is "Skins from before a
+    switch", with the time of step 9. Choose **Keep as a set** and name it **Rescued**: it appears in
+    the list and B stays in the game. Switch to **Rescued**, start the game: the slot from step 9 is
+    back. Quit. Switch to Set B and delete **Rescued**.
+    Result:
+11. Open a group, link **Set A** in its dialog and save. Switch the group on: mods and skins change, and
+    the toast says so. Choose **Undo**: mods and skins go back. Start the game once to confirm. Quit.
+    Result:
+12. Claude checks that `skin-sets/<id>/backups/` and each `skin-sets/<id>/replaced/<set>/` hold at most
+    three copies, and that every save file outside the five still matches the backup, apart from what
+    the game wrote itself (`global1.sav`, replays). Switch back to the set you want to keep. The "Runs"
+    table gets a Skin sets line.
+    Result:

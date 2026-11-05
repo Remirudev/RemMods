@@ -10,6 +10,7 @@ pub mod profiles;
 pub mod repair;
 pub mod settings;
 pub mod shell;
+pub mod skins;
 pub mod update;
 
 use std::fmt::Display;

@@ -60,6 +60,7 @@ fn reveal_refuses_a_trailing_dot() {
     paks_tree(&paks, &[("Mods/Foo./a.pak", DATA)]);
     let game_root = out.join("steamapps").join("common").join("TEKKEN 8");
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: false,
             fixed_location: Some(game_root),

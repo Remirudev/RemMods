@@ -233,13 +233,24 @@ impl GameService {
         changed.then(|| change_of(&state))
     }
 
-    /// One fresh process scan for a mutation; a failed scan counts as not running.
-    pub(crate) fn running_now(&self) -> bool {
+    /// One fresh process scan; `None` when it failed.
+    fn scan_now(&self) -> Option<bool> {
         let scan = scan_verdict(self.options.processes.as_ref())
-            .map_err(|error| log::warn!("process scan failed, treated as not running: {error}"));
-        let running = scan.as_ref().is_ok_and(|verdict| verdict.game.is_some());
+            .map_err(|error| log::warn!("process scan failed: {error}"));
+        let running = scan.as_ref().ok().map(|verdict| verdict.game.is_some());
         self.lock().tracker.observe(scan, Instant::now());
         running
+    }
+
+    /// For a mutation; a failed scan counts as not running.
+    pub(crate) fn running_now(&self) -> bool {
+        self.scan_now().unwrap_or(false)
+    }
+
+    /// For the game's own saves, which it would write over on exit: a failed scan counts as
+    /// running.
+    pub(crate) fn maybe_running_now(&self) -> bool {
+        self.scan_now().unwrap_or(true)
     }
 
     /// Re-reads the build of the Ready location; `Some` when the update notice changed.

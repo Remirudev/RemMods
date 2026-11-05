@@ -43,6 +43,7 @@ fn picked(
             .iter()
             .map(|(key, state)| ((*key).to_owned(), *state))
             .collect(),
+        skins: None,
     })
 }
 

@@ -12,6 +12,8 @@ pub const PROFILES_FILE: &str = "profiles.json";
 pub const PROFILES_VERSION: u32 = 1;
 pub const SNAPSHOT_KEEP: usize = 10;
 pub const PROFILE_NAME_MAX_CHARS: usize = 100;
+/// In `extra`, so the file format stays as it was.
+const SKIN_SET_FIELD: &str = "skinSet";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +58,24 @@ pub struct Profile {
     pub source: ProfileSource,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Profile {
+    /// The skin set switching this group on brings along.
+    pub fn skin_set(&self) -> Option<&str> {
+        self.extra.get(SKIN_SET_FIELD)?.as_str()
+    }
+
+    pub fn set_skin_set(&mut self, id: Option<&str>) {
+        match id {
+            Some(id) => {
+                self.extra.insert(SKIN_SET_FIELD.to_owned(), id.into());
+            }
+            None => {
+                self.extra.remove(SKIN_SET_FIELD);
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

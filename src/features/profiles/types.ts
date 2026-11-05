@@ -116,6 +116,8 @@ export interface ApplyHandlers {
 
 export interface GroupsSidebarProps {
   rows: readonly ModRow[]
+  // Shown below the groups while the sidebar is open.
+  footer?: ReactNode
 }
 
 export interface GroupRowProps {

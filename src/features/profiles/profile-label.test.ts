@@ -13,6 +13,7 @@ function profile(id: string, overrides: Partial<Profile> = {}): Profile {
     updated: '2026-11-01T10:00:00.000Z',
     lastApplied: null,
     source: { kind: 'user' },
+    skinSet: null,
     ...overrides,
   }
 }

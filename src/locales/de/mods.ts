@@ -254,6 +254,7 @@ export const mods: LocaleShape<typeof en> = {
     change: 'Bild ändern…',
     remove: 'Bild entfernen',
     pickTitle: 'Wähle ein Bild für diese Mod',
+    dropLabel: 'Hier ablegen, um es als Bild von {{name}} zu nehmen',
     dropHint: 'Oder lege hier ein PNG-, JPG- oder WebP-Bild ab.',
   },
   replaces: {

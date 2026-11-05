@@ -17,7 +17,7 @@ export function ApplyToast({ notificationId, outcome }: ApplyToastProps) {
   const { t } = useTranslation('profiles')
   const { mutateAsync } = useApplyProfile()
   const [undoing, setUndoing] = useState(false)
-  const { snapshotId } = outcome
+  const { snapshotId, skins } = outcome
   const message = [
     outcome.changed > 0
       ? t(($) => $.apply.done, { count: outcome.changed })
@@ -25,6 +25,7 @@ export function ApplyToast({ notificationId, outcome }: ApplyToastProps) {
     outcome.skipped.length > 0
       ? t(($) => $.apply.skipped, { count: outcome.skipped.length })
       : null,
+    skins ? t(($) => $.apply.skins[skins.kind], { name: skins.name }) : null,
   ]
     .filter(Boolean)
     .join(' ')

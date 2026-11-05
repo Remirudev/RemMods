@@ -1,7 +1,7 @@
 import { Notifications, notifications } from '@mantine/notifications'
 import { emit } from '@tauri-apps/api/event'
 import { screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { InstallDrop } from '../lib/ipc/types'
 import { useInstallQueue } from '../shared/install-queue'
 import { usePictureDropStore } from '../shared/picture-drop-store'
@@ -14,7 +14,7 @@ const EVENT = 'install-drop'
 const EMPTY = { count: 0, images: 0, sources: [], rejected: [] }
 const ENTER: InstallDrop = { phase: 'enter', ...EMPTY, count: 2 }
 const LEAVE: InstallDrop = { phase: 'leave', ...EMPTY }
-const TARGET = { modRef: 'm:alpha', key: 'alpha' }
+const LABEL = 'Drop to use as the picture of Alpha'
 
 function mountOverlay() {
   const ipc = installIpcMock()
@@ -102,45 +102,63 @@ describe('DropOverlay', () => {
   it('offers a dragged picture to the open mod', async () => {
     mountOverlay()
     await waitUntilListening()
-    usePictureDropStore.getState().setTarget(TARGET, 'Alpha')
+    usePictureDropStore.getState().setTarget({ label: LABEL, many: false, apply: vi.fn() })
     await emit(EVENT, { ...ENTER, count: 1, images: 1 })
-    expect(await screen.findByText('Drop to use as the picture of Alpha')).toBeVisible()
+    expect(await screen.findByText(LABEL)).toBeVisible()
     expect(screen.queryByText('1 item')).not.toBeInTheDocument()
   })
 
   it('keeps the install text when the drag is not only pictures', async () => {
     mountOverlay()
     await waitUntilListening()
-    usePictureDropStore.getState().setTarget(TARGET, 'Alpha')
+    usePictureDropStore.getState().setTarget({ label: LABEL, many: false, apply: vi.fn() })
     await emit(EVENT, { ...ENTER, count: 2, images: 1 })
     expect(await screen.findByText('Drop archives or folders to install')).toBeVisible()
   })
 
-  it('makes a dropped picture the open mod’s picture and installs the rest', async () => {
-    const ipc = mountOverlay()
+  it('hands one dropped picture to a mod and installs the rest', async () => {
+    mountOverlay()
     await waitUntilListening()
-    usePictureDropStore.getState().setTarget(TARGET, 'Alpha')
+    const apply = vi.fn().mockResolvedValue(undefined)
+    usePictureDropStore.getState().setTarget({ label: LABEL, many: false, apply })
     await emit(EVENT, {
       phase: 'dropped',
-      count: 2,
+      count: 3,
       images: 0,
       sources: [
         { id: 'src-1', name: 'look.png', kind: 'image' },
         { id: 'src-2', name: 'one.zip', kind: 'zip' },
+        { id: 'src-3', name: 'more.png', kind: 'image' },
       ],
       rejected: [],
     } satisfies InstallDrop)
-    await waitFor(() => expect(ipc.callsOf('mods_set_picture')).toHaveLength(1))
-    expect(ipc.callsOf('mods_set_picture')[0]?.payload).toEqual({
-      target: TARGET,
-      source: 'src-1',
-    })
+    await waitFor(() => expect(apply).toHaveBeenCalledWith('src-1'))
+    expect(apply).toHaveBeenCalledTimes(1)
     expect(useInstallQueue.getState().queue).toEqual([
       { kind: 'token', id: 'src-2', name: 'one.zip', sourceKind: 'zip' },
     ])
   })
 
-  it('asks for a mod when a picture is dropped with no details open', async () => {
+  it('hands every dropped picture to a skin set', async () => {
+    mountOverlay()
+    await waitUntilListening()
+    const apply = vi.fn().mockResolvedValue(undefined)
+    usePictureDropStore.getState().setTarget({ label: LABEL, many: true, apply })
+    await emit(EVENT, {
+      phase: 'dropped',
+      count: 2,
+      images: 0,
+      sources: [
+        { id: 'src-1', name: 'one.png', kind: 'image' },
+        { id: 'src-2', name: 'two.png', kind: 'image' },
+      ],
+      rejected: [],
+    } satisfies InstallDrop)
+    await waitFor(() => expect(apply).toHaveBeenCalledTimes(2))
+    expect(apply).toHaveBeenLastCalledWith('src-2')
+  })
+
+  it('asks where a picture goes when nothing open takes one', async () => {
     const ipc = mountOverlay()
     await waitUntilListening()
     await emit(EVENT, {
@@ -150,7 +168,7 @@ describe('DropOverlay', () => {
       sources: [{ id: 'src-1', name: 'look.png', kind: 'image' }],
       rejected: [],
     } satisfies InstallDrop)
-    expect(await screen.findByText('Which mod is this picture for?')).toBeVisible()
+    expect(await screen.findByText('Where should this picture go?')).toBeVisible()
     expect(ipc.callsOf('mods_set_picture')).toEqual([])
     expect(useInstallQueue.getState().queue).toEqual([])
   })

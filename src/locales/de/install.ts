@@ -4,13 +4,13 @@ import type { LocaleShape } from '../types'
 export const install: LocaleShape<typeof en> = {
   overlay: {
     title: 'Archive oder Ordner zum Installieren hier ablegen',
-    picture: 'Hier ablegen, um es als Bild von {{name}} zu nehmen',
     count_one: '{{count}} Element',
     count_other: '{{count}} Elemente',
   },
   picture: {
-    noModTitle: 'Zu welcher Mod gehört dieses Bild?',
-    noMod: 'Öffne zuerst die Details einer Mod und lege das Bild dann noch einmal ab.',
+    noModTitle: 'Wohin gehört dieses Bild?',
+    noMod:
+      'Öffne zuerst die Details einer Mod oder ein Skin-Set und lege das Bild dann noch einmal ab.',
   },
   pick: {
     archives: 'Mod-Archive auswählen',

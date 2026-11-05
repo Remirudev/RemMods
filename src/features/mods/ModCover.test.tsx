@@ -84,8 +84,8 @@ describe('ModCover', () => {
 
   it('takes dropped pictures while it is open', async () => {
     renderCover(null)
-    await waitFor(() => expect(usePictureDropStore.getState().target).toEqual(TARGET))
-    expect(usePictureDropStore.getState().name).toBe('Alpha')
+    await waitFor(() => expect(usePictureDropStore.getState().target).not.toBeNull())
+    expect(usePictureDropStore.getState().target?.label).toBe('Drop to use as the picture of Alpha')
     cleanup()
     expect(usePictureDropStore.getState().target).toBeNull()
   })

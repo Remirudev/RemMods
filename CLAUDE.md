@@ -30,7 +30,7 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
                        sink aborts instead of deleting))
   src/safe_fs/         the only place that mutates the file system: scope, rename, batch, journal, gate,
                        watch (names.rs: Windows name rules; app_files.rs: removing one app-folder file;
-                       busy.rs: folder-busy waits with Cancel, WG-2)
+                       busy.rs: folder-busy waits with Cancel, WG-2; skin_saves.rs: the five save files)
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
@@ -38,6 +38,8 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
                        (pictures/<edge>-<content hash>.png, names.<lang>.json, mod-names.<lang>.json), and
                        the owner's own mod pictures (own/, linked from mod-meta.json); read-only on game
                        and mods, nothing new is read while the game runs
+  src/skins/           skin sets: whole copies of the five skin save files per Steam account, switched with
+                       the game closed; never reads inside a save
   src/archive/         zip/7z/rar/folder readers (one backend file per crate), names, limits, capped sink
   src/install/         inspect (root, name, variants, issues) and start (stage, commit, job), no fs mutator
   src/app_update/      install-kind allowlist, AUR marker, version rules, update preflight + gate seal; no network
@@ -136,6 +138,10 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   version is not kept) or, on Windows, writes the installer to `%TEMP%` and NSIS installs per user.
   The update confirmation is the only confirmation. deb, rpm and AUR installs never self-update; the
   updater never runs `dpkg`, `rpm` or `pkexec`.
+  Third exception, skin sets (approved 2026-11-05, PLAN §15): with the game closed,
+  `WriteGuard::replace_skin_saves` replaces exactly `customize_save_data_{0..4}_1.sav` in one
+  `Saved/SaveGames/<id>` folder, whole files only. No other save is written, `global1.sav` above
+  all, and RemMods never looks inside a save: no decryption, no key.
 - The Trash is reached only through `platform::trash_location` + `safe_fs` `WriteGuard::trash`; on
   Windows that means the Recycle Bin via `platform::recycle`, only with `TopdirPolicy::Detect`
   (`TrashEnv::from_env()` in the shell). Tests pass a `TrashEnv` inside their TempDir and never use

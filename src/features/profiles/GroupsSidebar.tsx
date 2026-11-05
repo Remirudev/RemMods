@@ -23,7 +23,7 @@ function sameKeys(a: readonly string[], b: readonly string[]): boolean {
 }
 
 // Groups beside the mod list: one switch per group, the name narrows the list to its mods.
-export function GroupsSidebar({ rows }: GroupsSidebarProps) {
+export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
   const { t, i18n } = useTranslation('profiles')
   const profiles = useProfiles()
   const view = profiles.data ?? undefined
@@ -161,6 +161,7 @@ export function GroupsSidebar({ rows }: GroupsSidebarProps) {
           </Stack>
         )}
       </ScrollArea>
+      {footer}
     </nav>
   )
 }

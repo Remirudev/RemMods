@@ -10,6 +10,7 @@ import {
   TEST_NOTICES,
   TEST_PLATFORM_INFO,
   TEST_SETTINGS,
+  TEST_SKINS_VIEW,
   TEST_SNAPSHOT,
   TEST_UPDATE_CHANNEL,
 } from './fixtures'
@@ -65,6 +66,10 @@ export function installIpcMock(
           return makeGraphicsState()
         case 'about_notices':
           return TEST_NOTICES
+        case 'skins_view':
+          return TEST_SKINS_VIEW
+        case 'skins_copies':
+          return []
         case 'assets_status':
         case 'assets_refresh':
           return TEST_ASSETS_STATUS

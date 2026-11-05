@@ -95,6 +95,9 @@ export function createState(scenario: Scenario): MockState {
     trashed: [],
     deleted: [],
     ownPictures: {},
+    skinSets: [],
+    skinCopies: [],
+    activeSkinSet: null,
   }
 }
 

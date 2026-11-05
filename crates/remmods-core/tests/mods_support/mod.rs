@@ -256,6 +256,7 @@ pub fn exercise_read_only(home: &Path, app_root: &Path) {
     let hints = linux_hints(home);
     let _ = detect(&hints, 0);
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: true,
             fixed_location: None,

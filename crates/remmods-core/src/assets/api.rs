@@ -12,6 +12,7 @@ use super::own_picture::read_own_picture;
 use super::refresh::{OpenContainers, PictureJobs, Wanted, wanted_assets};
 use crate::mods::manage_target::{Managed, resolve_managed};
 use crate::mods::{ModTarget, ModsError, ScanContent};
+use crate::skins::all_screenshots;
 use crate::{Core, CoreError};
 
 impl Core {
@@ -50,9 +51,13 @@ impl Core {
         if loaded.read_only {
             return;
         }
+        let Some(screenshots) = all_screenshots(&self.paths.data_dir) else {
+            return;
+        };
         let entries = loaded.meta.mods.values();
         let used: HashSet<&str> = entries
             .filter_map(|entry| entry.picture.as_deref())
+            .chain(screenshots.iter().map(String::as_str))
             .collect();
         self.assets.remove_other_own(&used);
     }

@@ -1,7 +1,7 @@
 use std::io;
 use std::os::fd::{BorrowedFd, RawFd};
 use std::os::unix::process::CommandExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rustix::io::{Errno, FdFlags};
@@ -21,6 +21,18 @@ use super::{
     OsErrorClass, OsKind, ProcessRecord, RegistryHive, RegistrySteamValues, RegistryView,
     RetryPolicy, SteamHints, read_proc_tree,
 };
+
+/// Below the Proton prefix; the game's name in it does not change with the language.
+const PROTON_SAVE_PATH: [&str; 8] = [
+    "drive_c",
+    "users",
+    "steamuser",
+    "AppData",
+    "Local",
+    "TEKKEN 8",
+    "Saved",
+    "SaveGames",
+];
 
 pub(super) const OS_KIND: OsKind = OsKind::Linux;
 pub(super) const APP_ORIGIN: &str = "tauri://localhost";
@@ -48,6 +60,19 @@ pub(super) fn retry_policy(_class: OsErrorClass) -> RetryPolicy {
 
 pub(super) fn folder_retry_policy(_class: OsErrorClass) -> RetryPolicy {
     RetryPolicy::ONCE
+}
+
+pub(super) fn save_games_root(game_root: &Path, app_id: u32) -> Option<PathBuf> {
+    let steamapps = game_root.parent()?.parent()?;
+    let prefix = steamapps
+        .join("compatdata")
+        .join(app_id.to_string())
+        .join("pfx");
+    Some(
+        PROTON_SAVE_PATH
+            .iter()
+            .fold(prefix, |path, part| path.join(part)),
+    )
 }
 
 /// rename(2) replaces a target that others hold open, so a failed replace is not transient.

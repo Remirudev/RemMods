@@ -14,6 +14,10 @@ use super::{
 pub(super) const OS_KIND: OsKind = OsKind::Other;
 pub(super) const APP_ORIGIN: &str = "tauri://localhost";
 
+pub(super) fn save_games_root(_game_root: &Path, _app_id: u32) -> Option<std::path::PathBuf> {
+    None
+}
+
 pub(super) fn classify_raw(_error: &io::Error) -> Option<OsErrorClass> {
     None
 }

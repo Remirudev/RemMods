@@ -1,4 +1,5 @@
 use std::io;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::ptr;
 use std::time::Duration;
@@ -77,6 +78,11 @@ pub(super) fn folder_retry_policy(class: OsErrorClass) -> RetryPolicy {
         OsErrorClass::InUse | OsErrorClass::AccessDenied => FOLDER_RETRY,
         _ => RetryPolicy::ONCE,
     }
+}
+
+pub(super) fn save_games_root(_game_root: &Path, _app_id: u32) -> Option<PathBuf> {
+    let local = dirs::data_local_dir()?;
+    Some(local.join("TEKKEN 8").join("Saved").join("SaveGames"))
 }
 
 /// MoveFileExW(REPLACE_EXISTING) reports ACCESS_DENIED, not a sharing violation, when the target

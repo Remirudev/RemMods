@@ -6,6 +6,7 @@ use crate::mods::ModsError;
 use crate::profiles::ProfileError;
 use crate::safe_fs::FsError;
 use crate::settings::SettingsError;
+use crate::skins::SkinsError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {
@@ -27,4 +28,6 @@ pub enum CoreError {
     AppUpdate(#[from] AppUpdateError),
     #[error(transparent)]
     Graphics(#[from] GraphicsError),
+    #[error(transparent)]
+    Skins(#[from] SkinsError),
 }

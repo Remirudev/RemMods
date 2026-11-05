@@ -1,4 +1,4 @@
-import type { ModTarget, SourceKind } from '../lib/ipc/types'
+import type { SourceKind } from '../lib/ipc/types'
 
 export type UiScaleAction = 'increase' | 'decrease' | 'reset'
 
@@ -8,11 +8,17 @@ export type QueuedSource =
   | { kind: 'token'; id: string; name: string; sourceKind: SourceKind }
   | { kind: 'archive'; row: string; name: string }
 
+export interface PictureDropTarget {
+  // What the overlay says while pictures are dragged over the window.
+  label: string
+  // A set takes every picture of a drop, a mod only the first.
+  many: boolean
+  apply: (sourceId: string) => Promise<void>
+}
+
 export interface PictureDropState {
-  // The mod whose details are open.
-  target: ModTarget | null
-  name: string | null
-  setTarget: (target: ModTarget, name: string) => void
+  target: PictureDropTarget | null
+  setTarget: (target: PictureDropTarget) => void
   clearTarget: () => void
 }
 

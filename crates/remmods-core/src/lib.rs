@@ -17,11 +17,13 @@ pub mod platform;
 pub mod profiles;
 pub mod safe_fs;
 pub mod settings;
+pub mod skins;
 
 pub use error::CoreError;
 pub use paths::AppPaths;
 
 use std::collections::VecDeque;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
@@ -49,6 +51,10 @@ pub struct Core {
     pub assets: assets::AssetStore,
     pub trash_env: TrashEnv,
     require_marker: Option<String>,
+    /// The folder of the game's `SaveGames/<id>` folders when it is given, not found.
+    save_root: Option<PathBuf>,
+    /// Test hook: one entry per following skin file replacement, after how many files it fails.
+    skin_fault: Mutex<VecDeque<Option<usize>>>,
     /// Test hook: one entry per following manage mutation (rename, set-aside, profile apply,
     /// trash; a bulk row takes one each), in order.
     fault: Mutex<VecDeque<Option<FaultPlan>>>,
@@ -64,6 +70,9 @@ pub struct CoreOptions {
     pub require_marker: Option<String>,
     /// Where trashed mods go; the default refuses every trash.
     pub trash: TrashEnv,
+    /// The folder holding `SaveGames/<id>`: tests pass their own, so no test sees real saves.
+    /// `None` looks for it from the game folder, except under `--smoke`.
+    pub save_root: Option<PathBuf>,
 }
 
 impl Default for CoreOptions {
@@ -81,6 +90,7 @@ impl Default for CoreOptions {
                 uid: None,
                 topdirs: TopdirPolicy::Deny,
             },
+            save_root: None,
         }
     }
 }
@@ -108,10 +118,29 @@ impl Core {
             assets: assets::AssetStore::new(&paths),
             trash_env: options.trash,
             require_marker: options.require_marker,
+            save_root: options.save_root,
+            skin_fault: Mutex::new(VecDeque::new()),
             fault: Mutex::new(VecDeque::new()),
             fail_final_refresh: AtomicBool::new(false),
             paths,
         })
+    }
+
+    /// Test hook: each entry stops one following replacement of the skin files after that many.
+    #[doc(hidden)]
+    pub fn inject_skin_faults(&self, faults: Vec<Option<usize>>) {
+        self.skin_fault
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extend(faults);
+    }
+
+    pub(crate) fn take_skin_fault(&self) -> Option<usize> {
+        self.skin_fault
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .pop_front()
+            .flatten()
     }
 
     /// Test hook: the next manage batch (rename, set-aside, profile apply, trash) fails as `plan`

@@ -212,6 +212,12 @@ impl WriteGuard<'_> {
         &mut self.scope
     }
 
+    /// Any file in RemMods' own folders: only inside the app dirs of the scope.
+    pub fn write_app_file(&self, path: &Path, bytes: &[u8]) -> Result<(), FsError> {
+        self.scope.check_app(path)?;
+        write_atomic(path, bytes)
+    }
+
     /// App-data JSON (mod-meta.json): only inside the app dirs of the scope.
     pub fn write_json(&self, path: &Path, bytes: &[u8]) -> Result<(), FsError> {
         self.scope.check_app(path)?;

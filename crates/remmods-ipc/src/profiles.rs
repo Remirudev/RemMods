@@ -2,6 +2,7 @@ use remmods_core::profiles as core;
 use serde::{Deserialize, Serialize};
 
 use crate::mods::ModsSnapshot;
+use crate::skins::LinkedSkins;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +54,8 @@ pub struct Profile {
     pub updated: String,
     pub last_applied: Option<String>,
     pub source: ProfileSource,
+    /// The skin set switching this group on brings along.
+    pub skin_set: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -115,6 +118,7 @@ pub enum ProfileSave {
         description: String,
         mode: ProfileMode,
         mods: Vec<ProfileEntryDto>,
+        skins: Option<String>,
     },
 }
 
@@ -192,6 +196,7 @@ pub struct ApplyOutcome {
     pub changed: u32,
     pub snapshot_id: Option<String>,
     pub skipped: Vec<DiffSkip>,
+    pub skins: Option<LinkedSkins>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
@@ -326,6 +331,7 @@ impl From<&core::Profile> for Profile {
             updated: profile.updated.clone(),
             last_applied: profile.last_applied.clone(),
             source: ProfileSource::from(&profile.source),
+            skin_set: profile.skin_set().map(str::to_owned),
         }
     }
 }
@@ -402,6 +408,7 @@ impl From<&ProfileSave> for core::ProfileSave {
                 description,
                 mode,
                 mods,
+                skins,
             } => Self::Picked {
                 id: id.clone(),
                 name: name.clone(),
@@ -411,6 +418,7 @@ impl From<&ProfileSave> for core::ProfileSave {
                     .iter()
                     .map(|entry| (entry.key.clone(), entry.state.into()))
                     .collect(),
+                skins: skins.clone(),
             },
         }
     }
@@ -492,6 +500,7 @@ impl From<&core::ApplyOutcome> for ApplyOutcome {
             changed: outcome.changed,
             snapshot_id: outcome.snapshot_id.clone(),
             skipped: outcome.skipped.iter().map(DiffSkip::from).collect(),
+            skins: outcome.skins.as_ref().map(LinkedSkins::from),
         }
     }
 }

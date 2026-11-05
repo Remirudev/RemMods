@@ -34,6 +34,7 @@ export const errors: LocaleShape<typeof en> = {
     noSpace: 'Nicht genug freier Speicher',
     sourceRejected: 'Das lässt sich nicht installieren',
     pictureRefused: 'Dieses Bild lässt sich nicht verwenden',
+    skins: 'Skin-Sets',
     updateNotConfigured: 'Kein Update-Kanal',
     updateNotAllowed: 'Update über die Paketverwaltung',
     updateBlocked: 'Update gerade nicht möglich',
@@ -133,6 +134,19 @@ export const errors: LocaleShape<typeof en> = {
     ambiguous:
       'Mehrere installierte Mods passen zum Namen. Kläre das zuerst im Reiter „Reparieren“.',
     targetChanged: 'Die Mod-Ordner haben sich während der Vorbereitung geändert.',
+  },
+  skins: {
+    skinsUnavailable: 'Die Skin-Speicherstände des Spiels wurden nicht gefunden.',
+    skinSetNameTaken: 'Ein Set mit diesem Namen gibt es schon.',
+    skinSetInUse: 'Dieses Set ist im Spiel. Wechsle zuerst zu einem anderen.',
+    skinSetBroken:
+      'Dateien dieses Sets fehlen, darum lässt es sich nicht verwenden. Deine Skins im Spiel sind unverändert.',
+    skinSwitchInterrupted: 'Beende zuerst den unterbrochenen Wechsel.',
+    skinSetsReadOnly:
+      'Diese Liste stammt von einem neueren RemMods und lässt sich hier nicht ändern.',
+    switchFailed:
+      'Der Wechsel wurde nicht beendet, deine Skins können gemischt sein. Versuche es mit „Wechsel beenden“ noch einmal.',
+    switchFailedRestored: 'Der Wechsel hat nicht geklappt. Deine Skins sind wieder wie vorher.',
   },
   pictureRefused: {
     notAnImage: 'Nur PNG-, JPG- und WebP-Bilder funktionieren.',

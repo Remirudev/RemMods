@@ -46,6 +46,7 @@ describe('GroupDialog', () => {
     expect(ipc.callsOf('profiles_save')[0]?.payload).toEqual({
       save: {
         kind: 'picked',
+        skins: null,
         id: null,
         name: 'FineMods',
         description: '',
@@ -77,6 +78,7 @@ describe('GroupDialog', () => {
     expect(ipc.callsOf('profiles_save')[0]?.payload).toEqual({
       save: {
         kind: 'picked',
+        skins: null,
         id: 'p1',
         name: 'BlenderSphere',
         description: 'kept',
