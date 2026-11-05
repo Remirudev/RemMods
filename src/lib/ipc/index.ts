@@ -55,6 +55,11 @@ export const ipc = {
   assetsRefresh: (language: string) =>
     unwrapResult('assets_refresh', () => commands.assetsRefresh(language)),
   assetsPicture: (id: string) => unwrapResult('assets_picture', () => commands.assetsPicture(id)),
+  pickPicture: (title: string) => unwrapResult('pick_picture', () => commands.pickPicture(title)),
+  modsSetPicture: (target: ModTarget, source: string) =>
+    unwrapResult('mods_set_picture', () => commands.modsSetPicture(target, source)),
+  modsClearPicture: (target: ModTarget) =>
+    unwrapResult('mods_clear_picture', () => commands.modsClearPicture(target)),
   modsReveal: (modRef: string) => unwrapResult('mods_reveal', () => commands.modsReveal(modRef)),
   modsToggle: (request: ToggleRequest) =>
     unwrapResult('mods_toggle', () => commands.modsToggle(request)),

@@ -1,9 +1,12 @@
 import type {
+  CharacterHint,
   DeleteRequest,
   FolderBusy,
   MetadataRequest,
   ModContents,
   ModDetails,
+  ModItem,
+  ModItems,
   ModRow,
   ModTarget,
   RenameOutcome,
@@ -145,6 +148,62 @@ export function details(state: MockState, modRef: string): ModDetails {
 export function contents(state: MockState, modRef: string): ModContents {
   if (!findRow(state, modRef)) fail({ kind: 'stale' })
   return { modRef, base: 'complete', entries: [], total: 0, truncated: false }
+}
+
+const KUNIMITSU: CharacterHint = { code: 'ker', name: 'Kunimitsu', common: false }
+const REINA: CharacterHint = { code: 'zbr', name: 'Reina', common: false }
+
+function item(character: CharacterHint, overrides: Partial<ModItem>): ModItem {
+  return {
+    key: `${character.code}_bdu_blouse`,
+    character,
+    slot: { code: 'bdu', slot: 'upper' },
+    name: 'Frilled blouse',
+    nameSource: 'itemList',
+    gamePicture: `game-${character.code}`,
+    modPicture: `mod-${character.code}`,
+    live: true,
+    origin: 'replaces',
+    ...overrides,
+  }
+}
+
+// Every mod: an outfit for two characters, Kunimitsu with one new item and one hidden piece.
+export function items(state: MockState, modRef: string): ModItems {
+  const row = findRow(state, modRef)
+  if (!row) fail({ kind: 'stale' })
+  return {
+    modRef,
+    ownPicture: state.ownPictures[row.key] ?? null,
+    items: [
+      item(KUNIMITSU, {}),
+      item(REINA, { name: 'Rüschenbluse (Reina)' }),
+      item(KUNIMITSU, {
+        key: 'ker_bdf_yor',
+        slot: { code: 'bdf', slot: 'fullBody' },
+        name: 'Yor Style',
+        nameSource: 'modText',
+        gamePicture: null,
+        origin: 'adds',
+      }),
+      item(KUNIMITSU, {
+        key: 'ker_sho_hidden',
+        slot: { code: 'sho', slot: 'shoes' },
+        name: 'Barefoot',
+        modPicture: null,
+      }),
+    ],
+  }
+}
+
+export function setPicture(state: MockState, target: ModTarget): null {
+  state.ownPictures[rowFor(state, target).key] = 'own-picture'
+  return null
+}
+
+export function clearPicture(state: MockState, target: ModTarget): null {
+  delete state.ownPictures[rowFor(state, target).key]
+  return null
 }
 
 export function trash(state: MockState, request: TrashRequest): TrashOutcome {

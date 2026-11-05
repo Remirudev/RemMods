@@ -1,7 +1,15 @@
 use remmods_core::assets as core;
 use serde::{Deserialize, Serialize};
 
-use crate::content::{CharacterHint, SlotHint};
+use crate::content::{AssetOrigin, CharacterHint, SlotHint};
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum PictureProblem {
+    NotAnImage,
+    TooLarge,
+    Unreadable,
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -25,12 +33,15 @@ pub struct ModItem {
     pub game_picture: Option<String>,
     pub mod_picture: Option<String>,
     pub live: bool,
+    pub origin: AssetOrigin,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ModItems {
     pub mod_ref: String,
+    /// The picture the owner gave this mod, an id for `assets_picture`.
+    pub own_picture: Option<String>,
     pub items: Vec<ModItem>,
 }
 
@@ -42,6 +53,16 @@ pub struct AssetsStatus {
     pub bytes: f64,
     pub names: u32,
     pub failed: u32,
+}
+
+impl From<core::PictureProblem> for PictureProblem {
+    fn from(problem: core::PictureProblem) -> Self {
+        match problem {
+            core::PictureProblem::NotAnImage => Self::NotAnImage,
+            core::PictureProblem::TooLarge => Self::TooLarge,
+            core::PictureProblem::Unreadable => Self::Unreadable,
+        }
+    }
 }
 
 impl From<core::ItemNameSource> for ItemNameSource {
@@ -66,6 +87,7 @@ impl From<&core::ModItem> for ModItem {
             game_picture: item.game_picture.clone(),
             mod_picture: item.mod_picture.clone(),
             live: item.live,
+            origin: item.origin.into(),
         }
     }
 }
@@ -74,6 +96,7 @@ impl From<&core::ModItems> for ModItems {
     fn from(items: &core::ModItems) -> Self {
         Self {
             mod_ref: items.mod_ref.as_str().to_owned(),
+            own_picture: items.own_picture.clone(),
             items: items.items.iter().map(ModItem::from).collect(),
         }
     }

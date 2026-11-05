@@ -1,8 +1,13 @@
 export const install = {
   overlay: {
     title: 'Drop archives or folders to install',
+    picture: 'Drop to use as the picture of {{name}}',
     count_one: '{{count}} item',
     count_other: '{{count}} items',
+  },
+  picture: {
+    noModTitle: 'Which mod is this picture for?',
+    noMod: 'Open a mod’s details first, then drop the picture again.',
   },
   pick: {
     archives: 'Choose mod archives',
@@ -52,6 +57,7 @@ export const install = {
     sevenZip: '7z',
     rar: 'RAR',
     folder: 'Folder',
+    image: 'Picture',
   },
   summary: {
     files_one: '{{count}} file',

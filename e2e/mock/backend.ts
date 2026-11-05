@@ -67,6 +67,10 @@ function pluginAnswer(cmd: string): unknown {
   return null
 }
 
+// One transparent pixel: enough for the page to show an <img>.
+const TINY_PICTURE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+
 function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unknown {
   switch (cmd) {
     case 'platform_info':
@@ -90,7 +94,9 @@ function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unkn
     case 'assets_refresh':
       return { pictures: 12, bytes: 480_000, names: 120, failed: 0 }
     case 'assets_picture':
-      return null
+      return TINY_PICTURE
+    case 'pick_picture':
+      return { id: 'src-picture', name: 'look.png', kind: 'image' }
     case 'about_notices':
       return TEST_NOTICES
     case 'set_ui_scale':
@@ -139,7 +145,11 @@ function modsCommand(
     case 'mods_contents':
       return mods.contents(state, arg<string>(args, 'modRef'))
     case 'mods_items':
-      return { modRef: arg<string>(args, 'modRef'), items: [] }
+      return mods.items(state, arg<string>(args, 'modRef'))
+    case 'mods_set_picture':
+      return mods.setPicture(state, arg<ModTarget>(args, 'target'))
+    case 'mods_clear_picture':
+      return mods.clearPicture(state, arg<ModTarget>(args, 'target'))
     case 'mods_reveal':
       return null
     case 'mods_watch_status':

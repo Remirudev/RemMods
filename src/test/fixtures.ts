@@ -15,6 +15,7 @@ import type {
   ModContents,
   ModDetails,
   ModInfo,
+  ModItem,
   ModRow,
   ModsSnapshot,
   Notices,
@@ -76,6 +77,23 @@ export function makeGraphicsState(overrides: Partial<GraphicsState> = {}): Graph
 }
 
 export const TEST_ASSETS_STATUS: AssetsStatus = { pictures: 0, bytes: 0, names: 0, failed: 0 }
+
+// `<character>_<slot>_<name>`: the codes decide the hints, Kunimitsu and upper body by default.
+export function makeModItem(key: string, overrides: Partial<ModItem> = {}): ModItem {
+  const [character = '', slot = ''] = key.split('_')
+  return {
+    key,
+    character: { code: character, name: character === 'ker' ? 'Kunimitsu' : null, common: false },
+    slot: { code: slot, slot: slot === 'bdu' ? 'upper' : null },
+    name: null,
+    nameSource: 'internal',
+    gamePicture: `game-${key}`,
+    modPicture: `mod-${key}`,
+    live: true,
+    origin: 'replaces',
+    ...overrides,
+  }
+}
 
 export const TEST_NOTICES: Notices = {
   rust: 'THIRD-PARTY NOTICES\n\nserde 1.0.0',

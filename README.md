@@ -26,6 +26,8 @@ ship the same assets. It only reads mod files.
 
 Item pictures and names come from your own game and mods: RemMods reads them in the background while
 the game is closed and keeps them in its data folder (`assets`). Nothing of the game ships with it.
+A mod's details show what it replaces, character by character, with the game's picture next to the
+mod's, and a mod can have a picture of your own: choose one, or drop it on the open details.
 
 **Phase 3 (in progress)**: manage mods. Rename a mod (the folder, its files and the profiles that name
 it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it

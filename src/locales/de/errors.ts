@@ -33,6 +33,7 @@ export const errors: LocaleShape<typeof en> = {
     installCancelled: 'Installation abgebrochen',
     noSpace: 'Nicht genug freier Speicher',
     sourceRejected: 'Das lässt sich nicht installieren',
+    pictureRefused: 'Dieses Bild lässt sich nicht verwenden',
     updateNotConfigured: 'Kein Update-Kanal',
     updateNotAllowed: 'Update über die Paketverwaltung',
     updateBlocked: 'Update gerade nicht möglich',
@@ -132,6 +133,11 @@ export const errors: LocaleShape<typeof en> = {
     ambiguous:
       'Mehrere installierte Mods passen zum Namen. Kläre das zuerst im Reiter „Reparieren“.',
     targetChanged: 'Die Mod-Ordner haben sich während der Vorbereitung geändert.',
+  },
+  pictureRefused: {
+    notAnImage: 'Nur PNG-, JPG- und WebP-Bilder funktionieren.',
+    tooLarge: 'Das Bild ist zu groß. Bis zu 16 MB funktionieren.',
+    unreadable: 'RemMods kann diese Datei nicht lesen. Kopiere sie zuerst in einen lokalen Ordner.',
   },
   sourceRejected: {
     unsupportedType: 'Nur zip-, 7z- und rar-Archive sowie Ordner lassen sich installieren.',

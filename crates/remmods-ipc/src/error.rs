@@ -13,6 +13,7 @@ use remmods_core::safe_fs::{BatchError, FsError};
 use remmods_core::settings::SettingsError;
 use serde::{Deserialize, Serialize};
 
+use crate::assets::PictureProblem;
 use crate::game::{FolderProblem, RevealProblem};
 use crate::install::{ArchiveProblem, InstallBlock, SourceReject};
 use crate::manage::{ManageAction, ManageBlock, TrashUnavailableReason};
@@ -97,6 +98,9 @@ pub enum AppError {
     },
     SourceRejected {
         reason: SourceReject,
+    },
+    PictureRefused {
+        reason: PictureProblem,
     },
     /// This build carries no updater config (local, dev, CI and `--smoke` builds).
     UpdateNotConfigured,
@@ -265,6 +269,9 @@ fn mods_error(error: ModsError) -> AppError {
         ModsError::ModinfoAmbiguous => AppError::ModinfoAmbiguous,
         ModsError::FieldTooLong { field } => AppError::invalid_input(field),
         ModsError::BulkTargets => AppError::invalid_input("targets"),
+        ModsError::Picture { problem } => AppError::PictureRefused {
+            reason: problem.into(),
+        },
     }
 }
 

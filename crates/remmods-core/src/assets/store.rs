@@ -12,12 +12,15 @@ use serde::de::DeserializeOwned;
 use super::mod_names::{MOD_NAMES_VERSION, ModNames};
 use super::model::AssetsStatus;
 use super::names::{ItemNames, NAMES_VERSION};
+use super::own_picture::{OWN_ID_PREFIX, OwnFormat, own_format};
 use crate::paths::AppPaths;
 use crate::safe_fs::{self, AppLock, FsError};
 
 const ASSETS_DIR: &str = "assets";
 const PICTURES_DIR: &str = "pictures";
+const OWN_DIR: &str = "own";
 const PICTURE_EXTENSION: &str = "png";
+const PICTURE_MIME: &str = "image/png";
 const LOCK_WAIT: Duration = Duration::from_secs(2);
 const ID_HEX_LEN: usize = 32;
 
@@ -25,6 +28,7 @@ const ID_HEX_LEN: usize = 32;
 pub struct AssetStore {
     root: PathBuf,
     pictures: PathBuf,
+    own: PathBuf,
     lock_file: PathBuf,
     /// Ids on disk; `None` until the folder was listed.
     known: Mutex<Option<HashSet<String>>>,
@@ -75,6 +79,7 @@ impl AssetStore {
         let root = paths.data_dir.join(ASSETS_DIR);
         Self {
             pictures: root.join(PICTURES_DIR),
+            own: root.join(OWN_DIR),
             root,
             lock_file: paths.lock_file.clone(),
             known: Mutex::new(None),
@@ -135,13 +140,43 @@ impl AssetStore {
         changed
     }
 
-    /// PNG bytes; `None` for an unknown id or a file that went away.
-    pub(crate) fn read_picture(&self, id: &str) -> Option<Vec<u8>> {
-        if !is_picture_id(id) {
-            return None;
+    /// Keeps the file as it is under a new id; the old one goes with the next refresh.
+    pub(crate) fn add_own_picture(
+        &self,
+        format: OwnFormat,
+        bytes: &[u8],
+    ) -> Result<String, FsError> {
+        let unique = uuid::Uuid::new_v4().simple();
+        let id = format!("{OWN_ID_PREFIX}{unique}.{}", format.extension());
+        safe_fs::write_atomic(&self.own.join(&id), bytes)?;
+        Ok(id)
+    }
+
+    /// Removes the own pictures no mod links any more.
+    pub(crate) fn remove_other_own(&self, wanted: &HashSet<&str>) {
+        let Ok(entries) = fs::read_dir(&self.own) else {
+            return;
+        };
+        let names = entries.flatten().map(|entry| entry.file_name());
+        for name in names.filter_map(|name| name.into_string().ok()) {
+            if own_format(&name).is_some() && !wanted.contains(name.as_str()) {
+                let removed = safe_fs::remove_app_file(&self.own.join(&name), &[&self.own]);
+                if let Err(error) = removed {
+                    log::info!("assets: own picture not removed: {error}");
+                }
+            }
         }
-        match fs::read(self.picture_path(id)) {
-            Ok(bytes) => Some(bytes),
+    }
+
+    /// `(mime type, bytes)`; `None` for an unknown id or a file that went away.
+    pub(crate) fn read_picture(&self, id: &str) -> Option<(&'static str, Vec<u8>)> {
+        let (path, mime) = match own_format(id) {
+            Some(format) => (self.own.join(id), format.mime()),
+            None if is_picture_id(id) => (self.picture_path(id), PICTURE_MIME),
+            None => return None,
+        };
+        match fs::read(path) {
+            Ok(bytes) => Some((mime, bytes)),
             Err(error) if error.kind() == ErrorKind::NotFound => None,
             Err(error) => {
                 log::info!("assets: picture not read: {error}");

@@ -20,6 +20,7 @@ import type {
   LeftoverEntry,
   ModInfo,
   ModIssue,
+  ModItem,
   ModKind,
   ModRow,
   ModState,
@@ -148,6 +149,7 @@ export interface ModsUiState {
   filter: ModFilter
   tab: ModsTab
   detailsRef: string | null
+  detailsCharacter: string | null
   activeIndex: number
   selection: string[]
   anchor: string | null
@@ -162,6 +164,7 @@ export interface ModsUiState {
   setTab: (tab: ModsTab) => void
   openDetails: (modRef: string) => void
   closeDetails: () => void
+  setDetailsCharacter: (character: string) => void
   setActiveIndex: (index: number) => void
   setSelection: (selection: string[], anchor: string | null) => void
   clearSelection: () => void
@@ -340,6 +343,27 @@ export interface ModsErrorAlertProps {
 }
 
 export interface ContentSectionProps {
+  row: ModRow
+}
+
+export interface ItemGroups {
+  main: ModItem[]
+  other: ModItem[]
+}
+
+export interface ReplacesSectionProps {
+  modRef: string
+}
+
+export interface ReplacesRowProps {
+  item: ModItem
+}
+
+export interface ReplacesOtherProps {
+  items: readonly ModItem[]
+}
+
+export interface ModCoverProps {
   row: ModRow
 }
 

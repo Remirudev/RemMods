@@ -55,6 +55,8 @@ export function installIpcMock(
           return details
         case 'mods_contents':
           return contents
+        case 'mods_items':
+          return { modRef: 'm:none', ownPicture: null, items: [] }
         case 'mods_watch_status':
           return { state: 'active' }
         case 'update_channel':

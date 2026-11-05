@@ -56,6 +56,7 @@ const ERRORS: AppError[] = [
   { kind: 'installCancelled' },
   { kind: 'noSpace', needed: 3 * 1024 * 1024, available: 1024 },
   { kind: 'sourceRejected', reason: 'missing' },
+  { kind: 'pictureRefused', reason: 'notAnImage' },
   { kind: 'updateNotConfigured' },
   { kind: 'updateNotAllowed', install: 'deb' },
   { kind: 'updateNotAllowed', install: 'unknown' },

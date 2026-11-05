@@ -18,7 +18,7 @@ fn read_all(cache: &ContentCache, utocs: &[UtocRef]) -> Vec<ContainerResult> {
     utocs.iter().map(|utoc| cache.get_or_read(utoc).0).collect()
 }
 
-fn origin(base: Option<&BaseIndex>, path: &str) -> AssetOrigin {
+pub(crate) fn origin(base: Option<&BaseIndex>, path: &str) -> AssetOrigin {
     let Some(base) = base else {
         return AssetOrigin::Unknown;
     };

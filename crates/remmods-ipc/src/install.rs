@@ -12,6 +12,7 @@ pub enum SourceKind {
     SevenZip,
     Rar,
     Folder,
+    Image,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, specta::Type)]

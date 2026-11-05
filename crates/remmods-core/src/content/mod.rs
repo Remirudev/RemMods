@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 pub use base_index::BaseIndex;
 pub use cache::ContentCache;
+pub(crate) use listing::origin;
 pub(crate) use model::UtocRef;
 pub use model::{
     AssetEntry, AssetOrigin, BaseIndexState, CONFLICT_SAMPLE, CONTENTS_MAX_ENTRIES,

@@ -474,3 +474,30 @@ without the backup of step 1.
    `local/backup-groups/`, if anything else differs, and diff again. The "Runs" table gets a Groups
    line.
    Result:
+
+## Replaces steps (details drawer)
+
+Only reading: the app reads the game and mods, and nothing in Paks changes. No backup needed, and the
+game stays closed except to look at its menu. Each step ends with a "Result:" line to fill in.
+
+1. Open RemMods with the game closed. In Settings, "Item pictures and names" shows pictures and names
+   after a few seconds; "Check now" changes nothing the second time.
+   Result:
+2. Pick five mods with several slots (for example two outfits with hair, one accessory mod, one mod
+   that adds new items, one hair mod). Click each one and note its Replaces lines for your main
+   character: name, slot, left picture, right picture.
+   Result:
+3. Start the game, open Customization for that character and find the same items. The name matches
+   the left and the mod's look matches the right. Any line that does not match goes here.
+   Result:
+4. Close the game. Open a mod, click another character chip: both pictures of every line switch. Open
+   another mod: the same character stays chosen.
+   Result:
+5. "N more pieces without their own picture" unfolds; the pieces listed are ones the mod hides or
+   supports, not its outfit.
+   Result:
+6. Choose a picture for a mod with "Choose a picture…", then drag another image file onto the window
+   while the details are open: the overlay names the mod and the new picture replaces the first.
+   Drag an image with no details open: a notice asks which mod it is for, nothing installs. Rename
+   that mod: its picture stays. "Remove picture" brings the mod's own look back.
+   Result:

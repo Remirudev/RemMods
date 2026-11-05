@@ -9,9 +9,12 @@ mod items;
 mod mod_names;
 mod model;
 mod names;
+mod own_picture;
 mod refresh;
 mod store;
 
 pub(crate) use game_files::GameFiles;
-pub use model::{AssetsStatus, ItemNameSource, ModItem, ModItems, NAME_LANGUAGES, PICTURE_EDGE};
+pub use model::{
+    AssetsStatus, ItemNameSource, ModItem, ModItems, NAME_LANGUAGES, PICTURE_EDGE, PictureProblem,
+};
 pub use store::AssetStore;

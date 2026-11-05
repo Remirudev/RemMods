@@ -142,3 +142,43 @@
   unicode-bidi: isolate;
   overflow-wrap: anywhere;
 }
+
+.cover {
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: 76px 16px 76px minmax(0, 1fr);
+  gap: var(--mantine-spacing-xs);
+  align-items: center;
+}
+
+.otherRow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--mantine-spacing-xs);
+  align-items: center;
+}
+
+.itemText {
+  min-width: 0;
+}
+
+.itemName {
+  overflow-wrap: anywhere;
+}
+
+.newItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  color: var(--qc-text-2);
+}

@@ -21,6 +21,7 @@ impl From<core::SourceKind> for SourceKind {
             core::SourceKind::SevenZip => Self::SevenZip,
             core::SourceKind::Rar => Self::Rar,
             core::SourceKind::Folder => Self::Folder,
+            core::SourceKind::Image => Self::Image,
         }
     }
 }

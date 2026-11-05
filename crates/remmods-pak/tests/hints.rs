@@ -32,11 +32,12 @@ fn slot_table_is_exact() {
         ("acc", Slot::Accessory),
         ("sho", Slot::Shoes),
         ("exp", Slot::Extra),
+        ("ex0", Slot::Extra),
     ];
     for (code, expected) in table {
         assert_eq!(slot(code), Some(expected), "{code}");
     }
-    for code in ["ex0", "ex3", "jaw", "far", "BDU", "", "bdux"] {
+    for code in ["ex3", "jaw", "far", "BDU", "", "bdux"] {
         assert_eq!(slot(code), None, "{code}");
     }
 }
@@ -45,7 +46,9 @@ fn slot_table_is_exact() {
 fn character_names_are_only_confirmed() {
     assert_eq!(character_name("ker"), Some("Kunimitsu"));
     assert_eq!(character_name("mnt"), Some("Alisa"));
-    for code in ["zbr", "aml", "cf0", "cmn", "KER"] {
+    assert_eq!(character_name("zbr"), Some("Reina"));
+    assert_eq!(character_name("knk"), Some("Armor King"));
+    for code in ["cf0", "cm0", "cmn", "KER", "ava", "xyz"] {
         assert_eq!(character_name(code), None, "{code}");
     }
     assert!(is_common("cmn"));
@@ -146,6 +149,17 @@ fn r5_name_tokens() {
     );
     assert_eq!(hint_for("x/alisa-v2/Mesh.uasset"), hint(Some("mnt"), None));
     assert_eq!(hint_for("x/Kunimitsuish/A.uasset"), AssetHint::default());
+}
+
+#[test]
+fn r5_leaves_names_that_are_ordinary_words_alone() {
+    for path in [
+        "Polaris/Content/Mods/Bob_Hair/Mesh.uasset",
+        "x/King/Crown.uasset",
+        "x/Jun-v2/Top.uasset",
+    ] {
+        assert_eq!(hint_for(path), AssetHint::default(), "{path}");
+    }
 }
 
 #[test]

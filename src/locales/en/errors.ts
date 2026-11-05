@@ -30,6 +30,7 @@ export const errors = {
     installCancelled: 'Install cancelled',
     noSpace: 'Not enough free space',
     sourceRejected: 'This cannot be installed',
+    pictureRefused: 'This picture cannot be used',
     updateNotConfigured: 'No update channel',
     updateNotAllowed: 'Update with your package manager',
     updateBlocked: 'Update not possible right now',
@@ -119,6 +120,11 @@ export const errors = {
     replaceMismatch: 'The replace choice does not match the installed mods.',
     ambiguous: 'Several installed mods match the name. Resolve that in Repair first.',
     targetChanged: 'The mod folders changed while the install was prepared.',
+  },
+  pictureRefused: {
+    notAnImage: 'Only PNG, JPG and WebP pictures work.',
+    tooLarge: 'The picture is too large. Up to 16 MB work.',
+    unreadable: 'RemMods cannot read this file. Copy it to a local folder first.',
   },
   sourceRejected: {
     unsupportedType: 'Only zip, 7z and rar archives and folders can be installed.',

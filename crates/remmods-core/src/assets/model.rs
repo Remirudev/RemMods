@@ -1,9 +1,18 @@
+use crate::content::AssetOrigin;
 use crate::mods::ModRef;
 
 /// Longest edge of a stored picture: sharp in the largest place the UI shows one.
 pub const PICTURE_EDGE: u32 = 192;
 /// The game's text folders that match the app's languages.
 pub const NAME_LANGUAGES: [&str; 2] = ["en", "de"];
+
+/// Why a file was not taken as a mod's own picture.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PictureProblem {
+    NotAnImage,
+    TooLarge,
+    Unreadable,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ItemNameSource {
@@ -33,11 +42,15 @@ pub struct ModItem {
     pub mod_picture: Option<String>,
     /// `false` when only switched-off containers carry it.
     pub live: bool,
+    /// Whether the game has this item or the mod adds it.
+    pub origin: AssetOrigin,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModItems {
     pub mod_ref: ModRef,
+    /// The picture the owner gave this mod, an id for `Core::assets_picture`.
+    pub own_picture: Option<String>,
     /// Sorted by (character, slot, name).
     pub items: Vec<ModItem>,
 }

@@ -310,8 +310,8 @@ fn character_hint_names_only_confirmed() {
         }
     );
     assert_eq!(
-        to_json(&CharacterHint::from_code("zbr")),
-        json!({ "code": "zbr", "name": null, "common": false })
+        to_json(&CharacterHint::from_code("xyz")),
+        json!({ "code": "xyz", "name": null, "common": false })
     );
     assert_eq!(
         CharacterHint::from_code("cmn"),

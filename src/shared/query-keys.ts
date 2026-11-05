@@ -13,6 +13,11 @@ export const queryKeys = {
   modDetailsAll: ['mods', 'details'] as const,
   modDetails: (modRef: string) => ['mods', 'details', modRef] as const,
   modContents: (modRef: string) => ['mods', 'details', 'contents', modRef] as const,
+  modItemsAll: ['mods', 'details', 'items'] as const,
+  modItems: (modRef: string, language: string) =>
+    ['mods', 'details', 'items', modRef, language] as const,
   assets: ['assets'] as const,
   assetsStatus: (language: string) => ['assets', 'status', language] as const,
+  // Outside `assets`: a picture never changes, so "assets changed" need not load it again.
+  itemPicture: (id: string) => ['item-picture', id] as const,
 }

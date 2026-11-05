@@ -60,6 +60,8 @@ pub struct WatchStatusChanged {
 pub struct InstallDrop {
     pub phase: DropPhase,
     pub count: u32,
+    /// Of `count`: image files, which go to the open mod's details instead of an install.
+    pub images: u32,
     pub sources: Vec<PickedSource>,
     pub rejected: Vec<RejectedSource>,
 }

@@ -23,7 +23,7 @@ mod toggle;
 mod update;
 
 pub use about::Notices;
-pub use assets::{AssetsStatus, ItemNameSource, ModItem, ModItems};
+pub use assets::{AssetsStatus, ItemNameSource, ModItem, ModItems, PictureProblem};
 pub use bulk::{
     BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult, BulkTrashRequest,
     PreparedRow,

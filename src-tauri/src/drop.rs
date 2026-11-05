@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use remmods_core::install::is_image_name;
 use remmods_ipc::{DropPhase, RejectedSource, SourceReject};
 use tauri::{AppHandle, DragDropEvent, Manager};
 
@@ -17,8 +18,8 @@ const MAX_DROPPED: usize = 32;
 /// blocking pool. Positions and `Over` are ignored.
 pub fn on_drag_drop(app: &AppHandle, event: &DragDropEvent) {
     match event {
-        DragDropEvent::Enter { paths, .. } => emit(app, DropPhase::Enter, paths.len()),
-        DragDropEvent::Leave => emit(app, DropPhase::Leave, 0),
+        DragDropEvent::Enter { paths, .. } => emit(app, DropPhase::Enter, paths),
+        DragDropEvent::Leave => emit(app, DropPhase::Leave, &[]),
         DragDropEvent::Drop { paths, .. } => {
             let app = app.clone();
             let paths = paths.clone();
@@ -60,18 +61,21 @@ fn on_dropped(app: &AppHandle, mut paths: Vec<PathBuf>) {
         &InstallDrop {
             phase: DropPhase::Dropped,
             count,
+            images: 0,
             sources,
             rejected,
         },
     );
 }
 
-fn emit(app: &AppHandle, phase: DropPhase, count: usize) {
+fn emit(app: &AppHandle, phase: DropPhase, paths: &[PathBuf]) {
+    let images = paths.iter().filter(|path| is_image_name(path)).count();
     events::emit(
         app,
         &InstallDrop {
             phase,
-            count: count_of(count),
+            count: count_of(paths.len()),
+            images: count_of(images),
             sources: Vec::new(),
             rejected: Vec::new(),
         },

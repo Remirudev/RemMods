@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::error::InstallError;
 use super::inspect::{InspectInput, inspect};
-use super::model::{InspectOptions, Inspection, InstallSource, SourceKind};
+use super::model::{InspectOptions, Inspection, InstallSource, SourceKind, SourceReject};
 use super::service::{InstallHooks, StoredInspection};
 use super::source::{classify_source, source_names};
 use crate::archive::{self, ArchiveError, ArchiveReader, Limits};
@@ -27,6 +27,12 @@ impl Core {
             InstallSource::Path(path) => {
                 let kind = classify_source(path, Some(&input.paks))
                     .map_err(|reason| InstallError::Source { reason })?;
+                if kind == SourceKind::Image {
+                    return Err(InstallError::Source {
+                        reason: SourceReject::UnsupportedType,
+                    }
+                    .into());
+                }
                 (path.clone(), kind == SourceKind::Folder)
             }
             InstallSource::ArchiveRow { mod_ref } => (archive_row_path(content, mod_ref)?, false),

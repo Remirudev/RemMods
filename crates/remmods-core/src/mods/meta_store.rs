@@ -64,6 +64,19 @@ impl ModMeta {
     pub fn remove(&mut self, key: &str) {
         self.mods.remove(key);
     }
+
+    pub fn picture(&self, key: &str) -> Option<&str> {
+        self.mods.get(key)?.picture.as_deref()
+    }
+
+    /// Sets or clears the mod's own picture; an entry left with no fields is removed.
+    pub fn set_picture(&mut self, key: &str, picture: Option<String>) {
+        let entry = self.mods.entry(key.to_owned()).or_default();
+        entry.picture = picture;
+        if entry.is_empty() {
+            self.mods.remove(key);
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -77,6 +90,9 @@ pub struct ModMetaEntry {
     /// e.g. the archive file name (P4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
+    /// The owner's own picture: an id in the assets folder.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
@@ -86,6 +102,7 @@ impl ModMetaEntry {
         self.disabled.is_none()
             && self.added.is_none()
             && self.source.is_none()
+            && self.picture.is_none()
             && self.extra.is_empty()
     }
 }

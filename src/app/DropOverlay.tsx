@@ -1,6 +1,7 @@
 import { Stack, Text } from '@mantine/core'
-import { IconDownload } from '@tabler/icons-react'
+import { IconDownload, IconPhoto } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
+import { usePictureDropStore } from '../shared/picture-drop-store'
 import classes from './drop-overlay.module.css'
 import { useInstallDrop } from './use-install-drop'
 
@@ -8,18 +9,28 @@ import { useInstallDrop } from './use-install-drop'
 // overlay takes no pointer events.
 export function DropOverlay() {
   const { t } = useTranslation('install')
-  const { active, count } = useInstallDrop()
+  const { active, count, images } = useInstallDrop()
+  const pictureFor = usePictureDropStore((state) => state.name)
   if (!active) return null
+
+  // Only when the whole drag is pictures and a mod is open: anything else still installs.
+  const forPicture = pictureFor !== null && count > 0 && images === count
 
   return (
     <div className={classes.overlay} data-testid="drop-overlay" role="status">
       <div className={classes.frame} />
       <Stack align="center" gap="xs">
-        <IconDownload size={40} stroke={1.5} />
+        {forPicture ? (
+          <IconPhoto size={40} stroke={1.5} />
+        ) : (
+          <IconDownload size={40} stroke={1.5} />
+        )}
         <Text fw={600} fz="lg">
-          {t(($) => $.overlay.title)}
+          {forPicture
+            ? t(($) => $.overlay.picture, { name: pictureFor })
+            : t(($) => $.overlay.title)}
         </Text>
-        {count > 0 && (
+        {count > 0 && !forPicture && (
           <Text size="sm" c="var(--qc-text-2)">
             {t(($) => $.overlay.count, { count })}
           </Text>

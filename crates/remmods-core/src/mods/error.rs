@@ -1,5 +1,6 @@
 use super::manage_target::{ManageAction, ManageBlock};
 use super::model::ToggleBlock;
+use crate::assets::PictureProblem;
 use crate::platform::TrashUnavailableReason;
 use crate::safe_fs::FsError;
 
@@ -45,6 +46,8 @@ pub enum ModsError {
     FieldTooLong { field: &'static str },
     #[error("the bulk target list is empty, too long or names a row twice")]
     BulkTargets,
+    #[error("the picture was refused: {problem:?}")]
+    Picture { problem: PictureProblem },
 }
 
 impl ModsError {
@@ -66,6 +69,7 @@ impl ModsError {
             Self::ModinfoAmbiguous => "modinfo_ambiguous",
             Self::FieldTooLong { .. } => "field_too_long",
             Self::BulkTargets => "bulk_targets",
+            Self::Picture { .. } => "picture",
         }
     }
 }

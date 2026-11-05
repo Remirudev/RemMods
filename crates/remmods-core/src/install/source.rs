@@ -10,6 +10,8 @@ use crate::safe_fs::{is_within, resolve_existing};
 /// Missing → `Missing`; link → `Link`; folder → `Folder` unless it is, contains or lies inside
 /// `paks` (`InsidePaks`); `.zip`/`.7z`/`.rar` (any ASCII case) → that kind; else
 /// `UnsupportedType`. Archive files inside Paks are fine (they are only read).
+pub const IMAGE_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "webp"];
+
 pub fn classify_source(path: &Path, paks: Option<&Path>) -> Result<SourceKind, SourceReject> {
     let metadata = platform::fs_path(path)
         .and_then(fs::symlink_metadata)
@@ -35,8 +37,20 @@ pub fn classify_source(path: &Path, paks: Option<&Path>) -> Result<SourceKind, S
         "zip" => Ok(SourceKind::Zip),
         "7z" => Ok(SourceKind::SevenZip),
         "rar" => Ok(SourceKind::Rar),
+        _ if is_image_name(path) => Ok(SourceKind::Image),
         _ => Err(SourceReject::UnsupportedType),
     }
+}
+
+/// By extension: enough to tell a drag apart, `mods_set_picture` looks at the content.
+pub fn is_image_name(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            IMAGE_EXTENSIONS
+                .iter()
+                .any(|known| extension.eq_ignore_ascii_case(known))
+        })
 }
 
 /// The folder is Paks, lies below it or contains it; judged lexically and on resolved paths

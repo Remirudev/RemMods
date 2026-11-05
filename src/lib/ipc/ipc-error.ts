@@ -30,6 +30,7 @@ const KNOWN_KINDS: Record<AppError['kind'], true> = {
   installCancelled: true,
   noSpace: true,
   sourceRejected: true,
+  pictureRefused: true,
   updateNotConfigured: true,
   updateNotAllowed: true,
   updateBlocked: true,

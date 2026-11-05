@@ -148,6 +148,8 @@ fn p19_classify_source() {
         &[
             ("Cool.ZIP", b"z"),
             ("tool.exe", b"e"),
+            ("look.PNG", b"p"),
+            ("shot.jpeg", b"j"),
             ("Paks/Mods/Inside/", b""),
             ("Folder/", b""),
         ],
@@ -159,6 +161,14 @@ fn p19_classify_source() {
     assert_eq!(
         classify_source(&root.join("tool.exe"), Some(&paks)),
         Err(SourceReject::UnsupportedType)
+    );
+    assert_eq!(
+        classify_source(&root.join("look.PNG"), Some(&paks)),
+        Ok(SourceKind::Image)
+    );
+    assert_eq!(
+        classify_source(&root.join("shot.jpeg"), Some(&paks)),
+        Ok(SourceKind::Image)
     );
     assert_eq!(
         classify_source(&root.join("missing.7z"), Some(&paks)),

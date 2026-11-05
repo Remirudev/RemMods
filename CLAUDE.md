@@ -35,8 +35,9 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
   src/assets/          item pictures + names in <data dir>/assets, filled from the user's own game and mods
-                       (pictures/<edge>-<content hash>.png, names.<lang>.json, mod-names.<lang>.json);
-                       read-only on game and mods, nothing new is read while the game runs
+                       (pictures/<edge>-<content hash>.png, names.<lang>.json, mod-names.<lang>.json), and
+                       the owner's own mod pictures (own/, linked from mod-meta.json); read-only on game
+                       and mods, nothing new is read while the game runs
   src/archive/         zip/7z/rar/folder readers (one backend file per crate), names, limits, capped sink
   src/install/         inspect (root, name, variants, issues) and start (stage, commit, job), no fs mutator
   src/app_update/      install-kind allowlist, AUR marker, version rules, update preflight + gate seal; no network

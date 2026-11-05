@@ -45,6 +45,11 @@ export const commands = {
 	assetsRefresh: (language: string) => typedError<AssetsStatus, AppError>(__TAURI_INVOKE("assets_refresh", { language })),
 	/**  One stored picture as a `data:` URL; `null` when it is gone. */
 	assetsPicture: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("assets_picture", { id })),
+	/**  Opens the system file picker for one image; `None` when cancelled. */
+	pickPicture: (title: string) => typedError<PickedSource | null, AppError>(__TAURI_INVOKE("pick_picture", { title })),
+	/**  Makes a picked or dropped image the mod's own picture. Its path stays in Rust. */
+	modsSetPicture: (target: ModTarget, source: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_set_picture", { target, source })),
+	modsClearPicture: (target: ModTarget) => typedError<null, AppError>(__TAURI_INVOKE("mods_clear_picture", { target })),
 	/**  Shows a mod, archive or unmanaged entry selected in the file manager. */
 	modsReveal: (modRef: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_reveal", { modRef })),
 	/**  Enables or disables the given rows in one all-or-none rename batch. */
@@ -153,7 +158,7 @@ export type AppError = { kind: "busy" } | { kind: "io"; op: string; class: OsErr
 /**  `size` (bytes) lets the UI offer a permanent delete instead; null when unknown. */
 { kind: "trashUnavailable"; reason: TrashUnavailableReason; size: number | null } | { kind: "deleteTokenInvalid" } | { kind: "modinfoAmbiguous" } | { kind: "profileNotFound" } | { kind: "profileNameTaken" } | { kind: "importFailed"; problem: ImportProblem } | { kind: "archiveFailed"; reason: ArchiveProblem } | { kind: "installBlocked"; reason: InstallBlock } | { kind: "installBusy" } | { kind: "installCancelled" } | 
 /**  Bytes the install needs and the bytes free in the Paks file system. */
-{ kind: "noSpace"; needed: number; available: number } | { kind: "sourceRejected"; reason: SourceReject } | 
+{ kind: "noSpace"; needed: number; available: number } | { kind: "sourceRejected"; reason: SourceReject } | { kind: "pictureRefused"; reason: PictureProblem } | 
 /**  This build carries no updater config (local, dev, CI and `--smoke` builds). */
 { kind: "updateNotConfigured" } | 
 /**  This install kind updates through its package manager, never by itself. */
@@ -572,6 +577,8 @@ export type InstallCandidate = {
 export type InstallDrop = {
 	phase: DropPhase,
 	count: number,
+	/**  Of `count`: image files, which go to the open mod's details instead of an install. */
+	images: number,
 	sources: PickedSource[],
 	rejected: RejectedSource[],
 };
@@ -715,10 +722,13 @@ export type ModItem = {
 	gamePicture: string | null,
 	modPicture: string | null,
 	live: boolean,
+	origin: AssetOrigin,
 };
 
 export type ModItems = {
 	modRef: string,
+	/**  The picture the owner gave this mod, an id for `assets_picture`. */
+	ownPicture: string | null,
 	items: ModItem[],
 };
 
@@ -824,6 +834,8 @@ export type PickedSource = {
 	name: string,
 	kind: SourceKind,
 };
+
+export type PictureProblem = "notAnImage" | "tooLarge" | "unreadable";
 
 export type PlatformFeature = "graphicsFallback";
 
@@ -1033,7 +1045,7 @@ export type SmokeReport = {
 	checks: SmokeCheck[],
 };
 
-export type SourceKind = "zip" | "sevenZip" | "rar" | "folder";
+export type SourceKind = "zip" | "sevenZip" | "rar" | "folder" | "image";
 
 export type SourceReject = "unsupportedType" | "missing" | "link" | "insidePaks" | "tooMany";
 

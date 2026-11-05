@@ -8,7 +8,8 @@ mod mods_support;
 mod support;
 
 use install_support::{fixture, zip_bytes};
-use remmods_core::install::{InspectOptions, InstallSource};
+use remmods_core::CoreError;
+use remmods_core::install::{InspectOptions, InstallError, InstallSource, SourceReject};
 
 const FILES: &[(&str, &[u8])] = &[
     ("x.pak", b"pak"),
@@ -91,4 +92,21 @@ fn f3_sevenz_and_rar_install() {
         fixture.start(&inspection).expect("rar install");
         assert_eq!(fixture.read("Mods/Other/y.pak"), b"rar");
     }
+}
+
+#[test]
+fn a_picture_is_never_installed() {
+    let fixture = fixture(&[]);
+    let picture = fixture.src.join("look.png");
+    support::write_tree(&fixture.src, &[("look.png", b"\x89PNG")]);
+    let refused = fixture
+        .fx
+        .core
+        .install_inspect(&InstallSource::Path(picture), &InspectOptions::default());
+    assert!(matches!(
+        refused,
+        Err(CoreError::Install(InstallError::Source {
+            reason: SourceReject::UnsupportedType
+        }))
+    ));
 }

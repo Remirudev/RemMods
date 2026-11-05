@@ -1,5 +1,7 @@
 //! Character and slot hints from asset paths (SPEC-P2B §4.6). Only mappings with local evidence
-//! are named; every other code stays raw.
+//! are named; every other code stays raw. Character names come from the game's own texts
+//! (`TEXT_UI_*_CharaPanel_<code>_*` spells the name), slot `ex0` from its item names (weapons and
+//! other extras).
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Slot {
@@ -24,7 +26,7 @@ pub enum Slot {
     Extra,
 }
 
-const SLOTS: [(&str, Slot); 19] = [
+const SLOTS: [(&str, Slot); 20] = [
     ("bdu", Slot::Upper),
     ("bdl", Slot::Lower),
     ("btm", Slot::Bottom),
@@ -44,9 +46,57 @@ const SLOTS: [(&str, Slot); 19] = [
     ("acc", Slot::Accessory),
     ("sho", Slot::Shoes),
     ("exp", Slot::Extra),
+    ("ex0", Slot::Extra),
 ];
 
-const CHARACTERS: [(&str, &str); 2] = [("ker", "Kunimitsu"), ("mnt", "Alisa")];
+const CHARACTERS: [(&str, &str); 42] = [
+    ("aml", "Jun"),
+    ("ant", "Jin"),
+    ("bbn", "Raven"),
+    ("bee", "Heihachi"),
+    ("bsn", "Steve"),
+    ("cat", "Azucena"),
+    ("cbr", "Lidia"),
+    ("ccn", "Jack-8"),
+    ("cht", "Bryan"),
+    ("cml", "Yoshimitsu"),
+    ("crw", "Zafina"),
+    ("ctr", "Claudio"),
+    ("der", "Asuka"),
+    ("dog", "Eddy"),
+    ("ghp", "Leo"),
+    ("grf", "Paul"),
+    ("grl", "Kazuya"),
+    ("hms", "Lili"),
+    ("hrs", "Shaheen"),
+    ("jly", "Leroy"),
+    ("kal", "Nina"),
+    ("ker", "Kunimitsu"),
+    ("kgr", "Anna"),
+    ("klw", "Feng"),
+    ("kmd", "Dragunov"),
+    ("knk", "Armor King"),
+    ("lon", "Victor"),
+    ("lzd", "Lars"),
+    ("mnt", "Alisa"),
+    ("okm", "Clive"),
+    ("pgn", "King"),
+    ("pig", "Law"),
+    ("rat", "Xiaoyu"),
+    ("rbt", "Kuma"),
+    ("snk", "Hwoarang"),
+    ("swl", "Devil Jin"),
+    ("tgr", "Fahkumram"),
+    ("ttr", "Panda"),
+    ("usi", "Bob"),
+    ("wkz", "Miary Zo"),
+    ("wlf", "Lee"),
+    ("zbr", "Reina"),
+];
+
+/// The names also searched for in folder and file names: most others are ordinary words there
+/// (a `Bob` hair cut, `King`, `Law`).
+const NAME_TOKEN_CHARACTERS: [(&str, &str); 2] = [("ker", "Kunimitsu"), ("mnt", "Alisa")];
 
 const COMMON_CODE: &str = "cmn";
 /// Where a shared menu picture sits instead: everyone, then women's and men's items.
@@ -282,7 +332,7 @@ fn rule_name_tokens(dirs: &[&str], stem: &str, hint: &mut AssetHint) {
         .chain(std::iter::once(&stem))
         .flat_map(|segment| segment.split(['_', '-']));
     for token in tokens {
-        if let Some(&(code, _)) = CHARACTERS
+        if let Some(&(code, _)) = NAME_TOKEN_CHARACTERS
             .iter()
             .find(|(_, name)| token.eq_ignore_ascii_case(name))
         {

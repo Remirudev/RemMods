@@ -30,4 +30,4 @@ pub use model::{
 pub use names_fix::fix_name;
 pub use plan::{CandidatePlan, PlanFile, PlannedCandidate, PlannedGroup, plan_candidates};
 pub use service::{AfterStageHook, InstallHooks, InstallService};
-pub use source::classify_source;
+pub use source::{IMAGE_EXTENSIONS, classify_source, is_image_name};

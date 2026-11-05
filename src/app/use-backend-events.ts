@@ -31,6 +31,7 @@ export function useBackendEvents(): void {
       }),
       onAssetsChanged(() => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.assets })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.modItemsAll })
       }),
       onGameStatusChanged((event) => {
         queryClient.setQueryData<GameStatus>(queryKeys.gameStatus, (status) =>

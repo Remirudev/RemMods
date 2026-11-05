@@ -18,6 +18,8 @@ pub enum SourceKind {
     SevenZip,
     Rar,
     Folder,
+    /// Never installed: a picture for a mod's details.
+    Image,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

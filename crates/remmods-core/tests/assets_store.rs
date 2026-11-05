@@ -13,7 +13,10 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use mods_support::toggle::ToggleFixture;
 use mods_support::{DATA, MOUNT};
-use remmods_core::assets::{ItemNameSource, ModItem, ModItems, PICTURE_EDGE};
+use remmods_core::CoreError;
+use remmods_core::assets::{ItemNameSource, ModItem, ModItems, PICTURE_EDGE, PictureProblem};
+use remmods_core::content::AssetOrigin;
+use remmods_core::mods::{ModTarget, ModsError, RenameRequest};
 use remmods_pak::fixture::TocBuilder;
 use remmods_unpack::fixture::{bgra_package, item_list, text_table};
 
@@ -597,4 +600,209 @@ fn mount_point_of_a_mod_is_taken_into_account() {
     let found = items(&fixture, "Standard:Short", "en");
     assert_eq!(found.items.len(), 1);
     assert!(found.items[0].game_picture.is_some());
+}
+
+#[test]
+fn items_say_whether_the_game_has_them() {
+    let game = Container::game("pakchunk301-Windows")
+        .picture("rat_bdu_f_blouse", 10)
+        .prefab("rat_bdu_f_blouse", 13);
+    let tables = name_tables();
+    let both = a_mod("Both")
+        .prefab("rat_bdu_f_blouse", 20)
+        .prefab("rat_bdf_brandnew", 21);
+    let fixture = fixture(&[&game, &tables, &both]);
+    refresh(&fixture);
+
+    let found = items(&fixture, "Standard:Both", "en");
+    assert_eq!(
+        item(&found, "rat_bdu_f_blouse").origin,
+        AssetOrigin::Replaces
+    );
+    assert_eq!(item(&found, "rat_bdf_brandnew").origin, AssetOrigin::Adds);
+}
+
+const PNG_FILE: &[u8] = b"\x89PNG\r\n\x1a\nrest of a picture";
+const JPEG_FILE: &[u8] = b"\xff\xd8\xff\xe0rest of a picture";
+const WEBP_FILE: &[u8] = b"RIFF\x10\0\0\0WEBPVP8 rest";
+
+struct OwnPicture {
+    fixture: ToggleFixture,
+    target: ModTarget,
+}
+
+fn own_picture_fixture() -> OwnPicture {
+    let (game, tables, blouse) = (game_pictures(), name_tables(), blouse_mod());
+    let fixture = fixture(&[&game, &tables, &blouse]);
+    refresh(&fixture);
+    let target = fixture.target("Standard:Blouse");
+    OwnPicture { fixture, target }
+}
+
+impl OwnPicture {
+    fn source(&self, name: &str, bytes: &[u8]) -> PathBuf {
+        let path = self.fixture.root.join(name);
+        fs::write(&path, bytes).expect("source file");
+        path
+    }
+
+    fn set(&self, name: &str, bytes: &[u8]) -> Result<(), CoreError> {
+        let source = self.source(name, bytes);
+        self.fixture.core.mods_set_picture(&self.target, &source)
+    }
+
+    fn current(&self) -> Option<String> {
+        items(&self.fixture, "Standard:Blouse", "en").own_picture
+    }
+
+    fn folder(&self) -> PathBuf {
+        self.fixture.paths.data_dir.join("assets").join("own")
+    }
+}
+
+#[test]
+fn a_mod_keeps_its_own_picture() {
+    let own = own_picture_fixture();
+    assert_eq!(own.current(), None);
+
+    own.set("look.png", PNG_FILE).expect("set");
+
+    let id = own.current().expect("own picture");
+    let url = own.fixture.core.assets_picture(&id).expect("url");
+    let encoded = url.strip_prefix("data:image/png;base64,").expect("mime");
+    assert_eq!(STANDARD.decode(encoded).expect("base64"), PNG_FILE);
+}
+
+#[test]
+fn the_picture_stays_when_its_source_file_goes() {
+    let own = own_picture_fixture();
+    own.set("look.png", PNG_FILE).expect("set");
+    fs::remove_file(own.fixture.root.join("look.png")).expect("remove source");
+
+    let id = own.current().expect("own picture");
+    assert!(own.fixture.core.assets_picture(&id).is_some());
+}
+
+#[test]
+fn each_format_reaches_the_ui_with_its_own_type() {
+    let own = own_picture_fixture();
+    for (bytes, mime) in [
+        (JPEG_FILE, "data:image/jpeg;base64,"),
+        (WEBP_FILE, "data:image/webp;base64,"),
+    ] {
+        own.set("look.bin", bytes).expect("set");
+        let id = own.current().expect("own picture");
+        let url = own.fixture.core.assets_picture(&id).expect("url");
+        assert!(url.starts_with(mime), "{id}");
+    }
+}
+
+#[test]
+fn only_pictures_of_a_sane_size_are_taken() {
+    let own = own_picture_fixture();
+    let refused = |result: Result<(), CoreError>, wanted: PictureProblem| match result {
+        Err(CoreError::Mods(ModsError::Picture { problem })) => assert_eq!(problem, wanted),
+        other => panic!("{other:?}"),
+    };
+
+    refused(
+        own.set("fake.png", b"just text"),
+        PictureProblem::NotAnImage,
+    );
+    refused(own.set("empty.png", b""), PictureProblem::NotAnImage);
+    let mut large = PNG_FILE.to_vec();
+    large.resize(16 * 1024 * 1024 + 1, 0);
+    refused(own.set("large.png", &large), PictureProblem::TooLarge);
+    let gone = own.fixture.root.join("gone.png");
+    refused(
+        own.fixture.core.mods_set_picture(&own.target, &gone),
+        PictureProblem::Unreadable,
+    );
+    assert_eq!(own.current(), None);
+}
+
+#[test]
+fn a_picture_of_exactly_the_limit_is_taken() {
+    let own = own_picture_fixture();
+    let mut largest = PNG_FILE.to_vec();
+    largest.resize(16 * 1024 * 1024, 0);
+    own.set("largest.png", &largest).expect("set");
+    assert!(own.current().is_some());
+}
+
+#[test]
+fn a_new_picture_replaces_the_old_one_on_the_next_refresh() {
+    let own = own_picture_fixture();
+    own.set("first.png", PNG_FILE).expect("first");
+    let first = own.current().expect("first id");
+    own.set("second.png", JPEG_FILE).expect("second");
+    let second = own.current().expect("second id");
+    assert_ne!(first, second);
+
+    refresh(&own.fixture);
+
+    assert_eq!(own.fixture.core.assets_picture(&first), None);
+    assert!(own.fixture.core.assets_picture(&second).is_some());
+    assert_eq!(stored_files(&own.folder()), 1);
+}
+
+#[test]
+fn removing_the_picture_frees_its_file() {
+    let own = own_picture_fixture();
+    own.set("look.png", PNG_FILE).expect("set");
+    assert_eq!(stored_files(&own.folder()), 1);
+
+    own.fixture
+        .core
+        .mods_clear_picture(&own.target)
+        .expect("clear");
+    assert_eq!(own.current(), None);
+
+    refresh(&own.fixture);
+    assert_eq!(stored_files(&own.folder()), 0);
+}
+
+#[test]
+fn the_picture_follows_a_renamed_mod() {
+    let own = own_picture_fixture();
+    own.set("look.png", PNG_FILE).expect("set");
+    let id = own.current();
+
+    let request = RenameRequest {
+        target: own.target.clone(),
+        new_name: "Top".to_owned(),
+        apply_while_running: false,
+    };
+    own.fixture.core.mods_rename(&request).expect("rename");
+
+    assert_eq!(items(&own.fixture, "Standard:Top", "en").own_picture, id);
+}
+
+#[test]
+fn a_stale_target_stores_nothing() {
+    let own = own_picture_fixture();
+    let stale = ModTarget {
+        mod_ref: own.target.mod_ref.clone(),
+        key: "Standard:Other".to_owned(),
+    };
+    let source = own.source("look.png", PNG_FILE);
+
+    assert!(own.fixture.core.mods_set_picture(&stale, &source).is_err());
+    assert_eq!(stored_files(&own.folder()), 0);
+}
+
+#[test]
+fn own_picture_ids_stay_inside_their_folder() {
+    let own = own_picture_fixture();
+    own.set("look.png", PNG_FILE).expect("set");
+    for id in [
+        "own-../../names.en.json",
+        "own-0123456789abcdef0123456789abcdef.exe",
+        "own-0123456789abcdef0123456789abcdef",
+        "own-0123456789abcdef0123456789abcde.png",
+        "own-0123456789ABCDEF0123456789ABCDEF.png",
+        "own-0123456789abcdef0123456789abcdef.png.png",
+    ] {
+        assert_eq!(own.fixture.core.assets_picture(id), None, "{id}");
+    }
 }

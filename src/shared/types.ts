@@ -1,4 +1,4 @@
-import type { SourceKind } from '../lib/ipc/types'
+import type { ModTarget, SourceKind } from '../lib/ipc/types'
 
 export type UiScaleAction = 'increase' | 'decrease' | 'reset'
 
@@ -7,6 +7,14 @@ export type UiScaleKeyEvent = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' |
 export type QueuedSource =
   | { kind: 'token'; id: string; name: string; sourceKind: SourceKind }
   | { kind: 'archive'; row: string; name: string }
+
+export interface PictureDropState {
+  // The mod whose details are open.
+  target: ModTarget | null
+  name: string | null
+  setTarget: (target: ModTarget, name: string) => void
+  clearTarget: () => void
+}
 
 export interface InstallQueueState {
   queue: readonly QueuedSource[]

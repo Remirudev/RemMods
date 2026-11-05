@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
 use base64::Engine;
@@ -8,11 +8,11 @@ use super::game_files::GameFiles;
 use super::items::{NameSources, mod_items};
 use super::model::{AssetsStatus, ModItems, NAME_LANGUAGES};
 use super::names::{build_names, item_list, names_stamp};
+use super::own_picture::read_own_picture;
 use super::refresh::{OpenContainers, PictureJobs, Wanted, wanted_assets};
-use crate::mods::ModsError;
+use crate::mods::manage_target::{Managed, resolve_managed};
+use crate::mods::{ModTarget, ModsError, ScanContent};
 use crate::{Core, CoreError};
-
-const PNG_DATA_URL: &str = "data:image/png;base64,";
 
 impl Core {
     /// Brings the assets folder in line with the game and the mods (slow the first time: meant
@@ -41,7 +41,50 @@ impl Core {
         let names = self.refresh_names(&stale, stamp, game, paks)?;
         let mod_names = self.refresh_mod_names(&stale_mods, &wanted)?;
         let pictures = self.fill_pictures(&wanted.pictures)?;
+        self.remove_unused_own_pictures();
         Ok(names || mod_names || pictures)
+    }
+
+    fn remove_unused_own_pictures(&self) {
+        let loaded = self.mods.meta().load();
+        if loaded.read_only {
+            return;
+        }
+        let entries = loaded.meta.mods.values();
+        let used: HashSet<&str> = entries
+            .filter_map(|entry| entry.picture.as_deref())
+            .collect();
+        self.assets.remove_other_own(&used);
+    }
+
+    /// Makes the image at `source` the mod's own picture: it stays in RemMods' folder, so moving
+    /// the file later changes nothing, and the link follows renames.
+    pub fn mods_set_picture(&self, target: &ModTarget, source: &Path) -> Result<(), CoreError> {
+        let (format, bytes) =
+            read_own_picture(source).map_err(|problem| ModsError::Picture { problem })?;
+        let _turn = self.assets.refresh_turn();
+        self.run_managed(|guard, _, content| {
+            let key = row_key(content, target)?;
+            let id = self.assets.add_own_picture(format, &bytes)?;
+            self.mods
+                .meta()
+                .update(guard, |meta| meta.set_picture(&key, Some(id)))?;
+            Ok(())
+        })?;
+        Ok(())
+    }
+
+    /// The mod goes back to the pictures of its items.
+    pub fn mods_clear_picture(&self, target: &ModTarget) -> Result<(), CoreError> {
+        let _turn = self.assets.refresh_turn();
+        self.run_managed(|guard, _, content| {
+            let key = row_key(content, target)?;
+            self.mods
+                .meta()
+                .update(guard, |meta| meta.set_picture(&key, None))?;
+            Ok(())
+        })?;
+        Ok(())
     }
 
     /// Languages whose stored names are missing or from another game state.
@@ -151,24 +194,33 @@ impl Core {
             game: game_names.as_deref(),
             mods: &[&mod_names, &english],
         };
+        let loaded = self.mods.meta().load();
         Ok(mod_items(
             &row.mod_ref,
             &utocs,
             cache,
-            base.as_deref().map(|base| base.game_files()),
+            base.as_deref(),
             &names,
             &self.assets,
+            loaded.meta.picture(&row.key).map(str::to_owned),
         ))
     }
 
     /// A stored picture as a `data:` URL, the way images reach the UI; `None` when it is gone.
     pub fn assets_picture(&self, id: &str) -> Option<String> {
-        let png = self.assets.read_picture(id)?;
-        Some(format!("{PNG_DATA_URL}{}", STANDARD.encode(png)))
+        let (mime, bytes) = self.assets.read_picture(id)?;
+        Some(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
     }
 
     pub fn assets_status(&self, language: &str) -> AssetsStatus {
         self.assets.status(name_language(language))
+    }
+}
+
+fn row_key(content: &ScanContent, target: &ModTarget) -> Result<String, CoreError> {
+    match resolve_managed(content, target)? {
+        Managed::Row(row) => Ok(row.key.clone()),
+        _ => Err(ModsError::Stale.into()),
     }
 }
 

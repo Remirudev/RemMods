@@ -45,7 +45,8 @@ impl fmt::Display for PictureKey {
 
 /// A menu picture in one container's listing.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ListedPicture {
+pub(crate) struct ListedPicture<'a> {
+    pub path: &'a str,
     pub item: ItemRef,
     pub asset: u32,
     pub bulk: Option<u32>,
@@ -63,7 +64,7 @@ fn bulk_of<'a>(files: &'a [TocFile], asset_path: &str) -> Option<&'a TocFile> {
 
 /// `files` sorted by display path, as a listing keeps them. Without a content hash a picture has
 /// no id, so it is left out.
-pub(crate) fn listed_pictures(files: &[TocFile]) -> impl Iterator<Item = ListedPicture> {
+pub(crate) fn listed_pictures(files: &[TocFile]) -> impl Iterator<Item = ListedPicture<'_>> {
     files.iter().filter_map(|file| {
         let item = picture_item(&file.path)?;
         let bulk = bulk_of(files, &file.path);
@@ -73,6 +74,7 @@ pub(crate) fn listed_pictures(files: &[TocFile]) -> impl Iterator<Item = ListedP
             None => None,
         };
         Some(ListedPicture {
+            path: &file.path,
             item,
             asset: file.chunk_index,
             bulk: bulk.map(|bulk| bulk.chunk_index),

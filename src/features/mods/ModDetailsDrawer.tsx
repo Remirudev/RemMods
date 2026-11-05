@@ -12,9 +12,11 @@ import { DrawerSection } from './DrawerSection'
 import { displayState } from './display-state'
 import { IssueText } from './IssueText'
 import { MetadataInfo } from './MetadataInfo'
+import { ModCover } from './ModCover'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
 import { useRevealEntry } from './queries'
+import { ReplacesSection } from './ReplacesSection'
 import type { ModDetailsDrawerProps } from './types'
 
 export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
@@ -47,6 +49,8 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
     >
       {row && state && (
         <Stack gap="xl" data-testid="mod-details">
+          <ModCover row={row} />
+          <ReplacesSection modRef={row.modRef} />
           <Stack gap="xs">
             <DataList labelWidth={120}>
               <DataList.Item>

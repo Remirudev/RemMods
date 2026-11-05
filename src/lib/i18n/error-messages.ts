@@ -172,6 +172,13 @@ export function describeAppError(error: AppError): ErrorDescription {
         message: t(($) => $.sourceRejected[reason]),
       }
     }
+    case 'pictureRefused': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.pictureRefused),
+        message: t(($) => $.pictureRefused[reason]),
+      }
+    }
     case 'updateNotConfigured':
       return {
         title: t(($) => $.titles.updateNotConfigured),

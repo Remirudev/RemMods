@@ -79,6 +79,7 @@ export function createState(scenario: Scenario): MockState {
     inspections: [],
     trashed: [],
     deleted: [],
+    ownPictures: {},
   }
 }
 

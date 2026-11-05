@@ -1,13 +1,16 @@
 #![allow(clippy::expect_used)]
 
+use remmods_core::CoreError;
 use remmods_core::assets as core;
-use remmods_core::mods::ModRef;
-use remmods_ipc::{AssetsStatus, ItemNameSource, ModItems, Slot};
+use remmods_core::content::AssetOrigin;
+use remmods_core::mods::{ModRef, ModsError};
+use remmods_ipc::{AppError, AssetsStatus, ItemNameSource, ModItems, Slot};
 use serde_json::json;
 
 fn items() -> core::ModItems {
     core::ModItems {
         mod_ref: ModRef::from_token("row"),
+        own_picture: Some("own-1.png".to_owned()),
         items: vec![core::ModItem {
             key: "ker_bdu_f_blouse".to_owned(),
             character: "ker".to_owned(),
@@ -17,6 +20,7 @@ fn items() -> core::ModItems {
             game_picture: None,
             mod_picture: Some("192-abc".to_owned()),
             live: true,
+            origin: AssetOrigin::Adds,
         }],
     }
 }
@@ -32,6 +36,19 @@ fn items_carry_hints_and_picture_ids() {
     assert_eq!(value["items"][0]["nameSource"], json!("modText"));
     assert_eq!(value["items"][0]["gamePicture"], json!(null));
     assert_eq!(value["items"][0]["modPicture"], json!("192-abc"));
+    assert_eq!(value["items"][0]["origin"], json!("adds"));
+    assert_eq!(value["ownPicture"], json!("own-1.png"));
+}
+
+#[test]
+fn a_refused_picture_says_why() {
+    let error = CoreError::Mods(ModsError::Picture {
+        problem: core::PictureProblem::TooLarge,
+    });
+    assert_eq!(
+        serde_json::to_value(AppError::from(error)).expect("json"),
+        json!({ "kind": "pictureRefused", "reason": "tooLarge" })
+    );
 }
 
 #[test]

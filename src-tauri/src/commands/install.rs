@@ -130,7 +130,7 @@ pub async fn install_cancel(state: State<'_, AppState>) -> Result<bool, AppError
     Ok(state.core.install_cancel())
 }
 
-fn classify_picked(window: &WebviewWindow, picked: Vec<FilePath>) -> Vec<Classified> {
+pub(super) fn classify_picked(window: &WebviewWindow, picked: Vec<FilePath>) -> Vec<Classified> {
     let paths: Vec<PathBuf> = picked
         .into_iter()
         .filter_map(|file| {
@@ -146,7 +146,7 @@ fn classify_picked(window: &WebviewWindow, picked: Vec<FilePath>) -> Vec<Classif
     classify_all(&state.core, paths)
 }
 
-fn registry<'a>(
+pub(super) fn registry<'a>(
     state: &'a State<'_, AppState>,
 ) -> Result<std::sync::MutexGuard<'a, SourceRegistry>, AppError> {
     state

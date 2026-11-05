@@ -55,6 +55,8 @@ export interface MockState {
   inspections: Inspection[]
   trashed: string[]
   deleted: string[]
+  // Row key → own picture id.
+  ownPictures: Record<string, string>
 }
 
 export type EventEmitter = (event: string, payload: unknown) => Promise<void>

@@ -110,6 +110,7 @@ export type {
   PayloadKind,
   PickedSource,
   PickOutcome,
+  PictureProblem,
   PlatformFeature,
   PlatformFeatures,
   PlatformInfo,
