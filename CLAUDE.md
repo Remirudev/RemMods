@@ -165,7 +165,9 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
   and no `--smoke` run touches the network.
 - `oozextract` declares MIT but derives from GPL-3 code and has no licence file. It is in the app only
   because RemMods is for private use (owner's decision, PLAN §15, 2026-11-05). Before any public
-  build, move the decoder into a separate helper or replace it.
+  build, move the decoder into a separate helper or replace it. Until then `artifacts.yml` has no
+  pull-request or weekly trigger, because this repo is public and its uploaded bundles would be public
+  builds; run it by hand only when the owner asks.
 - `src-tauri/tauri.release.conf.json` (updater config, `createUpdaterArtifacts`) is used only by
   `release.yml`, which builds with `--no-sign` and signs in a separate `sign` job. Never build with it
   locally. The pubkey stays `REMMODS-UPDATER-PUBKEY-NOT-SET` until the owner sets it
@@ -239,8 +241,8 @@ scripts/paks-snapshot.sh > local/paks-<label>.tsv   # read-only listing of the g
 ```
 
 CI (`.github/workflows/ci.yml`) has the required checks `linux`, `windows`, `smoke (linux)`,
-`smoke (windows)` and `policy`. `artifacts.yml` (not required) runs on packaging-path PRs, weekly and
-from `release.yml`. Actions are pinned by full commit SHA with a `# vX.Y.Z` comment;
+`smoke (windows)` and `policy`. `artifacts.yml` (not required) runs by hand and from `release.yml`
+(no PR or weekly trigger for now, see `oozextract` above). Actions are pinned by full commit SHA with a `# vX.Y.Z` comment;
 look SHAs up with `git ls-remote`.
 
 ## Claude Code sandbox

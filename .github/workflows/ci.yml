@@ -3,8 +3,8 @@ name: ci
 # Merge gate (docs/PLAN.md §1, §9, §10): linux, windows, smoke (linux), smoke (windows) and policy.
 # fs-matrix (P2) joins the required checks once it is green on a pull request; e2e (Playwright, P3b)
 # is not a required check until the owner adds it.
-# The package tests live in artifacts.yml: they run on packaging-path pull requests, weekly and from
-# release.yml, and are not a required check (SPEC-P5 A16).
+# The package tests live in artifacts.yml: for now they run by hand and from release.yml, and are
+# not a required check (SPEC-P5 A16).
 # Actions are pinned by full commit SHA; Dependabot bumps the SHA and the version comment together.
 
 on:

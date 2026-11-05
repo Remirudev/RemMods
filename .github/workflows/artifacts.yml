@@ -3,8 +3,11 @@ name: artifacts
 # Package tests (docs/PLAN.md §9, SPEC-P5 §7.6): builds the deb, rpm, AppImage and NSIS bundles, or with
 # `prebuilt: true` (release.yml) takes the release's exact bundles, installs each one in a fresh
 # environment and runs `remmods --smoke`; the smoke report names the install kind the updater sees.
-# Not a required check (SPEC-P5 A16): runs on packaging-path pull requests, weekly, by hand and from
-# release.yml. No secrets, no environment; the bundles are unsigned and carry no updater config.
+# Not a required check (SPEC-P5 A16): runs by hand and from release.yml. No secrets, no environment;
+# the bundles are unsigned and carry no updater config.
+#
+# No pull_request or schedule trigger while `oozextract` is in the app (PLAN §15): this repo is public,
+# so the uploaded bundles would be public builds. Both come back once the decoder has moved.
 
 on:
   workflow_call:
@@ -13,25 +16,7 @@ on:
         description: Use the bundles-linux / bundles-windows artifacts of the calling run
         type: boolean
         default: false
-  schedule:
-    - cron: "41 5 * * 1"
   workflow_dispatch:
-  pull_request:
-    paths:
-      - packaging/**
-      - scripts/render-pkgbuild.py
-      - scripts/inspect-bundle.py
-      - scripts/seed-appimage-tools.sh
-      - package-lock.json
-      - src-tauri/tauri.conf.json
-      - src-tauri/tauri.linux.conf.json
-      - src-tauri/tauri.windows.conf.json
-      - src-tauri/tauri.release.conf.json
-      - src-tauri/linux/**
-      - src-tauri/icons/**
-      - THIRD-PARTY-NOTICES
-      - THIRD-PARTY-NOTICES-NPM
-      - .github/workflows/artifacts.yml
 
 permissions:
   contents: read
@@ -358,11 +343,11 @@ jobs:
           $p = Start-Process -FilePath "$env:LOCALAPPDATA\RemMods\uninstall.exe" -ArgumentList '/S' -Wait -PassThru
           if ($p.ExitCode -ne 0) { exit 1 }
 
-  # Weekly and non-blocking (docs/PLAN.md §9): the deb under a headless Weston compositor.
+  # By hand and non-blocking (docs/PLAN.md §9): the deb under a headless Weston compositor.
   wayland:
     name: wayland (weston, non-blocking)
     needs: build
-    if: ${{ always() && !cancelled() && needs.build.result != 'failure' && github.event_name == 'schedule' }}
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     continue-on-error: true
