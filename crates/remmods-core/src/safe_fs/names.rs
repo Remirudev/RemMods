@@ -3,6 +3,7 @@
 
 use std::ffi::OsStr;
 use std::fmt::Write as _;
+use std::path::Path;
 use std::str::Chars;
 
 use unicase::UniCase;
@@ -27,6 +28,8 @@ const FORBIDDEN_CHARS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'
 const PLAIN_DEVICE_NAMES: [&str; 6] = ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"];
 const PORT_DEVICE_NAMES: [&str; 2] = ["COM", "LPT"];
 const TEMP_MARKER: &[u8] = b"_tmp_";
+const VERBATIM: &str = r"\\?\";
+const VERBATIM_UNC: &str = r"\\?\UNC\";
 const TEMP_SUFFIX_LEN: usize = 32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -121,6 +124,48 @@ pub fn windows_name_issue(name: &str) -> Option<NameIssue> {
         return Some(NameIssue::TrailingDotOrSpace);
     }
     is_reserved_device_name(name).then_some(NameIssue::ReservedDeviceName)
+}
+
+/// True when the shell would get exactly this path: valid Unicode; a leading `\\?\` or
+/// `\\?\UNC\` is read as the plain form (`\\?\` must then be followed by a drive); components
+/// split on `\` and `/`; a leading `X:` drive or `\\server\share` (both names Win32 keeps) and an
+/// empty root component are allowed; every other component passes [`windows_name_issue`] (so no
+/// `.`/`..`, forbidden or control characters, trailing dot or space, device names incl.
+/// CONIN$/CONOUT$ and superscript COM/LPT); the plain form is ≤ 259 UTF-16 units.
+pub fn shell_safe_path(path: &Path) -> bool {
+    let Some(text) = path.to_str() else {
+        return false;
+    };
+    let plain = if let Some(rest) = text.strip_prefix(VERBATIM_UNC) {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = text.strip_prefix(VERBATIM) {
+        if !rest.split(['\\', '/']).next().is_some_and(is_drive) {
+            return false;
+        }
+        rest.to_owned()
+    } else {
+        text.to_owned()
+    };
+    if utf16_len(&plain) > WINDOWS_PATH_MAX_FILE {
+        return false;
+    }
+    let mut components = plain.split(['\\', '/']).peekable();
+    let is_unc = plain.starts_with(r"\\") || plain.starts_with("//");
+    if is_unc {
+        components.next();
+        components.next();
+        let server = components.next().unwrap_or_default();
+        let share = components.next().unwrap_or_default();
+        if windows_name_issue(server).is_some() || windows_name_issue(share).is_some() {
+            return false;
+        }
+    } else if components
+        .peek()
+        .is_some_and(|first| first.is_empty() || is_drive(first))
+    {
+        components.next();
+    }
+    components.all(|component| windows_name_issue(component).is_none())
 }
 
 /// A name already on disk that Windows accepts but RemMods would not create; the first hit.
@@ -267,7 +312,7 @@ pub fn is_reserved_device_name(name: &str) -> bool {
         )
 }
 
-/// The original's IsInstallTempFolder: `_`, then `_tmp_` (case-sensitive), and exactly 32 hex
+/// An unfinished-install folder name: `_`, then `_tmp_` (case-sensitive), and exactly 32 hex
 /// digits after the last `_tmp_`.
 pub fn is_install_temp_name(name: &OsStr) -> bool {
     let bytes = name.as_encoded_bytes();
@@ -287,7 +332,7 @@ pub fn is_install_temp_name(name: &OsStr) -> bool {
         })
 }
 
-/// The original's scan rule: the first 10 bytes equal `.disabled_` ignoring ASCII case.
+/// Scan rule: the first 10 bytes equal `.disabled_` ignoring ASCII case.
 pub fn has_disabled_prefix_ascii(name: &OsStr) -> bool {
     name.as_encoded_bytes()
         .get(..DISABLED_PREFIX.len())
@@ -301,6 +346,11 @@ pub fn has_disabled_prefix_folded(name: &str) -> bool {
 
 pub fn utf16_len(s: &str) -> usize {
     s.encode_utf16().count()
+}
+
+fn is_drive(component: &str) -> bool {
+    let bytes = component.as_bytes();
+    bytes.len() == 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 fn is_dot_name(name: &str) -> bool {

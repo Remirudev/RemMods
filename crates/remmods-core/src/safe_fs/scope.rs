@@ -10,7 +10,7 @@ use super::FsError;
 use crate::platform::{self, OsKind};
 
 /// Names of the mod roots under Paks, matched ASCII-case-insensitively.
-const MOD_ROOT_NAMES: [&str; 3] = ["Mods", "~mods", "LogicMods"];
+pub(crate) const MOD_ROOT_NAMES: [&str; 3] = ["Mods", "~mods", "LogicMods"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScopeViolation {
@@ -31,6 +31,8 @@ struct Root {
 pub struct Scope {
     mod_roots: Vec<Root>,
     app_dirs: Vec<Root>,
+    /// The Paks folder of `for_paks`; installs create missing mod roots below it.
+    paks: Option<PathBuf>,
 }
 
 impl Scope {
@@ -41,7 +43,7 @@ impl Scope {
         let entries = match listing {
             Ok(entries) => entries,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(Self::build(&[], app_dirs.iter().copied()));
+                return Ok(Self::build(&[], app_dirs.iter().copied(), Some(paks)));
             }
             Err(error) => return Err(FsError::io("scope", paks, error)),
         };
@@ -58,7 +60,11 @@ impl Scope {
                 mod_roots.push(paks.join(name));
             }
         }
-        Ok(Self::build(&mod_roots, app_dirs.iter().copied()))
+        Ok(Self::build(
+            &mod_roots,
+            app_dirs.iter().copied(),
+            Some(paks),
+        ))
     }
 
     /// Explicit roots (tests).
@@ -66,6 +72,7 @@ impl Scope {
         Ok(Self::build(
             mod_roots,
             app_dirs.iter().map(PathBuf::as_path),
+            None,
         ))
     }
 
@@ -79,13 +86,60 @@ impl Scope {
         ScopeChecker::new(self).check_app(path)
     }
 
-    fn build<'a>(mod_roots: &[PathBuf], app_dirs: impl Iterator<Item = &'a Path>) -> Scope {
+    /// True when `path` names one of the mod roots (lexically, or as the same real folder when
+    /// `path` itself is no link).
+    pub(crate) fn is_mod_root(&self, path: &Path) -> bool {
+        self.mod_roots
+            .iter()
+            .any(|root| same_lexical(path, &root.lexical))
+            || (!is_link(path)
+                && canonicalize(path).is_some_and(|canonical| {
+                    self.mod_roots
+                        .iter()
+                        .any(|root| root.canonical == canonical)
+                }))
+    }
+
+    /// True when `path` (existing or not) is a mod root or an app dir or lies below one, judged
+    /// on the lexical path and on the path with its existing part resolved.
+    pub(crate) fn contains(&self, path: &Path) -> bool {
+        let resolved = resolve_existing(path);
+        self.mod_roots.iter().chain(&self.app_dirs).any(|root| {
+            is_within(path, &root.lexical)
+                || resolved
+                    .as_deref()
+                    .is_some_and(|resolved| is_within(resolved, &root.canonical))
+        })
+    }
+
+    /// The Paks folder this scope was built for (`None` for `from_roots`).
+    pub fn paks(&self) -> Option<&Path> {
+        self.paks.as_deref()
+    }
+
+    /// Adds a mod root that was just created; false when it does not resolve.
+    pub(crate) fn add_mod_root(&mut self, root: &Path) -> bool {
+        match existing_root(root) {
+            Some(root) => {
+                self.mod_roots.push(root);
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn build<'a>(
+        mod_roots: &[PathBuf],
+        app_dirs: impl Iterator<Item = &'a Path>,
+        paks: Option<&Path>,
+    ) -> Scope {
         Scope {
             mod_roots: mod_roots
                 .iter()
                 .filter_map(|root| existing_root(root))
                 .collect(),
             app_dirs: app_dirs.filter_map(existing_root).collect(),
+            paks: paks.map(Path::to_path_buf),
         }
     }
 }
@@ -191,8 +245,36 @@ fn canonicalize(path: &Path) -> Option<PathBuf> {
     platform::fs_path(path).and_then(fs::canonicalize).ok()
 }
 
+/// `path` with its longest existing ancestor canonicalised and the rest appended; None when no
+/// ancestor resolves.
+pub(crate) fn resolve_existing(path: &Path) -> Option<PathBuf> {
+    let mut rest = Vec::new();
+    for ancestor in path.ancestors() {
+        if let Some(canonical) = canonicalize(ancestor) {
+            return Some(
+                rest.iter()
+                    .rev()
+                    .fold(canonical, |base, part| base.join(part)),
+            );
+        }
+        rest.push(ancestor.file_name()?.to_os_string());
+    }
+    None
+}
+
+/// `path` equals `base` or lies below it, component-wise (ASCII case folded on Windows).
+pub(crate) fn is_within(path: &Path, base: &Path) -> bool {
+    let fold = platform::os_kind() == OsKind::Windows;
+    let mut parts = path.components();
+    base.components().all(|wanted| {
+        parts
+            .next()
+            .is_some_and(|part| same_component(part, wanted, fold))
+    })
+}
+
 /// Symlinks, and on Windows junctions (std reports name-surrogate reparse points as links).
-fn is_link(path: &Path) -> bool {
+pub(crate) fn is_link(path: &Path) -> bool {
     platform::fs_path(path)
         .and_then(fs::symlink_metadata)
         .is_ok_and(|metadata| metadata.file_type().is_symlink())

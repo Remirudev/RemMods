@@ -1,0 +1,379 @@
+name: artifacts
+
+# Package tests (docs/PLAN.md §9, SPEC-P5 §7.6): builds the deb, rpm, AppImage and NSIS bundles, or with
+# `prebuilt: true` (release.yml) takes the release's exact bundles, installs each one in a fresh
+# environment and runs `remmods --smoke`; the smoke report names the install kind the updater sees.
+# Not a required check (SPEC-P5 A16): runs by hand and from release.yml. No secrets, no environment;
+# the bundles are unsigned and carry no updater config.
+#
+# No pull_request or schedule trigger while `oozextract` is in the app (PLAN §15): this repo is public,
+# so the uploaded bundles would be public builds. Both come back once the decoder has moved.
+
+on:
+  workflow_call:
+    inputs:
+      prebuilt:
+        description: Use the bundles-linux / bundles-windows artifacts of the calling run
+        type: boolean
+        default: false
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artifacts-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    if: ${{ !inputs.prebuilt }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-24.04
+          - name: windows
+            os: windows-2025
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (.node-version)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev libwayland-dev build-essential pkg-config libssl-dev
+
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: |
+          rustup toolchain install
+          rustc --version
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: npm ci
+        run: npm ci
+
+      # tauri-bundler downloads these without a hash check when they are missing.
+      - name: Seed the AppImage tools (sha256-checked)
+        if: runner.os == 'Linux'
+        run: bash scripts/seed-appimage-tools.sh
+
+      - name: Build the bundles (unsigned, no updater config)
+        run: npm run tauri -- build
+
+      # Fails when the bundler skipped a seeded tool and downloaded its own (W11).
+      - name: Check the AppImage tools cache
+        if: runner.os == 'Linux'
+        run: bash scripts/seed-appimage-tools.sh --verify-cache
+
+      - name: Collect the bundles (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist-bundles
+          cp target/release/bundle/{deb/*.deb,rpm/*.rpm,appimage/*.AppImage} dist-bundles/
+          ls -l dist-bundles
+
+      - name: Collect the bundles (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p dist-bundles
+          cp target/release/bundle/nsis/*-setup.exe dist-bundles/
+          ls -l dist-bundles
+
+      - name: Upload the bundles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundles-${{ matrix.name }}
+          path: dist-bundles/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # deb on Ubuntu 24.04 (the glibc floor), then the AppImage on the same runner.
+  linux:
+    name: linux (deb, AppImage)
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the Linux bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundles-linux
+          path: bundles
+
+      - name: Inspect the packages
+        run: |
+          python3 -I scripts/inspect-bundle.py --expect deb bundles/RemMods_*_amd64.deb
+          python3 -I scripts/inspect-bundle.py --expect rpm bundles/RemMods-*.x86_64.rpm
+
+      - name: Install the deb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./bundles/RemMods_*_amd64.deb xvfb dbus-x11 desktop-file-utils
+          desktop-file-validate /usr/share/applications/RemMods.desktop
+
+      # check-native.sh reads the dependency trees with cargo before it checks the binary.
+      - name: Install Rust toolchain (rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - name: glibc floor of the packaged binary
+        run: bash scripts/check-native.sh --glibc /usr/bin/remmods
+
+      - name: Generate the smoke fixture
+        run: python3 -I scripts/make-fixtures.py smoke "$RUNNER_TEMP/remmods-fixture"
+
+      - name: Smoke test (deb)
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" remmods --smoke | tee "$RUNNER_TEMP/smoke-deb.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"deb"' "$RUNNER_TEMP/smoke-deb.out"
+
+      - name: Smoke test with fixture (deb)
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          PAKS="$RUNNER_TEMP/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" remmods --smoke --paks "$PAKS" |
+            tee "$RUNNER_TEMP/smoke-deb-fixture.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"deb"' "$RUNNER_TEMP/smoke-deb-fixture.out"
+          bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
+
+      - name: Remove the deb
+        run: sudo apt-get remove -y rem-mods
+
+      - name: Smoke test (AppImage, extract and run)
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          appimage="$(echo "$PWD"/bundles/RemMods_*_amd64.AppImage)"
+          chmod +x "$appimage"
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" "$appimage" --appimage-extract-and-run --smoke |
+            tee "$RUNNER_TEMP/smoke-appimage.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"appImage"' "$RUNNER_TEMP/smoke-appimage.out"
+
+      # FUSE on hosted runners is unverified (SPEC-P5 A15): skipped and logged without /dev/fuse.
+      - name: Smoke test (AppImage, mounted)
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          sudo apt-get install -y libfuse2t64 fuse3
+          if [[ ! -e /dev/fuse ]]; then
+            echo "FUSE run skipped: no /dev/fuse"
+            exit 0
+          fi
+          appimage="$(echo "$PWD"/bundles/RemMods_*_amd64.AppImage)"
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" "$appimage" --smoke |
+            tee "$RUNNER_TEMP/smoke-appimage-fuse.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"appImage"' "$RUNNER_TEMP/smoke-appimage-fuse.out"
+
+      - name: Upload smoke logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: artifacts-smoke-logs-linux
+          path: |
+            ${{ runner.temp }}/remmods-smoke-*/data/logs/
+            ${{ runner.temp }}/*.out
+            ${{ runner.temp }}/paks-*.tsv
+          if-no-files-found: ignore
+          retention-days: 14
+
+  rpm:
+    name: rpm (Fedora)
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' }}
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+    timeout-minutes: 30
+    steps:
+      - name: Download the Linux bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundles-linux
+          path: bundles
+
+      - name: Install the rpm
+        run: dnf install -y ./bundles/RemMods-*.x86_64.rpm /usr/bin/xvfb-run /usr/bin/dbus-run-session python3
+
+      # bubblewrap cannot create namespaces inside the container (test-only, SPEC-P5 A24).
+      - name: Smoke test (rpm)
+        timeout-minutes: 5
+        env:
+          WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
+        run: |
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" remmods --smoke | tee "$RUNNER_TEMP/smoke-rpm.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"rpm"' "$RUNNER_TEMP/smoke-rpm.out"
+
+  aur:
+    name: aur (Arch)
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' }}
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    timeout-minutes: 30
+    steps:
+      - name: Install the build tools and the package's dependencies
+        run: |
+          pacman -Syu --noconfirm --needed git python base-devel namcap xorg-server-xvfb dbus \
+            webkit2gtk-4.1 gtk3 libsoup3 openssl glib2 cairo gdk-pixbuf2 wayland hicolor-icon-theme xdg-utils
+
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the Linux bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundles-linux
+          path: bundles
+
+      - name: Render PKGBUILD and .SRCINFO (local source)
+        run: |
+          deb="$(echo bundles/RemMods_*_amd64.deb)"
+          if [[ ! $deb =~ RemMods_([0-9]+\.[0-9]+\.[0-9]+)_amd64\.deb$ ]]; then
+            echo "::error::unexpected deb name $deb"
+            exit 1
+          fi
+          python3 -I scripts/render-pkgbuild.py --deb "$deb" --version "${BASH_REMATCH[1]}" --local --out aur
+
+      - name: Build the package (makepkg, namcap)
+        run: |
+          useradd -m builder
+          chown -R builder: aur
+          su builder -c 'cd aur && makepkg --printsrcinfo' > "$RUNNER_TEMP/SRCINFO"
+          diff -u aur/.SRCINFO "$RUNNER_TEMP/SRCINFO"
+          namcap aur/PKGBUILD | tee "$RUNNER_TEMP/namcap-pkgbuild.txt"
+          su builder -c 'cd aur && makepkg --force --noconfirm'
+          namcap aur/remmods-bin-*.pkg.tar.zst | tee "$RUNNER_TEMP/namcap-package.txt"
+          if grep -q ' E: ' "$RUNNER_TEMP/namcap-pkgbuild.txt" "$RUNNER_TEMP/namcap-package.txt"; then exit 1; fi
+
+      # A throwaway container: installing here touches nothing else.
+      - name: Install the package
+        run: |
+          pacman -U --noconfirm aur/remmods-bin-*.pkg.tar.zst
+          test -f /usr/lib/remmods/install-source
+          test -f /usr/share/licenses/remmods-bin/THIRD-PARTY-NOTICES
+
+      - name: Smoke test (AUR)
+        timeout-minutes: 5
+        env:
+          WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: "1"
+        run: |
+          dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" remmods --smoke | tee "$RUNNER_TEMP/smoke-aur.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"aur"' "$RUNNER_TEMP/smoke-aur.out"
+
+  nsis:
+    name: nsis (Windows)
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' }}
+    runs-on: windows-2025
+    timeout-minutes: 30
+    # pwsh: Git Bash would rewrite the installer's /S switch into a path.
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download the Windows bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundles-windows
+          path: bundles
+
+      - name: Install silently (current user)
+        run: |
+          $setup = Get-ChildItem -Path bundles -Filter '*-setup.exe' | Select-Object -First 1
+          if (-not $setup) { Write-Error 'no setup.exe in bundles-windows'; exit 1 }
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
+          if (-not (Test-Path "$env:LOCALAPPDATA\RemMods\remmods.exe")) { Write-Error 'remmods.exe not installed'; exit 1 }
+
+      # The release exe is a GUI-subsystem program, so its stdout only reaches a redirected file.
+      - name: Smoke test (NSIS)
+        timeout-minutes: 5
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: |
+          $p = Start-Process -FilePath "$env:LOCALAPPDATA\RemMods\remmods.exe" -ArgumentList '--smoke' -Wait -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP\smoke.out" -RedirectStandardError "$env:RUNNER_TEMP\smoke.err"
+          Get-Content "$env:RUNNER_TEMP\smoke.out"
+          if ($p.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\smoke.err"; exit 1 }
+          if (-not (Select-String -SimpleMatch -Path "$env:RUNNER_TEMP\smoke.out" -Pattern '"name":"updateChannel","ok":true,"detail":"nsis"')) { exit 1 }
+
+      - name: Uninstall silently
+        run: |
+          $p = Start-Process -FilePath "$env:LOCALAPPDATA\RemMods\uninstall.exe" -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
+
+  # By hand and non-blocking (docs/PLAN.md §9): the deb under a headless Weston compositor.
+  wayland:
+    name: wayland (weston, non-blocking)
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'failure' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Download the Linux bundles
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundles-linux
+          path: bundles
+
+      - name: Install the deb and Weston
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./bundles/RemMods_*_amd64.deb weston dbus-x11
+
+      - name: Smoke test (Wayland)
+        timeout-minutes: 5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg-runtime"
+          mkdir -p -m 0700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless --socket=wayland-remmods &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2> /dev/null || true' EXIT
+          for _ in $(seq 50); do [[ -S $XDG_RUNTIME_DIR/wayland-remmods ]] && break; sleep 0.2; done
+          WAYLAND_DISPLAY=wayland-remmods GDK_BACKEND=wayland dbus-run-session -- remmods --smoke |
+            tee "$RUNNER_TEMP/smoke-wayland.out"
+          grep -F '"name":"updateChannel","ok":true,"detail":"deb"' "$RUNNER_TEMP/smoke-wayland.out"

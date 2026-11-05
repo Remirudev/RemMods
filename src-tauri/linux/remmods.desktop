@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name={{name}}
+GenericName=Mod manager
+GenericName[de]=Mod-Manager
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}}
+Icon={{icon}}
+Terminal=false
+Categories={{categories}}
+Keywords=TEKKEN;mods;pak;
+StartupNotify=true
+StartupWMClass=remmods
+Actions=safe-graphics;
+
+[Desktop Action safe-graphics]
+Name=Start in safe graphics mode
+Name[de]=Im sicheren Grafikmodus starten
+Exec={{exec}} --safe-graphics

@@ -1,7 +1,8 @@
 import { type QueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { ipc } from '../../lib/ipc'
 import { isIpcError } from '../../lib/ipc/ipc-error'
-import type { Settings, SettingsUpdate } from '../../lib/ipc/types'
+import type { GraphicsMode, GraphicsState, Settings, SettingsUpdate } from '../../lib/ipc/types'
+import { showErrorToast } from '../../lib/query/error-toast'
 import { queryKeys } from '../../shared/query-keys'
 import { clampUiScale } from '../../shared/ui-scale'
 import { appearanceUpdate, applySettingsUpdate } from './settings-update'
@@ -78,4 +79,71 @@ export function useSetUiScale() {
 
 export function useOpenLogs() {
   return useMutation({ mutationFn: () => ipc.openLogs() })
+}
+
+export function useAssetsStatus(language: string) {
+  return useQuery({
+    queryKey: queryKeys.assetsStatus(language),
+    queryFn: () => ipc.assetsStatus(language),
+  })
+}
+
+export function useAssetsRefresh(language: string) {
+  return useMutation({
+    mutationFn: () => ipc.assetsRefresh(language),
+    onSuccess: (status, _variables, _result, { client }) => {
+      client.setQueryData(queryKeys.assetsStatus(language), status)
+    },
+  })
+}
+
+export function useUpdateChannel() {
+  return useQuery({ queryKey: queryKeys.updateChannel, queryFn: () => ipc.updateChannel() })
+}
+
+// Never automatic: the check runs only when the user asks for it.
+export function useUpdateCheck() {
+  return useMutation({
+    mutationFn: () => ipc.updateCheck(),
+    meta: { suppressErrorToast: true },
+  })
+}
+
+export function useGraphics(enabled: boolean) {
+  return useQuery({ queryKey: queryKeys.graphics, queryFn: () => ipc.graphicsGet(), enabled })
+}
+
+function storeGraphics(client: QueryClient, state: GraphicsState): void {
+  client.setQueryData(queryKeys.graphics, state)
+}
+
+// `readOnly` (graphics.json turned newer or unreadable) and `stale` (the step was already
+// answered) are shown by the fetched state itself; the shared toast texts would name settings.json
+// or the mod list.
+function onGraphicsError(client: QueryClient, error: Error): void {
+  void client.invalidateQueries({ queryKey: queryKeys.graphics })
+  const kind = isIpcError(error) ? error.appError.kind : null
+  if (kind !== 'readOnly' && kind !== 'stale') showErrorToast(error)
+}
+
+export function useSetGraphicsMode() {
+  return useMutation({
+    mutationFn: (mode: GraphicsMode) => ipc.graphicsSetMode(mode),
+    meta: { suppressErrorToast: true },
+    onError: (error, _mode, _result, { client }) => onGraphicsError(client, error),
+    onSuccess: (state, _mode, _result, { client }) => storeGraphics(client, state),
+  })
+}
+
+export function useAckGraphicsStep() {
+  return useMutation({
+    mutationFn: (revert: boolean) => ipc.graphicsAckStep(revert),
+    meta: { suppressErrorToast: true },
+    onError: (error, _revert, _result, { client }) => onGraphicsError(client, error),
+    onSuccess: (state, _revert, _result, { client }) => storeGraphics(client, state),
+  })
+}
+
+export function useNotices(enabled: boolean) {
+  return useQuery({ queryKey: queryKeys.notices, queryFn: () => ipc.aboutNotices(), enabled })
 }

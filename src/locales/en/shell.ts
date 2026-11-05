@@ -16,12 +16,6 @@ export const shell = {
       title: 'Mods',
       description: 'Your installed TEKKEN 8 mods.',
     },
-    profiles: {
-      title: 'Profiles',
-      description: 'Saved sets of enabled mods.',
-      emptyTitle: 'No profiles yet',
-      emptyDescription: 'Saved sets of mods show up here once profiles arrive.',
-    },
     settings: {
       title: 'Settings',
       description: 'Appearance, diagnostics and information about RemMods.',

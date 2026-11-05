@@ -18,9 +18,9 @@ export const game = {
     body: 'The game changed from build {{from}} to build {{to}}. Mods made for the old build can crash the game or look wrong.',
     acknowledge: 'Got it',
   },
-  originalApp: {
+  otherManager: {
     title: 'Another mod manager is running',
-    body: 'A program named ModManager.exe is running, probably TekkenModManager. Refresh the list after you change mods there.',
+    body: 'A program named ModManager.exe is running, probably another mod manager. Refresh the list after you change mods there.',
   },
   sources: { steam: 'Found through Steam', manual: 'Chosen by you', fixture: 'Test fixture' },
   steamKinds: {

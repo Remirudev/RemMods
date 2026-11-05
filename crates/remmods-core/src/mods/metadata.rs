@@ -1,5 +1,4 @@
-//! modinfo.json, read like the original: .NET `File.ReadAllText` decoding, then System.Text.Json
-//! semantics (spec §4.6).
+//! modinfo.json: BOM-sniffing lossy decoding, then strict JSON rules (spec §4.6, PLAN §7).
 
 use std::fmt;
 
@@ -10,7 +9,7 @@ use super::model::{ModInfo, ModInfoDefaulted, ModInfoOrigin};
 /// Larger modinfo.json files are treated as invalid (a RemMods guard).
 pub const MODINFO_MAX_BYTES: usize = 1 << 20;
 
-/// System.Text.Json's default MaxDepth, the top-level object included.
+/// Maximum nesting depth (64), the top-level object included.
 const MAX_DEPTH: usize = 64;
 
 const DEFAULT_VERSION: &str = "1.0";
@@ -37,7 +36,7 @@ impl ModInfo {
     }
 }
 
-/// Reads a modinfo.json body like the original (.NET `File.ReadAllText` + System.Text.Json).
+/// Reads a modinfo.json body: decoding, then the key rules.
 pub fn parse_modinfo(bytes: &[u8]) -> ModInfo {
     if bytes.len() > MODINFO_MAX_BYTES {
         return ModInfo::defaults(ModInfoOrigin::Invalid);
@@ -52,7 +51,7 @@ pub fn parse_modinfo(bytes: &[u8]) -> ModInfo {
     }
 }
 
-/// .NET `File.ReadAllText` decoding: BOM sniffing, invalid sequences become U+FFFD.
+/// BOM sniffing (UTF-8/16/32), else UTF-8; invalid sequences become U+FFFD.
 pub fn decode_modinfo_text(bytes: &[u8]) -> String {
     match bytes {
         [0xFE, 0xFF, rest @ ..] => decode_utf16(rest, u16::from_be_bytes),

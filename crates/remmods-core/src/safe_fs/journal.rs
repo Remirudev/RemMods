@@ -35,6 +35,8 @@ pub struct RecoveryReport {
     pub stuck: u32,
     /// Entries with a path outside the scope (or not decodable); left as they are.
     pub foreign: u32,
+    /// Install staging folders of dead owners that were removed.
+    pub discarded: u32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -74,6 +76,24 @@ pub(crate) enum OpRecord {
     Placeholder {
         path: PathRecord,
     },
+    /// An install staging folder, journaled before it is created; `inert` lists the payload
+    /// files staging renamed with `-x` (paths inside the folder).
+    Staging {
+        path: PathRecord,
+        #[serde(default)]
+        inert: Vec<PathRecord>,
+    },
+}
+
+impl OpRecord {
+    /// Every path the record names.
+    pub(crate) fn paths(&self) -> Vec<&PathRecord> {
+        match self {
+            Self::Rename { from, to, .. } => vec![from, to],
+            Self::Placeholder { path } => vec![path],
+            Self::Staging { path, inert } => std::iter::once(path).chain(inert).collect(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -161,8 +181,53 @@ impl Journal {
     /// Records a batch before its first rename; returns the entry id.
     pub(crate) fn begin(&self, label: &str, ops: &[RenameOp]) -> Result<String, FsError> {
         let id = uuid::Uuid::new_v4().simple().to_string();
-        let entry = Entry {
-            id: id.clone(),
+        let records = ops
+            .iter()
+            .map(|op| OpRecord::Rename {
+                is_dir: op.is_dir,
+                from: PathRecord::encode(&op.from),
+                to: PathRecord::encode(&op.to),
+            })
+            .collect();
+        let entry = self.new_entry(&id, label, records);
+        self.update(|file| file.entries.push(entry))?;
+        Ok(id)
+    }
+
+    /// Records an install staging folder before it is created; returns the entry id.
+    pub(crate) fn begin_staging(&self, label: &str, path: &Path) -> Result<String, FsError> {
+        let id = uuid::Uuid::new_v4().simple().to_string();
+        let entry = self.new_entry(
+            &id,
+            label,
+            vec![OpRecord::Staging {
+                path: PathRecord::encode(path),
+                inert: Vec::new(),
+            }],
+        );
+        self.update(|file| file.entries.push(entry))?;
+        Ok(id)
+    }
+
+    /// Adds the files staging made inert to the staging record of entry `id`.
+    pub(crate) fn add_inert(&self, id: &str, files: &[PathBuf]) -> Result<(), FsError> {
+        self.update(|file| {
+            let records = file
+                .entries
+                .iter_mut()
+                .filter(|entry| entry.id == id)
+                .flat_map(|entry| entry.ops.iter_mut());
+            for record in records {
+                if let OpRecord::Staging { inert, .. } = record {
+                    inert.extend(files.iter().map(|path| PathRecord::encode(path)));
+                }
+            }
+        })
+    }
+
+    fn new_entry(&self, id: &str, label: &str, ops: Vec<OpRecord>) -> Entry {
+        Entry {
+            id: id.to_owned(),
             label: label.to_owned(),
             owner: Owner {
                 pid: std::process::id(),
@@ -170,17 +235,8 @@ impl Journal {
             },
             created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
             stuck: false,
-            ops: ops
-                .iter()
-                .map(|op| OpRecord::Rename {
-                    is_dir: op.is_dir,
-                    from: PathRecord::encode(&op.from),
-                    to: PathRecord::encode(&op.to),
-                })
-                .collect(),
-        };
-        self.update(|file| file.entries.push(entry))?;
-        Ok(id)
+            ops,
+        }
     }
 
     /// Records a placeholder folder before the folder fallback creates it.

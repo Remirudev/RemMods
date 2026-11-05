@@ -118,7 +118,7 @@ pub struct ProcFixture {
     pub running: bool,
     pub signal: Option<String>,
     pub pid: Option<u32>,
-    pub original_app: Option<bool>,
+    pub other_manager: Option<bool>,
     pub processes: Vec<Value>,
 }
 
@@ -149,7 +149,7 @@ fn parse_proc_fixture(path: &Path) -> ProcFixture {
         pid: expect["pid"]
             .as_u64()
             .map(|pid| u32::try_from(pid).expect("pid fits")),
-        original_app: expect["originalApp"].as_bool(),
+        other_manager: expect["otherManager"].as_bool(),
         processes: value["processes"].as_array().expect("processes").clone(),
     }
 }

@@ -1,7 +1,10 @@
-// The raw no-replace rename; only safe_fs calls it, after its scope checks.
+// The raw no-replace renames and the private trash folder/file creation; only safe_fs calls
+// them, after its scope checks.
 #![allow(clippy::disallowed_methods)]
 
+use std::fs::{DirBuilder, File, OpenOptions};
 use std::io;
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::Path;
 
 use rustix::fs::{CWD, RenameFlags, renameat_with};
@@ -17,6 +20,29 @@ pub(in crate::platform) fn rename_noreplace(from: &Path, to: &Path) -> io::Resul
         Err(Errno::INVAL | Errno::NOSYS) => Ok(NoReplace::FlagUnsupported),
         Err(errno) => Err(io::Error::from(errno)),
     }
+}
+
+/// renameat2(NOREPLACE) between two folders. EINVAL/ENOSYS: the flag is unknown to the file
+/// system or kernel and nothing changed; EXDEV stays an error (classified CrossDevice).
+pub(in crate::platform) fn rename_noreplace_across(
+    from: &Path,
+    to: &Path,
+) -> io::Result<NoReplace> {
+    rename_noreplace(from, to)
+}
+
+/// FDO: trash folders a user creates are private to them (0700).
+pub(in crate::platform) fn create_private_dir(path: &Path) -> io::Result<()> {
+    DirBuilder::new().mode(0o700).create(path)
+}
+
+/// O_CREAT|O_EXCL: a `.trashinfo` name is reserved atomically against other processes.
+pub(in crate::platform) fn create_new_file(path: &Path) -> io::Result<File> {
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
 }
 
 /// Linux has no sharing modes: an open file never blocks a rename.

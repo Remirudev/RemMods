@@ -1,9 +1,13 @@
 import type {
+  AppUpdateChannel,
   GameStatus,
+  GraphicsState,
   ModRow,
   ModState,
   ModsSnapshot,
+  Notices,
   PlatformInfo,
+  ProfilesView,
   Settings,
   SmokeCheck,
 } from '../../lib/ipc/types'
@@ -61,6 +65,16 @@ export function checkSettings(settings: Loaded<Settings>): SmokeCheck {
 
 export function checkCommand(name: string, result: Loaded<unknown>): SmokeCheck {
   return result.ok ? passedCheck(name) : failedCheck(name, result.error)
+}
+
+// The smoke data folder is fresh, so the profile list must come back empty and writable.
+export function checkEmptyProfiles(view: Loaded<ProfilesView>): SmokeCheck {
+  if (!view.ok) return failedCheck('profilesList', view.error)
+  const { profiles, readOnly } = view.value
+  if (profiles.length > 0 || readOnly) {
+    return failedCheck('profilesList', `${profiles.length} profiles, readOnly ${readOnly}`)
+  }
+  return passedCheck('profilesList')
 }
 
 export function checkCollectedErrors(errors: readonly string[]): SmokeCheck {
@@ -126,4 +140,67 @@ export function checkToggleRoundTrip(failures: readonly string[] | null): SmokeC
   if (failures === null) return passedCheck('toggleRoundTrip', 'no fixture')
   if (failures.length === 0) return passedCheck('toggleRoundTrip')
   return failedCheck('toggleRoundTrip', failures.slice(0, MAX_REPORTED_ERRORS).join('\n'))
+}
+
+export function checkInstallRoundTrip(failures: readonly string[] | null): SmokeCheck {
+  if (failures === null) return passedCheck('installRoundTrip', 'no fixture')
+  if (failures.length === 0) return passedCheck('installRoundTrip')
+  return failedCheck('installRoundTrip', failures.slice(0, MAX_REPORTED_ERRORS).join('\n'))
+}
+
+// Smoke builds never carry the updater config (`--smoke` skips the plugin), so the channel must
+// say "not configured"; the detail is the install kind, `unknown` for a debug build without bundle.
+export function checkUpdateChannel(
+  channel: Loaded<AppUpdateChannel>,
+  info: Loaded<PlatformInfo>,
+): SmokeCheck {
+  if (!channel.ok) return failedCheck('updateChannel', channel.error)
+  if (!info.ok) return failedCheck('updateChannel', `no platform info: ${info.error}`)
+  const { configured, current, install } = channel.value
+  if (configured) return failedCheck('updateChannel', `configured in a smoke run (${install})`)
+  if (current !== info.value.appVersion) {
+    return failedCheck('updateChannel', `version ${current}, app ${info.value.appVersion}`)
+  }
+  return passedCheck('updateChannel', install)
+}
+
+function notConfiguredProblem(name: string, refusal: Refusal): string | null {
+  if (!refusal.rejected) return `${name} succeeded`
+  if (refusal.kind !== 'updateNotConfigured') return `${name} rejected with ${refusal.kind}`
+  return null
+}
+
+// Both refusals come before any network access, so this never leaves the machine.
+export function checkUpdateRefused(check: Refusal, install: Refusal): SmokeCheck {
+  const problems = [
+    notConfiguredProblem('updateCheck', check),
+    notConfiguredProblem('updateInstall', install),
+  ].filter((problem) => problem !== null)
+  return problems.length === 0
+    ? passedCheck('updateRefused')
+    : failedCheck('updateRefused', problems.join('\n'))
+}
+
+export function checkGraphics(
+  state: Loaded<GraphicsState>,
+  info: Loaded<PlatformInfo>,
+): SmokeCheck {
+  if (!state.ok) return failedCheck('graphics', state.error)
+  if (!info.ok) return failedCheck('graphics', `no platform info: ${info.error}`)
+  const expected = info.value.features.graphicsFallback
+  if (state.value.supported !== expected) {
+    return failedCheck('graphics', `supported ${state.value.supported}, feature ${expected}`)
+  }
+  return passedCheck('graphics', state.value.effective)
+}
+
+export function checkNotices(notices: Loaded<Notices>): SmokeCheck {
+  if (!notices.ok) return failedCheck('notices', notices.error)
+  const { rust, npm } = notices.value
+  const problems: string[] = []
+  if (!rust.startsWith('THIRD-PARTY NOTICES')) problems.push('rust notices header missing')
+  if (!npm.toLowerCase().includes('sil open font license')) problems.push('npm without SIL OFL')
+  return problems.length === 0
+    ? passedCheck('notices')
+    : failedCheck('notices', problems.join('\n'))
 }

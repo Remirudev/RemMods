@@ -2,19 +2,28 @@
 //! `WriteGuard`.
 
 mod api;
+mod api_manage;
 mod api_toggle;
+mod bulk;
+mod bulk_delete;
 mod conflicts;
+mod delete;
+mod delete_token;
 mod details;
 mod error;
 mod issues;
 mod listing;
+pub(crate) mod manage_target;
 mod meta_store;
 mod metadata;
 mod model;
+mod modinfo_write;
 mod modref;
-mod path_length;
-mod payload;
-mod rows;
+pub(crate) mod path_length;
+pub(crate) mod payload;
+mod rename;
+mod repair;
+pub(crate) mod rows;
 mod scan;
 mod scan_log;
 mod service;
@@ -22,13 +31,20 @@ mod strategy;
 mod toggle_apply;
 mod toggle_files;
 mod toggle_plan;
+mod trash;
 mod unmanaged;
 mod walk;
 
-pub use conflicts::{original_conflict_names, original_enabled};
+pub use bulk::{
+    BULK_MAX_TARGETS, BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult,
+    BulkTrashRequest, PreparedRow,
+};
+pub use delete::{DeleteOutcome, DeletePrepared, DeleteRequest, plan_set_aside};
+pub use delete_token::DeleteTokens;
 pub use details::{read_details, resolve_ref, shell_form};
 pub use error::ModsError;
 pub use issues::{ModIssue, NameProblem};
+pub use manage_target::{ManageAction, ManageBlock, ManagedKind, ModTarget, manage_block};
 pub use meta_store::{
     DisableRecord, LoadedMeta, MOD_META_FILE, MOD_META_VERSION, ModMeta, ModMetaEntry, ModMetaStore,
 };
@@ -39,9 +55,16 @@ pub use model::{
     PayloadKind, RootInfo, RootKind, ScanContent, ScanInput, ScanOutput, ScanProblem, ScanSnapshot,
     ScanStats, ToggleBlock, UnmanagedEntry, UnmanagedKind,
 };
+pub use modinfo_write::{
+    MODINFO_FIELD_MAX_CHARS, MetadataRequest, ModInfoEdit, escape_json_value, modinfo_json,
+};
 pub use modref::{ModRef, ParsedRef, RefKind, paks_identity};
-pub use scan::scan_paks;
+pub use rename::{RekeyReport, RenameOutcome, RenameRequest, plan_rename};
+pub use repair::{RepairAction, RepairItem, RepairKind, RepairList, repair_items, suggest_name};
+pub use scan::{scan_paks, scan_paks_with, scan_paks_with_base};
 pub use service::{ModsService, Refreshed};
 pub use toggle_apply::{SkippedRow, ToggleOutcome, ToggleRequest, ToggleTarget};
+pub(crate) use toggle_apply::{plan_rows, wants_disable};
 pub use toggle_files::{FileClass, ModFile, ModFiles, list_toggle_files};
 pub use toggle_plan::{RecordChange, RowPlan, plan_row, record_matches};
+pub use trash::{TrashOutcome, TrashRequest};

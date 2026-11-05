@@ -3,8 +3,8 @@ use remmods_core::safe_fs::names::NameIssue::*;
 use remmods_core::safe_fs::names::*;
 
 const VALIDATE_CASES: &[(&str, Option<NameIssue>)] = &[
-    ("CoolSkin", None),
-    ("Cool Skin", None),
+    ("NeonSkin", None),
+    ("Neon Skin", None),
     (".hidden", None),
     ("..x", None),
     ("x..y", None),
@@ -38,8 +38,8 @@ const VALIDATE_CASES: &[(&str, Option<NameIssue>)] = &[
     ("disabled_X", None),
     ("x.disabled_y", None),
     (".disabled", None),
-    ("_hidden_mod", None),
-    ("my_tmp_mod", None),
+    ("_private_pack", None),
+    ("pack_tmp_notes", None),
     ("", Some(Empty)),
     (".", Some(DotName)),
     ("..", Some(DotName)),
@@ -90,11 +90,11 @@ const VALIDATE_CASES: &[(&str, Option<NameIssue>)] = &[
     (".di\u{17F}abled_x", Some(DisabledPrefix)),
     (".disabled_", Some(DisabledPrefix)),
     (
-        "_Cool Skin_tmp_0123456789abcdef0123456789abcdef",
+        "_Neon Skin_tmp_5f3ccf7c5cff4a1e9b20d6e8c1a7b394",
         Some(TempName),
     ),
     (
-        "_Cool Skin_tmp_0123456789ABCDEF0123456789ABCDEF",
+        "_Neon Skin_tmp_5F3CCF7C5CFF4A1E9B20D6E8C1A7B394",
         Some(TempName),
     ),
     ("_tmp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Some(TempName)),
@@ -110,8 +110,8 @@ const VALIDATE_CASES: &[(&str, Option<NameIssue>)] = &[
     ("_x_tmp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaag", None),
 ];
 const FOLD_CASES: &[(&str, &str)] = &[
-    ("CoolSkin", "coolskin"),
-    ("COOLSKIN", "coolskin"),
+    ("NeonSkin", "neonskin"),
+    ("NEONSKIN", "neonskin"),
     ("Stra\u{DF}e", "strasse"),
     ("STRASSE", "strasse"),
     ("\u{1E9E}", "ss"),
@@ -183,8 +183,8 @@ fn fold_vectors() {
 #[test]
 fn escape_vectors() {
     let bytes: &[(&[u8], &str)] = &[
-        (b"Cool", "Cool"),
-        (b"Cool\xFFSkin", r"Cool\xFFSkin"),
+        (b"Neon", "Neon"),
+        (b"Neon\xFFSkin", r"Neon\xFFSkin"),
         (b"caf\xE9", r"caf\xE9"),
         (b"\xED\xA0\x80", r"\xED\xA0\x80"),
         (b"a\\b", r"a\\b"),
@@ -257,9 +257,9 @@ fn unicode_data_pin() {
 #[test]
 fn temp_and_prefix_on_os_str() {
     assert!(is_install_temp_name(OsStr::new(
-        "_Cool Skin_tmp_0123456789abcdef0123456789abcdef"
+        "_Neon Skin_tmp_5f3ccf7c5cff4a1e9b20d6e8c1a7b394"
     )));
-    assert!(!is_install_temp_name(OsStr::new("Cool Skin")));
+    assert!(!is_install_temp_name(OsStr::new("Neon Skin")));
     assert!(has_disabled_prefix_ascii(OsStr::new(".DISABLED_x")));
     assert!(has_disabled_prefix_ascii(OsStr::new(".disabled_")));
     assert!(!has_disabled_prefix_ascii(OsStr::new(".di\u{17F}abled_x")));
@@ -270,7 +270,7 @@ fn temp_and_prefix_on_os_str() {
 fn new_name_rules_do_not_apply_to_existing_names() {
     assert_eq!(windows_name_issue(".disabled_X"), None);
     assert_eq!(
-        windows_name_issue("_x_tmp_0123456789abcdef0123456789abcdef"),
+        windows_name_issue("_x_tmp_5f3ccf7c5cff4a1e9b20d6e8c1a7b394"),
         None
     );
 }
@@ -318,8 +318,8 @@ fn os_str_cut_removes_ascii_ends_only() {
         Some(OsString::from("X"))
     );
     assert_eq!(
-        os_str_cut(OsStr::new("Cool.pak-x"), 0, 2),
-        Some(OsString::from("Cool.pak"))
+        os_str_cut(OsStr::new("Neon.pak-x"), 0, 2),
+        Some(OsString::from("Neon.pak"))
     );
     assert_eq!(
         os_str_cut(OsStr::new("\u{E9}t\u{E9}.pak-x"), 0, 2),
@@ -337,4 +337,55 @@ fn os_str_cut_removes_ascii_ends_only() {
         RawName::Wide(_) => RawName::Bytes(vec![0x41]),
     };
     assert_eq!(os_string(&foreign), None);
+}
+
+/// S1: only paths Win32 keeps as they are may reach the shell.
+#[test]
+fn shell_safe_path_table() {
+    use std::path::Path;
+
+    use remmods_core::platform::{OsKind, os_kind};
+
+    let base = r"C:\Games\Paks\Mods";
+    let cases: &[(String, bool)] = &[
+        (format!(r"{base}\Neon"), true),
+        (r"\\?\C:\Games\Mods\Neon".to_owned(), true),
+        (r"\\?\UNC\srv\share\Mods\Neon".to_owned(), true),
+        (r"\\srv\share\Mods\Neon".to_owned(), true),
+        ("/tmp/x/Mods/Neon".to_owned(), true),
+        (format!(r"{base}\Foo."), false),
+        (format!(r"{base}\Foo "), false),
+        (format!(r"{base}\CON"), false),
+        (format!(r"{base}\con.txt"), false),
+        (format!(r"{base}\CONIN$"), false),
+        (format!("{base}\\COM\u{B9}"), false),
+        (format!(r"{base}\a:b"), false),
+        (format!(r"{base}\..\x"), false),
+        (format!(r"{base}\.\x"), false),
+        (r"\\?\Volume{0}\Mods\Neon".to_owned(), false),
+        (r"\\.\C:\Mods\Neon".to_owned(), false),
+        (format!(r"{base}\Neon\"), false),
+    ];
+    for (path, safe) in cases {
+        assert_eq!(shell_safe_path(Path::new(path)), *safe, "{path}");
+    }
+
+    let at_limit = |units: usize| {
+        let head = r"C:\Mods\";
+        format!("{head}{}", "a".repeat(units - head.len()))
+    };
+    assert_eq!(utf16_len(&at_limit(259)), 259);
+    assert!(shell_safe_path(Path::new(&at_limit(259))));
+    assert!(!shell_safe_path(Path::new(&at_limit(260))));
+    let verbatim = format!(r"\\?\{}", at_limit(259));
+    assert!(
+        shell_safe_path(Path::new(&verbatim)),
+        "the plain form counts"
+    );
+
+    if os_kind() == OsKind::Linux {
+        let name = remmods_core::platform::os_string(&RawName::Bytes(b"Neon\xFF".to_vec()))
+            .expect("bytes are an OS name on Linux");
+        assert!(!shell_safe_path(&Path::new("/tmp/Mods").join(name)));
+    }
 }

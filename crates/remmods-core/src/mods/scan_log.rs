@@ -28,6 +28,12 @@ pub(super) fn log_snapshot(snapshot: &ScanSnapshot) {
         snapshot.stats.dirs_read,
         snapshot.stats.duration.as_millis(),
     );
+    log::info!(
+        "scan-content\tcontainers_read={}\tcontainers_cached={}\tms={}",
+        snapshot.stats.containers_read,
+        snapshot.stats.containers_cached,
+        snapshot.stats.content_duration.as_millis(),
+    );
     if !log::log_enabled!(log::Level::Debug) {
         return;
     }

@@ -5,7 +5,7 @@
     "running": true,
     "signal": "gameExecutable",
     "pid": 210,
-    "originalApp": false
+    "otherManager": false
   },
   "processes": [
     {

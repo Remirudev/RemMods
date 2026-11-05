@@ -1,4 +1,4 @@
-//! modinfo.json decoding and parsing like .NET File.ReadAllText + System.Text.Json (spec §4.6).
+//! modinfo.json decoding and parsing: BOM sniffing, lossy UTF-8 and strict key rules (spec §4.6).
 
 use remmods_core::mods::{
     MODINFO_MAX_BYTES, ModInfo, ModInfoDefaulted, ModInfoOrigin, decode_modinfo_text, parse_modinfo,
@@ -64,7 +64,7 @@ fn blank_values_fall_back_to_defaults() {
 #[test]
 fn malformed_documents_are_invalid() {
     for text in [
-        "not valid json {{",
+        "modinfo: broken {",
         r#"{"Version":"1",}"#,
         "{\"Version\":\"1\" /* c */}",
         "",

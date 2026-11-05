@@ -19,7 +19,7 @@ pub struct RunningTracker {
     negatives: u8,
     first_negative_at: Option<Instant>,
     session: u32,
-    original_app: bool,
+    other_manager: bool,
 }
 
 impl Default for RunningTracker {
@@ -36,22 +36,22 @@ impl RunningTracker {
             negatives: 0,
             first_negative_at: None,
             session: 0,
-            original_app: false,
+            other_manager: false,
         }
     }
 
     /// Feeds one scan (`Err` = the process list could not be read); true when the state, the
-    /// session or `original_app` changed.
+    /// session or `other_manager` changed.
     pub fn observe(&mut self, scan: Result<ProcessVerdict, ()>, now: Instant) -> bool {
-        let before = (self.state, self.session, self.original_app);
+        let before = (self.state, self.session, self.other_manager);
         match scan {
             Err(()) => {
                 self.state = RunningState::Unknown;
-                self.original_app = false;
+                self.other_manager = false;
                 self.reset_streak();
             }
             Ok(verdict) => {
-                self.original_app = verdict.original_app;
+                self.other_manager = verdict.other_manager;
                 if verdict.game.is_some() {
                     self.observe_positive();
                 } else {
@@ -59,7 +59,7 @@ impl RunningTracker {
                 }
             }
         }
-        before != (self.state, self.session, self.original_app)
+        before != (self.state, self.session, self.other_manager)
     }
 
     pub fn state(&self) -> RunningState {
@@ -70,8 +70,8 @@ impl RunningTracker {
         self.session
     }
 
-    pub fn original_app(&self) -> bool {
-        self.original_app
+    pub fn other_manager(&self) -> bool {
+        self.other_manager
     }
 
     fn observe_positive(&mut self) {

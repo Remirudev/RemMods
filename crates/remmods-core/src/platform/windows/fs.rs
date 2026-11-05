@@ -1,8 +1,9 @@
-// The raw no-replace rename; only safe_fs calls it, after its scope checks.
+// The raw no-replace renames and the trash folder/file creation; only safe_fs calls them, after
+// its scope checks.
 #![allow(clippy::disallowed_methods)]
 
 use std::ffi::OsStr;
-use std::fs::OpenOptions;
+use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::fs::OpenOptionsExt;
@@ -26,6 +27,26 @@ pub(in crate::platform) fn rename_noreplace(from: &Path, to: &Path) -> io::Resul
         return Err(io::Error::last_os_error());
     }
     Ok(NoReplace::Done)
+}
+
+/// MoveFileExW moves between folders of one volume the same way; flags 0 never replace or copy.
+pub(in crate::platform) fn rename_noreplace_across(
+    from: &Path,
+    to: &Path,
+) -> io::Result<NoReplace> {
+    rename_noreplace(from, to)
+}
+
+pub(in crate::platform) fn create_private_dir(path: &Path) -> io::Result<()> {
+    fs::create_dir(fs_path(path)?)
+}
+
+/// CREATE_NEW: fails with ERROR_FILE_EXISTS when the name is taken.
+pub(in crate::platform) fn create_new_file(path: &Path) -> io::Result<File> {
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(fs_path(path)?)
 }
 
 /// The game opens its paks without FILE_SHARE_DELETE; asking for DELETE access then fails with a

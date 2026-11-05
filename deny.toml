@@ -14,6 +14,7 @@ yanked = "warn"
 
 [licenses]
 # Everything not listed is denied, including GPL, LGPL and the UnRAR licence.
+# oozextract says MIT but derives from GPL-3 code: fine for private use only (PLAN §15, 2026-11-05).
 # MPL-2.0 is needed for Tauri's option-ext and cssparser.
 allow = [
     "MIT",
@@ -33,6 +34,10 @@ allow = [
 confidence-threshold = 0.8
 # The list is policy, not an inventory: licences for later phases (bzip2, notify) stay listed.
 unused-allowed-license = "allow"
+
+[licenses.private]
+# Our own crates are unpublished (publish = false) and carry no licence.
+ignore = true
 
 [bans]
 multiple-versions = "warn"
@@ -66,6 +71,11 @@ reason = "C codecs; zip uses zlib-rs, bzip2 (libbz2-rs-sys) and lzma-rust2"
 crate = "sevenz-rust2"
 deny = ["zstd"]
 reason = "C zstd"
+
+[[bans.features]]
+crate = "rars"
+deny = ["experimental-ring-state"]
+reason = "experimental RAR writer state; the app only reads archives"
 
 [[bans.features]]
 crate = "bzip2"

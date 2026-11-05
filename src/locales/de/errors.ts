@@ -19,6 +19,28 @@ export const errors: LocaleShape<typeof en> = {
     outOfScope: 'Außerhalb der Mod-Ordner',
     toggleBlocked: 'Diese Mod kann nicht geändert werden',
     batchFailed: 'Änderungen nicht angewendet',
+    invalidName: 'Name nicht erlaubt',
+    manageBlocked: 'Das geht nicht',
+    trashUnavailable: '{{place}} nicht nutzbar',
+    deleteTokenInvalid: 'Bestätigung abgelaufen',
+    modinfoAmbiguous: 'modinfo.json ist nicht eindeutig',
+    profileNotFound: 'Profil nicht gefunden',
+    profileNameTaken: 'Profilname schon vergeben',
+    importFailed: 'Import fehlgeschlagen',
+    archiveFailed: 'Dieses Archiv lässt sich nicht installieren',
+    installBlocked: 'Installation nicht möglich',
+    installBusy: 'Eine andere Installation läuft',
+    installCancelled: 'Installation abgebrochen',
+    noSpace: 'Nicht genug freier Speicher',
+    sourceRejected: 'Das lässt sich nicht installieren',
+    pictureRefused: 'Dieses Bild lässt sich nicht verwenden',
+    skins: 'Skin-Sets',
+    updateNotConfigured: 'Kein Update-Kanal',
+    updateNotAllowed: 'Update über die Paketverwaltung',
+    updateBlocked: 'Update gerade nicht möglich',
+    updateFailed: 'Update fehlgeschlagen',
+    unsupported: 'Auf diesem System nicht verfügbar',
+    busyCancelled: 'Warten abgebrochen',
   },
   messages: {
     busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
@@ -44,6 +66,134 @@ export const errors: LocaleShape<typeof en> = {
     batchStuck_other:
       '{{count}} Umbenennungen konnten nicht rückgängig gemacht werden. RemMods holt das beim nächsten Start nach.',
     probeInUse: 'Eine Mod-Datei wird verwendet. Schließe zuerst TEKKEN 8.',
+    trashUnavailable:
+      'Das Verschieben in den Papierkorb ist hier nicht möglich. Nichts wurde geändert.',
+    deleteTokenInvalid:
+      'Die Löschbestätigung ist abgelaufen. Nichts wurde gelöscht; starte noch einmal.',
+    modinfoAmbiguous:
+      'Mehrere modinfo.json-Dateien unterscheiden sich nur in der Schreibweise. Entferne zuerst die überzähligen.',
+    profileNotFound: 'Dieses Profil gibt es nicht mehr. Die Liste wurde aktualisiert.',
+    profileNameTaken: 'Ein Profil mit diesem Namen gibt es schon.',
+    installBusy: 'Warte, bis die laufende Installation fertig ist, und versuche es dann erneut.',
+    installCancelled: 'Es wurde nichts installiert.',
+    noSpace: 'Die Installation braucht {{needed}}, aber nur {{available}} sind frei.',
+    updateNotConfigured: 'Dieser Build hat keinen Update-Kanal (Entwicklungs- oder Test-Build).',
+    busyCancelled: 'Abgebrochen. Kein Mod wurde geändert.',
+  },
+  updateNotAllowed: {
+    appImage:
+      'Dieses AppImage kann sich nicht selbst ersetzen. Lade die neue Version von der Release-Seite herunter.',
+    nsis: 'Diese Kopie kann das Update-Installationsprogramm nicht starten. Lade die neue Version von der Release-Seite herunter.',
+    deb: 'RemMods wurde aus einem .deb-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
+    rpm: 'RemMods wurde aus einem RPM-Paket installiert. Installiere die neue Version mit deiner Paketverwaltung.',
+    aur: 'RemMods wurde aus dem AUR installiert. Aktualisiere es mit deinem AUR-Helfer, zum Beispiel paru -Syu.',
+    local:
+      'RemMods wurde mit cachyos-install.sh installiert. Führe es im RemMods-Ordner erneut aus, um zu aktualisieren.',
+    unknown:
+      'Diese Kopie wurde nicht aus einem Release-Paket installiert und kann sich deshalb nicht selbst aktualisieren. Lade die neue Version von der Release-Seite herunter.',
+  },
+  updateBlocked: {
+    installRunning:
+      'Eine Mod-Installation läuft. Warte, bis sie fertig ist, und versuche es dann erneut.',
+    journalPending:
+      'Eine unvollständige Änderung an den Mod-Ordnern steht noch aus. Starte RemMods neu und versuche es dann erneut.',
+    busy: 'Eine andere Änderung läuft noch. Versuch es gleich nochmal.',
+  },
+  updateFailed: {
+    check:
+      'RemMods konnte nicht nach Updates suchen. Prüfe die Internetverbindung und versuche es erneut; Details stehen im Log.',
+    download:
+      'Das Update konnte nicht heruntergeladen werden. Nichts wurde geändert; versuche es später erneut.',
+    verify:
+      'Das heruntergeladene Update hat die Signaturprüfung nicht bestanden und wurde nicht installiert.',
+    install: 'Das Update konnte nicht installiert werden. Details stehen im Log.',
+  },
+  unsupported: {
+    graphicsFallback: 'Die Grafikeinstellungen gibt es nur unter Linux.',
+  },
+  archiveFailed: {
+    notAnArchive: 'Diese Datei ist kein zip-, 7z- oder rar-Archiv oder sie ist beschädigt.',
+    multiVolume: 'Dieses Archiv ist auf mehrere Teile verteilt.',
+    selfExtracting: 'Das ist ein selbstentpackendes Programm, das RemMods nie ausführt.',
+    unsupportedMethod: 'Das Archiv nutzt ein Kompressionsverfahren, das RemMods nicht lesen kann.',
+    rarDisabled: 'Diese RemMods-Version kann keine rar-Archive lesen.',
+    encrypted: 'Das Archiv ist passwortgeschützt.',
+    corrupt: 'Das Archiv ist beschädigt oder stimmt nicht mit seinen Angaben überein.',
+    memoryLimit: 'Zum Entpacken dieses Archivs wäre mehr Arbeitsspeicher nötig als erlaubt.',
+    tooManyEntries: 'Das Archiv enthält zu viele Dateien.',
+    tooLarge: 'Das Archiv wird größer entpackt, als RemMods erlaubt.',
+  },
+  installBlocked: {
+    issues: 'Die Quelle hat Probleme, die die Installation verhindern.',
+    invalidName: 'Ein Name ist nicht erlaubt oder kollidiert mit einem anderen.',
+    unresolvedClash: 'Bei einem Groß-/Kleinschreibungs-Konflikt fehlt noch eine Wahl.',
+    noSelection: 'Es ist nichts ausgewählt.',
+    variantConflict: 'Von mehreren Alternativen lässt sich nur eine installieren.',
+    replaceNotConfirmed: 'Das Ersetzen einer installierten Mod wurde nicht bestätigt.',
+    replaceMismatch: 'Die Ersetzen-Auswahl passt nicht zu den installierten Mods.',
+    ambiguous:
+      'Mehrere installierte Mods passen zum Namen. Kläre das zuerst im Reiter „Reparieren“.',
+    targetChanged: 'Die Mod-Ordner haben sich während der Vorbereitung geändert.',
+  },
+  skins: {
+    skinsUnavailable: 'Die Skin-Speicherstände des Spiels wurden nicht gefunden.',
+    skinSetNameTaken: 'Ein Set mit diesem Namen gibt es schon.',
+    skinSetInUse: 'Dieses Set ist im Spiel. Wechsle zuerst zu einem anderen.',
+    skinSetBroken:
+      'Dateien dieses Sets fehlen, darum lässt es sich nicht verwenden. Deine Skins im Spiel sind unverändert.',
+    skinSwitchInterrupted: 'Beende zuerst den unterbrochenen Wechsel.',
+    skinSetsReadOnly:
+      'Diese Liste stammt von einem neueren RemMods und lässt sich hier nicht ändern.',
+    switchFailed:
+      'Der Wechsel wurde nicht beendet, deine Skins können gemischt sein. Versuche es mit „Wechsel beenden“ noch einmal.',
+    switchFailedRestored: 'Der Wechsel hat nicht geklappt. Deine Skins sind wieder wie vorher.',
+  },
+  pictureRefused: {
+    notAnImage: 'Nur PNG-, JPG- und WebP-Bilder funktionieren.',
+    tooLarge: 'Das Bild ist zu groß. Bis zu 16 MB funktionieren.',
+    unreadable: 'RemMods kann diese Datei nicht lesen. Kopiere sie zuerst in einen lokalen Ordner.',
+  },
+  sourceRejected: {
+    unsupportedType: 'Nur zip-, 7z- und rar-Archive sowie Ordner lassen sich installieren.',
+    missing: 'RemMods kommt nicht heran. Kopiere es zuerst in einen lokalen Ordner.',
+    link: 'Verknüpfungen werden nicht verfolgt. Wähle die echte Datei oder den echten Ordner.',
+    insidePaks: 'Dieser Ordner liegt im Paks-Ordner des Spiels.',
+    tooMany: 'Zu viele Elemente auf einmal.',
+  },
+  manageBlocked: {
+    action: {
+      rename: 'RemMods benennt diesen Eintrag nicht um.',
+      trash: 'RemMods verschiebt diesen Eintrag nicht in den {{place}}.',
+      delete: 'RemMods löscht diesen Eintrag nicht.',
+      metadata: 'RemMods bearbeitet die Infos dieses Eintrags nicht.',
+    },
+    reason: {
+      loose: 'Lose Dateien haben keinen Ordner, der bearbeitet werden könnte.',
+      linked: 'Verknüpfte Mod-Ordner ändert RemMods nicht.',
+      archive: 'Archive bleiben unberührt.',
+      leftover: 'Übrig gebliebene Ordner lassen sich nicht umbenennen oder bearbeiten.',
+      unmanaged: 'Dieser Eintrag wird nicht von RemMods verwaltet.',
+      outsideRoots:
+        'Der Paks-Ordner selbst ist schreibgeschützt; nur die Mod-Ordner werden geändert.',
+      journalPending:
+        'Eine unfertige Änderung bezieht sich noch auf diesen Ordner. Starte RemMods zuerst neu.',
+    },
+  },
+  trashUnavailable: {
+    otherDevice: 'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb.',
+    noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
+    notSupported: 'Das Verschieben in den Papierkorb ist in diesem Lauf nicht verfügbar.',
+    recycleRefused:
+      'Windows hat diesen Ordner nicht in den Papierkorb verschoben (der Papierkorb ist vielleicht aus oder zu klein, oder das Laufwerk hat keinen).',
+    notShellSafe:
+      'Windows kann diesen Namen nicht in den Papierkorb verschieben. Benenne ihn zuerst unter Reparieren um oder lösche ihn endgültig.',
+  },
+  importFailed: {
+    tooLarge: 'Die Datei ist zu groß für eine Profilliste.',
+    notJson: 'Die Datei ist kein gültiges JSON.',
+    wrongShape: 'Die Datei enthält keine Profilliste.',
+    wrongFormat: 'Die Datei ist kein RemMods-Profilexport.',
+    newerVersion: 'Die Datei stammt von einem neueren RemMods. Aktualisiere zuerst RemMods.',
   },
   toggleBlocked: {
     ambiguous: 'Mehrere Mods haben diesen Namen. Benenne zuerst eine um.',

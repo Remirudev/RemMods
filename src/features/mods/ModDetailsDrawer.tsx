@@ -1,17 +1,22 @@
-import { Button, Code, DataList, Drawer, ScrollArea, Stack, Text } from '@mantine/core'
+import { Button, Code, DataList, Drawer, Group, ScrollArea, Stack, Text } from '@mantine/core'
 import { IconFolderOpen } from '@tabler/icons-react'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatSize } from '../../shared/format-size'
 import { ConflictList } from './ConflictList'
+import { ContentConflictList } from './ContentConflictList'
+import { ContentSection } from './ContentSection'
 import { DetailsFiles } from './DetailsFiles'
+import { DrawerActions } from './DrawerActions'
 import { DrawerSection } from './DrawerSection'
 import { displayState } from './display-state'
 import { IssueText } from './IssueText'
-import { modInfoText } from './mod-info-text'
+import { MetadataInfo } from './MetadataInfo'
+import { ModCover } from './ModCover'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
 import { useRevealEntry } from './queries'
+import { ReplacesSection } from './ReplacesSection'
 import type { ModDetailsDrawerProps } from './types'
 
 export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
@@ -29,13 +34,6 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
   }, [rows, closeDetails])
 
   const state = row ? displayState(row) : null
-  const originText = row
-    ? row.info.origin === 'file'
-      ? t(($) => $.drawer.infoFile)
-      : row.info.origin === 'missing'
-        ? t(($) => $.drawer.infoMissing)
-        : t(($) => $.drawer.infoInvalid)
-    : ''
   const companions = row ? row.payload.liveCompanion + row.payload.offCompanion : 0
 
   return (
@@ -51,6 +49,8 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
     >
       {row && state && (
         <Stack gap="xl" data-testid="mod-details">
+          <ModCover row={row} />
+          <ReplacesSection modRef={row.modRef} />
           <Stack gap="xs">
             <DataList labelWidth={120}>
               <DataList.Item>
@@ -99,33 +99,7 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
           </Stack>
 
           <DrawerSection title={t(($) => $.drawer.info)}>
-            <DataList labelWidth={120}>
-              <DataList.Item>
-                <DataList.ItemLabel>{t(($) => $.drawer.version)}</DataList.ItemLabel>
-                <DataList.ItemValue>{modInfoText(row.info, 'version', t)}</DataList.ItemValue>
-              </DataList.Item>
-              <DataList.Item>
-                <DataList.ItemLabel>{t(($) => $.drawer.category)}</DataList.ItemLabel>
-                <DataList.ItemValue>{modInfoText(row.info, 'category', t)}</DataList.ItemValue>
-              </DataList.Item>
-              <DataList.Item>
-                <DataList.ItemLabel>{t(($) => $.drawer.author)}</DataList.ItemLabel>
-                <DataList.ItemValue>
-                  <bdi>{modInfoText(row.info, 'author', t)}</bdi>
-                </DataList.ItemValue>
-              </DataList.Item>
-              <DataList.Item>
-                <DataList.ItemLabel>{t(($) => $.drawer.description)}</DataList.ItemLabel>
-                <DataList.ItemValue>
-                  <bdi>
-                    {modInfoText(row.info, 'description', t) || t(($) => $.drawer.descriptionEmpty)}
-                  </bdi>
-                </DataList.ItemValue>
-              </DataList.Item>
-            </DataList>
-            <Text size="xs" c="var(--qc-text-2)">
-              {originText}
-            </Text>
+            <MetadataInfo key={row.modRef} row={row} />
           </DrawerSection>
 
           <DrawerSection title={t(($) => $.drawer.conflicts)}>
@@ -148,15 +122,28 @@ export function ModDetailsDrawer({ rows }: ModDetailsDrawerProps) {
             <DetailsFiles modRef={row.modRef} />
           </DrawerSection>
 
-          <Button
-            variant="default"
-            w="fit-content"
-            leftSection={<IconFolderOpen size={18} stroke={1.8} />}
-            loading={reveal.isPending}
-            onClick={() => reveal.mutate(row.modRef)}
-          >
-            {t(($) => $.drawer.reveal)}
-          </Button>
+          {row.contentConflicts.length > 0 && (
+            <DrawerSection title={t(($) => $.contentConflicts.title)}>
+              <ContentConflictList conflicts={row.contentConflicts} />
+            </DrawerSection>
+          )}
+
+          <DrawerSection title={t(($) => $.content.title)}>
+            <ContentSection key={row.modRef} row={row} />
+          </DrawerSection>
+
+          <Group gap="sm">
+            <Button
+              variant="default"
+              w="fit-content"
+              leftSection={<IconFolderOpen size={18} stroke={1.8} />}
+              loading={reveal.isPending}
+              onClick={() => reveal.mutate(row.modRef)}
+            >
+              {t(($) => $.drawer.reveal)}
+            </Button>
+          </Group>
+          <DrawerActions row={row} />
         </Stack>
       )}
     </Drawer>

@@ -7,7 +7,7 @@ use remmods_core::settings::{Appearance, ColorScheme, TitleBarMode};
 use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 
 use crate::state::AppState;
-use crate::{focus, os, smoke};
+use crate::{drop, focus, os, smoke};
 
 pub const MAIN_WINDOW: &str = "main";
 
@@ -62,8 +62,18 @@ fn install_event_handler(window: &WebviewWindow) {
     window.on_window_event(move |event| match event {
         WindowEvent::Focused(true) => on_focused(&app),
         WindowEvent::Focused(false) | WindowEvent::Resized(_) => update_monitor_activity(&app),
+        WindowEvent::DragDrop(event) => drop::on_drag_drop(&app, event),
+        WindowEvent::CloseRequested { api, .. } if update_install_running(&app) => {
+            log::info!("window close refused while the update is being installed");
+            api.prevent_close();
+        }
         _ => {}
     });
+}
+
+fn update_install_running(app: &AppHandle) -> bool {
+    app.try_state::<AppState>()
+        .is_some_and(|state| state.update_install_running())
 }
 
 fn on_focused(app: &AppHandle) {

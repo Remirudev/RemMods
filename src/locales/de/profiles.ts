@@ -1,0 +1,168 @@
+import type { profiles as en } from '../en/profiles'
+import type { LocaleShape } from '../types'
+
+export const profiles: LocaleShape<typeof en> = {
+  unnamed: 'Ohne Namen',
+  sidebar: {
+    title: 'Gruppen',
+    newGroup: 'Neue Gruppe',
+    menu: 'Weitere Gruppenoptionen',
+    collapse: 'Gruppen ausblenden',
+    expand: 'Gruppen einblenden',
+    empty: 'Noch keine Gruppen. Eine Gruppe schaltet mehrere Mods auf einmal ein oder aus.',
+    readOnly:
+      'profiles.json stammt von einem neueren RemMods, deshalb sind Gruppen hier schreibgeschützt. Aktualisiere RemMods, um sie zu ändern.',
+    problem: {
+      corrupt:
+        'profiles.json konnte nicht gelesen werden. Eine Sicherung bleibt erhalten, das nächste Speichern beginnt eine neue Liste.',
+      newerVersion: 'profiles.json stammt von einem neueren RemMods.',
+      unreadable: 'profiles.json konnte nicht gelesen werden. Details stehen im Log.',
+    },
+    loadError: 'Die Gruppen konnten nicht geladen werden.',
+    switchOn: '„{{name}}“ einschalten',
+    switchOff: '„{{name}}“ ausschalten',
+    showMods: 'Nur die Mods von „{{name}}“ zeigen',
+    count_one: 'Schaltet {{count}} Mod ein',
+    count_other: 'Schaltet {{count}} Mods ein',
+    countMissing_one:
+      'Schaltet {{count}} Mod ein · {{missing}} aufgeführte Mods sind nicht installiert',
+    countMissing_other:
+      'Schaltet {{count}} Mods ein · {{missing}} aufgeführte Mods sind nicht installiert',
+    clashes_one:
+      '{{count}} Paar Mods in dieser Gruppe ersetzt dieselben Teile. Im Spiel erscheint jeweils nur eine.',
+    clashes_other:
+      '{{count}} Paare Mods in dieser Gruppe ersetzen dieselben Teile. Im Spiel erscheint jeweils nur eine.',
+    rowMenu: 'Optionen für „{{name}}“',
+  },
+  menu: {
+    saveCurrent: 'Aktuellen Stand als Gruppe speichern…',
+    switchWithoutList: 'Ohne Änderungsliste umschalten',
+    showListFirst: 'Änderungen vor dem Umschalten zeigen',
+    snapshots: 'Automatische Schnappschüsse…',
+  },
+  row: {
+    edit: 'Bearbeiten…',
+    update: 'Mit aktuellem Stand aktualisieren',
+    updateTitle: 'Gruppe aktualisieren?',
+    updateBody: 'Die in „{{name}}“ gespeicherten Mods durch den aktuellen Stand ersetzen?',
+    delete: 'Löschen',
+    deleteTitle: 'Gruppe löschen?',
+    deleteBody: '„{{name}}“ löschen? Die Mods selbst bleiben unberührt.',
+  },
+  mode: {
+    additive: {
+      hint: 'Schaltet die Mods ein, die die Gruppe als an führt, und die aus, die sie als aus führt. Andere Mods bleiben, wie sie sind.',
+    },
+    exclusive: {
+      hint: 'Schaltet die Mods ein, die die Gruppe als an führt, und jede andere Mod aus.',
+    },
+  },
+  form: {
+    saveTitle: 'Aktuellen Stand als Gruppe speichern',
+    saveHint: 'Die Gruppe merkt sich, welche Mods gerade an und aus sind.',
+    name: 'Name',
+    exclusive: 'Alle anderen Mods ausschalten',
+    exclusiveHint:
+      'Wenn diese Gruppe eingeschaltet wird, werden Mods, die sie nicht führt, auch ausgeschaltet.',
+    cancel: 'Abbrechen',
+    save: 'Speichern',
+    problem: {
+      taken: 'Eine Gruppe mit diesem Namen gibt es schon.',
+      invalid: 'Gib einen Namen mit 1 bis 100 Zeichen ein.',
+    },
+  },
+  group: {
+    newTitle: 'Neue Gruppe',
+    editTitle: '„{{name}}“ bearbeiten',
+    name: 'Name',
+    mods: 'Mods',
+    search: 'Mods suchen',
+    fromCurrent: 'Mit aktuellem Stand beginnen',
+    allShown_one: 'Die {{count}} gezeigte Mod setzen auf:',
+    allShown_other: 'Alle {{count}} gezeigten Mods setzen auf:',
+    pick: {
+      on: 'An',
+      off: 'Aus',
+      skip: 'Nicht ändern',
+    },
+    nowOn: 'gerade an',
+    nowOff: 'gerade aus',
+    notInstalled: 'nicht installiert',
+    counts: 'Einschalten dieser Gruppe schaltet {{on}} ein und {{off}} aus.',
+    skinSet: 'Skin-Set',
+    skinSetHint:
+      'Beim Einschalten dieser Gruppe kommen auch diese Skins ins Spiel, damit Plätze nie auf ausgeschaltete Mods zeigen.',
+    noMods: 'Keine Mods gefunden.',
+    noMatch: 'Keine Mod passt zur Suche.',
+    clashTitle: 'Einige dieser Mods ersetzen dieselben Teile',
+    clashPair: '{{first}} und {{second}}: Im Spiel erscheint nur eine davon.',
+    clashMore_one: 'Und {{count}} weiteres Paar.',
+    clashMore_other: 'Und {{count}} weitere Paare.',
+    modsProblem:
+      'Die Mod-Liste konnte nicht gespeichert werden. Schließe den Dialog und versuche es erneut.',
+    create: 'Gruppe anlegen',
+    save: 'Änderungen speichern',
+  },
+  diff: {
+    titleOn: '„{{name}}“ einschalten',
+    titleOff: '„{{name}}“ ausschalten',
+    offHint: 'Schaltet die Mods aus, die diese Gruppe als an führt. Sonst ändert sich nichts.',
+    error: 'Die Änderungen konnten nicht berechnet werden.',
+    changed:
+      'Die Mods haben sich auf der Platte geändert. Die Liste unten ist aktuell; prüfe sie und wende erneut an.',
+    enable_one: 'Einschalten ({{count}})',
+    enable_other: 'Einschalten ({{count}})',
+    disable_one: 'Ausschalten ({{count}})',
+    disable_other: 'Ausschalten ({{count}})',
+    skipped_one: 'Übersprungen ({{count}})',
+    skipped_other: 'Übersprungen ({{count}})',
+    missing_one: 'Nicht installiert ({{count}})',
+    missing_other: 'Nicht installiert ({{count}})',
+    notInProfile: 'nicht in dieser Gruppe',
+    skipReason: {
+      ambiguous: 'mehrere Mods haben diesen Namen',
+      linked: 'verknüpfter Ordner',
+      unknownState: 'Dateien konnten nicht gelesen werden',
+      noPakFiles: 'keine Pak-Dateien',
+      invalidLogicName: 'LogicMods-Ordner ohne Namen',
+    },
+    nothing: 'Nichts zu ändern.',
+    cancel: 'Abbrechen',
+    apply: 'Anwenden',
+  },
+  apply: {
+    done_one: 'Fertig: {{count}} Mod geändert.',
+    done_other: 'Fertig: {{count}} Mods geändert.',
+    nothing: 'Es musste nichts geändert werden.',
+    skipped_one: '{{count}} Mod wurde übersprungen.',
+    skipped_other: '{{count}} Mods wurden übersprungen.',
+    skins: {
+      switched: 'Skins zu {{name}} gewechselt.',
+      gameRunning: 'Die Skins bleiben, solange das Spiel läuft: Wechsle danach zu {{name}}.',
+      failed: 'Das Skin-Set {{name}} ließ sich nicht wechseln.',
+    },
+    undo: 'Rückgängig',
+  },
+  snapshots: {
+    dialogTitle: 'Automatische Schnappschüsse',
+    hint: 'RemMods speichert vor jedem Umschalten den Stand aller Mods. Stelle einen wieder her, um dorthin zurückzukehren.',
+    empty: 'Noch keine Schnappschüsse. Vor jedem Umschalten wird einer gespeichert.',
+    restore: 'Wiederherstellen…',
+    label: 'Vor dem Umschalten von „{{name}}“ · {{date}}',
+    labelDeleted: 'Vor dem Umschalten einer gelöschten Gruppe · {{date}}',
+    deleteTitle: 'Schnappschuss löschen?',
+    deleteBody: 'Dieser Schnappschuss wird gelöscht. Die Mods selbst bleiben unberührt.',
+  },
+  transfer: {
+    importOtherManager: 'Aus einem anderen Mod-Manager importieren…',
+    importOtherManagerTitle: 'profiles.json des anderen Mod-Managers wählen',
+    import: 'RemMods-Gruppen importieren…',
+    importTitle: 'RemMods-Gruppenexport wählen',
+    export: 'Gruppen exportieren…',
+    exportTitle: 'Gruppen exportieren',
+    imported:
+      'Importiert: {{added}} neu, {{updated}} aktualisiert, {{unchanged}} unverändert, {{skipped}} übersprungen.',
+    exported_one: '{{count}} Gruppe nach {{file}} exportiert.',
+    exported_other: '{{count}} Gruppen nach {{file}} exportiert.',
+  },
+}

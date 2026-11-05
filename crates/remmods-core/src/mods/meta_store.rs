@@ -41,7 +41,39 @@ impl ModMeta {
     pub fn set_record(&mut self, key: &str, record: Option<DisableRecord>) {
         let entry = self.mods.entry(key.to_owned()).or_default();
         entry.disabled = record;
-        if entry.disabled.is_none() && entry.extra.is_empty() {
+        if entry.is_empty() {
+            self.mods.remove(key);
+        }
+    }
+
+    /// Moves the whole entry of `old` to `new`; an existing entry under `new` is replaced.
+    /// `true` when `old` had an entry.
+    pub fn rekey(&mut self, old: &str, new: &str) -> bool {
+        if old == new {
+            return self.mods.contains_key(old);
+        }
+        let Some(entry) = self.mods.remove(old) else {
+            return false;
+        };
+        if self.mods.insert(new.to_owned(), entry).is_some() {
+            log::warn!("mod-meta.json: the entry of the renamed key replaced an existing one");
+        }
+        true
+    }
+
+    pub fn remove(&mut self, key: &str) {
+        self.mods.remove(key);
+    }
+
+    pub fn picture(&self, key: &str) -> Option<&str> {
+        self.mods.get(key)?.picture.as_deref()
+    }
+
+    /// Sets or clears the mod's own picture; an entry left with no fields is removed.
+    pub fn set_picture(&mut self, key: &str, picture: Option<String>) {
+        let entry = self.mods.entry(key.to_owned()).or_default();
+        entry.picture = picture;
+        if entry.is_empty() {
             self.mods.remove(key);
         }
     }
@@ -52,8 +84,27 @@ impl ModMeta {
 pub struct ModMetaEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disabled: Option<DisableRecord>,
+    /// RFC 3339, written by P4 installs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub added: Option<String>,
+    /// e.g. the archive file name (P4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    /// The owner's own picture: an id in the assets folder.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl ModMetaEntry {
+    fn is_empty(&self) -> bool {
+        self.disabled.is_none()
+            && self.added.is_none()
+            && self.source.is_none()
+            && self.picture.is_none()
+            && self.extra.is_empty()
+    }
 }
 
 /// The files a disable renamed (rel paths below the mod folder) and when.
@@ -139,8 +190,7 @@ impl ModMetaStore {
             Disk::Parsed(meta) => meta,
         };
         change(&mut meta);
-        meta.mods
-            .retain(|_, entry| entry.disabled.is_some() || !entry.extra.is_empty());
+        meta.mods.retain(|_, entry| !entry.is_empty());
         meta.revision = meta.revision.saturating_add(1);
         let bytes = serde_json::to_vec_pretty(&meta)
             .map_err(|error| FsError::io("encode", &self.path, io::Error::other(error)))?;

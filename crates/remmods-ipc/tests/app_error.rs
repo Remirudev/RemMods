@@ -10,7 +10,9 @@ use remmods_core::mods::ToggleBlock as CoreToggleBlock;
 use remmods_core::platform;
 use remmods_core::safe_fs::{BatchError, FsError, JournalProblem, ScopeViolation, StuckOp};
 use remmods_core::settings::SettingsError;
-use remmods_ipc::{AppError, FolderProblem, OsErrorClass, RevealProblem, ToggleBlock};
+use remmods_ipc::{
+    AppError, FolderProblem, OsErrorClass, RevealProblem, ToggleBlock, TrashUnavailableReason,
+};
 use serde_json::{Value, json};
 
 fn to_json(error: &AppError) -> Value {
@@ -463,4 +465,86 @@ fn toggle_errors_carry_no_keys_or_paths() {
     let text = serde_json::to_string(&error).expect("serialize");
 
     assert_eq!(text, r#"{"kind":"toggleBlocked","reason":"ambiguous"}"#);
+}
+
+fn busy_cancelled() -> FsError {
+    FsError::BusyCancelled {
+        path: "Paks/LogicMods/Tool".into(),
+    }
+}
+
+#[test]
+fn busy_cancelled_maps_bare_and_in_a_rolled_back_batch() {
+    assert_eq!(fs(busy_cancelled()), AppError::BusyCancelled);
+    assert_eq!(fs(batch(busy_cancelled(), 0)), AppError::BusyCancelled);
+    assert_eq!(
+        AppError::from(CoreError::Mods(ModsError::Fs(busy_cancelled()))),
+        AppError::BusyCancelled
+    );
+    assert_eq!(
+        to_json(&AppError::BusyCancelled),
+        json!({ "kind": "busyCancelled" })
+    );
+}
+
+#[test]
+fn busy_cancelled_with_stuck_ops_is_a_folder_batch_failure() {
+    assert_eq!(
+        fs(batch(busy_cancelled(), 1)),
+        AppError::BatchFailed {
+            class: OsErrorClass::InUse,
+            stuck: 1,
+            folder: true,
+        }
+    );
+}
+
+#[test]
+fn bulk_target_list_errors_are_invalid_input() {
+    let error = AppError::from(CoreError::Mods(ModsError::BulkTargets));
+
+    assert_eq!(error, AppError::invalid_input("targets"));
+    assert_eq!(
+        to_json(&error),
+        json!({ "kind": "invalidInput", "field": "targets" })
+    );
+}
+
+#[test]
+fn recycle_reasons_reach_trash_unavailable() {
+    let cases = [
+        (
+            platform::TrashUnavailableReason::RecycleRefused,
+            TrashUnavailableReason::RecycleRefused,
+            "recycleRefused",
+        ),
+        (
+            platform::TrashUnavailableReason::NotShellSafe,
+            TrashUnavailableReason::NotShellSafe,
+            "notShellSafe",
+        ),
+    ];
+    for (core_reason, reason, name) in cases {
+        let error = AppError::from(CoreError::Mods(ModsError::TrashUnavailable {
+            reason: core_reason,
+            size: Some(4096),
+        }));
+        assert_eq!(
+            error,
+            AppError::TrashUnavailable {
+                reason,
+                size: Some(4096.0),
+            }
+        );
+        assert_eq!(
+            to_json(&error),
+            json!({ "kind": "trashUnavailable", "reason": name, "size": 4096.0 })
+        );
+        assert_eq!(
+            fs(FsError::TrashUnavailable {
+                reason: core_reason
+            }),
+            AppError::TrashUnavailable { reason, size: None }
+        );
+    }
 }

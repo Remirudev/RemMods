@@ -1,12 +1,13 @@
 //! Focus rescan: P1's only detection of changes made outside RemMods (no watcher until P2).
 
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use remmods_core::game::GameError;
 use remmods_core::{Core, CoreError};
 use tauri::{AppHandle, Manager};
 
+use crate::base_index;
 use crate::events::{self, GameStatusChanged, ModsChanged};
 use crate::state::AppState;
 
@@ -36,7 +37,8 @@ fn claim_rescan(last: &Mutex<Option<Instant>>, now: Instant) -> bool {
     true
 }
 
-fn rescan(app: &AppHandle, core: &Core) {
+fn rescan(app: &AppHandle, core: &Arc<Core>) {
+    base_index::check_soon(app, core);
     match core.mods_refresh() {
         Ok(refreshed) if refreshed.changed => {
             let revision = refreshed.snapshot.revision;

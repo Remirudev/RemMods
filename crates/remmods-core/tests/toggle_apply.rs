@@ -270,6 +270,23 @@ fn a_failed_toggle_still_publishes_the_disk_state() {
 }
 
 #[test]
+fn a_failed_final_rescan_does_not_keep_the_old_scan() {
+    let fixture = ToggleFixture::new(&[("Mods/A/a.pak", DATA)]);
+    let before = fixture.snapshot().revision;
+    fixture.core.fail_next_final_refresh();
+    assert!(fixture.toggle(&["Standard:A"], false).is_err());
+    assert!(fixture.exists("Mods/A/a.pak-x"));
+    let listed = fixture.core.mods_list().expect("list rescans");
+    let row = listed
+        .content
+        .rows
+        .iter()
+        .find(|row| row.key == "Standard:A");
+    assert_eq!(row.expect("row A").state, ModState::Disabled);
+    assert!(listed.revision > before);
+}
+
+#[test]
 fn bulk_targets_run_in_one_batch() {
     let fixture = ToggleFixture::new(&[
         ("Mods/A/a.pak", DATA),

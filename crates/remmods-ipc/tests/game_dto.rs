@@ -47,7 +47,7 @@ fn core_status() -> core::GameStatus {
         location: core::GameLocation::Ready(core_install()),
         running: core::RunningState::Running,
         session: 2,
-        original_app: true,
+        other_manager: true,
         update: Some(core::UpdateNotice {
             from: "1".into(),
             to: "25221600".into(),
@@ -237,7 +237,7 @@ fn game_status_shape() {
         location: GameLocation::NotSet,
         running: RunningState::Unknown,
         session: 0,
-        original_app: false,
+        other_manager: false,
         update: None,
         candidates: vec![GameCandidate {
             id: "c0-0".into(),
@@ -261,7 +261,7 @@ fn game_status_shape() {
         "location": { "kind": "notSet" },
         "running": "unknown",
         "session": 0,
-        "originalApp": false,
+        "otherManager": false,
         "update": null,
         "candidates": [{
             "id": "c0-0",
@@ -300,7 +300,7 @@ fn game_status_converts_from_core() {
     );
     assert_eq!(status.running, RunningState::Running);
     assert_eq!(status.session, 2);
-    assert!(status.original_app);
+    assert!(status.other_manager);
     assert_eq!(
         status.update,
         Some(UpdateNotice {

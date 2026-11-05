@@ -41,4 +41,7 @@ disallowed-methods = [
   { path = "windows_sys::Win32::Storage::FileSystem::MoveFileExW", reason = "use remmods_core::safe_fs", allow-invalid = true },
   { path = "windows_sys::Win32::Storage::FileSystem::DeleteFileW", reason = "use remmods_core::safe_fs", allow-invalid = true },
   { path = "windows_sys::Win32::Storage::FileSystem::RemoveDirectoryW", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows::Win32::UI::Shell::IFileOperation::DeleteItem", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows::Win32::UI::Shell::IFileOperation::DeleteItems", reason = "use remmods_core::safe_fs", allow-invalid = true },
+  { path = "windows::Win32::UI::Shell::IFileOperation::PerformOperations", reason = "use remmods_core::safe_fs", allow-invalid = true },
 ]

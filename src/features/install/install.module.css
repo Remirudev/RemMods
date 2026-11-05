@@ -1,0 +1,18 @@
+.chrome {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.chrome input,
+.chrome textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.path {
+  overflow-wrap: anywhere;
+}
+
+.dimmed {
+  opacity: 0.55;
+}

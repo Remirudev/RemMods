@@ -2,18 +2,32 @@
 //! OS; the per-OS files only fill in the details. Raw OS error codes collide across systems
 //! (Windows 5/32/33 are EIO/EPIPE/EDOM on Linux), so errors are classified here and nowhere else.
 
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
 mod entry;
+mod host_env;
+mod meminfo;
 mod procfs;
+mod trash;
 
+pub(crate) use entry::os_str_prefix;
 pub use entry::{FileId, RawName, file_id, fs_path, os_str_cut, os_string, raw_name};
+pub use host_env::{
+    APPIMAGE_RUNTIME_VARS, APPRUN_PATH_LISTS, APPRUN_VALUE_VARS, FALLBACK_PATH, HostEnvPlan,
+    host_env_plan, resolve_cli_path,
+};
+pub use meminfo::parse_meminfo_total;
 pub use procfs::{ProcessRecord, parse_cmdline, parse_comm, read_proc_tree};
+pub(crate) use trash::DirTraits;
+pub use trash::{
+    MountId, Recycled, TopdirPolicy, TrashEnv, TrashKind, TrashLocation, TrashUnavailableReason,
+};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -33,6 +47,9 @@ use fallback as imp;
 /// How long `spawn_detached` watches a new child for an early failure.
 const DETACHED_EARLY_EXIT_WINDOW: Duration = Duration::from_millis(300);
 const DETACHED_POLL_INTERVAL: Duration = Duration::from_millis(20);
+
+/// The renderer variables this process set for itself (`os::graphics::prepare`).
+static OWN_ENV_VARS: OnceLock<Vec<&'static str>> = OnceLock::new();
 
 /// OS-independent meaning of an I/O error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -143,6 +160,12 @@ pub fn retry_policy(class: OsErrorClass) -> RetryPolicy {
     imp::retry_policy(class)
 }
 
+/// The folder holding the game's `SaveGames/<id>` folders: under Proton in the prefix of the
+/// library `game_root` sits in, on Windows in the user's local app data.
+pub fn save_games_root(game_root: &Path, app_id: u32) -> Option<PathBuf> {
+    imp::save_games_root(game_root, app_id)
+}
+
 /// Policy for replacing an existing file (the rename that ends `write_atomic`). On Windows a
 /// target held open without `FILE_SHARE_DELETE` (scanner, indexer, sync tool, editor) makes the
 /// replace fail with ACCESS_DENIED, so there that class means "in use" as well.
@@ -169,6 +192,66 @@ pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> io::Result<NoReplace> 
     imp::rename_noreplace(from, to)
 }
 
+/// Rename to a different folder on the same mount, never replacing `to`. Linux: renameat2
+/// NOREPLACE; EINVAL/ENOSYS → `NoReplace::FlagUnsupported` and nothing changed. Windows:
+/// MoveFileExW(verbatim, 0). EXDEV is classified CrossDevice.
+pub(crate) fn rename_noreplace_across(from: &Path, to: &Path) -> io::Result<NoReplace> {
+    imp::rename_noreplace_across(from, to)
+}
+
+/// mkdir with mode 0700 on Unix (plain create_dir on Windows); AlreadyExists is an error.
+pub(crate) fn create_private_dir(path: &Path) -> io::Result<()> {
+    imp::create_private_dir(path)
+}
+
+/// open(O_CREAT|O_EXCL|O_WRONLY, 0600) on Unix, CREATE_NEW on Windows.
+pub(crate) fn create_new_file(path: &Path) -> io::Result<std::fs::File> {
+    imp::create_new_file(path)
+}
+
+/// Owner, kind and sticky bit of `path` without following it (owner None and sticky false on
+/// Windows).
+pub(crate) fn dir_traits(path: &Path) -> io::Result<DirTraits> {
+    imp::dir_traits(path)
+}
+
+/// Linux: the real uid; Windows and other OSes: None. Read-only.
+pub fn current_uid() -> Option<u32> {
+    imp::current_uid()
+}
+
+/// Read-only probe for the trash that `item` (an existing absolute path, not followed if it is a
+/// link) would move into. Linux: the freedesktop.org rules, never `RecycleBin`. Windows: `Detect`
+/// → the volume's Recycle Bin (no drive-type or bin-size probe: the shell decides and `recycle`
+/// never deletes), `Deny`/`Fixed` → `Ok(Err(NotSupported))`. Other OSes: `Ok(Err(NotSupported))`.
+pub fn trash_location(
+    env: &TrashEnv,
+    item: &Path,
+) -> io::Result<Result<TrashLocation, TrashUnavailableReason>> {
+    imp::trash_location(env, item)
+}
+
+/// Windows: moves one existing file or folder into its volume's Recycle Bin through
+/// IFileOperation on a fresh STA thread and never deletes it (PLAN §4 Trash). `force_abort`
+/// (tests): the sink refuses every delete as if the shell could not recycle. Linux/other:
+/// Err(Unsupported).
+pub(crate) fn recycle(item: &Path, force_abort: bool) -> io::Result<Recycled> {
+    imp::recycle(item, force_abort)
+}
+
+/// Tests only (W10): initialises COM as MTA on the calling thread, so the test needs no
+/// `unsafe`. Linux/other: Err(Unsupported).
+#[doc(hidden)]
+pub fn enter_mta_for_tests() -> io::Result<()> {
+    imp::enter_mta_for_tests()
+}
+
+/// Linux: statx(AT_SYMLINK_NOFOLLOW, STATX_MNT_ID) → (st_dev, mount id when the kernel reports
+/// it). Windows/other: Unsupported.
+pub fn mount_identity(path: &Path) -> io::Result<MountId> {
+    imp::mount_identity(path)
+}
+
 /// Windows: opens `path` for DELETE with full sharing and closes it again; a holder that did not
 /// grant FILE_SHARE_DELETE (the game) makes it fail with InUse. Other OSes: Ok at once.
 pub fn lock_probe(path: &Path, is_dir: bool) -> io::Result<()> {
@@ -178,6 +261,12 @@ pub fn lock_probe(path: &Path, is_dir: bool) -> io::Result<()> {
 /// Names of the processes holding `paths`. P2: None everywhere (Restart Manager is WG-1).
 pub fn who_holds(_paths: &[PathBuf]) -> Option<Vec<String>> {
     None
+}
+
+/// Physical memory in bytes. Linux: `MemTotal` from `/proc/meminfo`; Windows:
+/// `GlobalMemoryStatusEx`; other OSes: None. Read-only.
+pub fn total_memory() -> Option<u64> {
+    imp::total_memory()
 }
 
 pub fn os_kind() -> OsKind {
@@ -218,10 +307,42 @@ pub fn registry_string(
     imp::registry_string(hive, subkey, value, view)
 }
 
-/// A command for a host program: working directory = home when known, all three streams null.
+/// Records the environment variables RemMods set for itself, so host programs do not inherit
+/// them. Only the first call counts; a later one is logged and ignored.
+pub fn set_own_env_vars(vars: Vec<&'static str>) {
+    if let Err(ignored) = OWN_ENV_VARS.set(vars) {
+        log::warn!("own environment variables already recorded; ignoring {ignored:?}");
+    }
+}
+
+pub fn own_env_vars() -> &'static [&'static str] {
+    OWN_ENV_VARS.get().map_or(&[], Vec::as_slice)
+}
+
+/// A command for a host program with the environment of this process, without RemMods' own
+/// renderer variables and AppImage mount paths ([`host_env_plan`]): working directory = home when
+/// known, all three streams null.
 pub fn host_command(program: impl AsRef<OsStr>) -> Command {
+    let env: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+    host_command_in(program, &env, own_env_vars(), dirs::home_dir().as_deref())
+}
+
+/// [`host_command`] with the inherited environment, own variables and home passed in.
+pub fn host_command_in(
+    program: impl AsRef<OsStr>,
+    env: &[(OsString, OsString)],
+    own_vars: &[&str],
+    home: Option<&Path>,
+) -> Command {
+    let plan = host_env_plan(env, own_vars);
     let mut command = Command::new(program);
-    if let Some(home) = dirs::home_dir() {
+    for name in &plan.remove {
+        command.env_remove(name);
+    }
+    for (name, value) in &plan.set {
+        command.env(name, value);
+    }
+    if let Some(home) = home {
         command.current_dir(home);
     }
     command

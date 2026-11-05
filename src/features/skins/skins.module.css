@@ -1,0 +1,51 @@
+.section {
+  flex: none;
+  max-height: 45%;
+  min-height: 0;
+  margin-top: var(--mantine-spacing-md);
+  padding-top: var(--mantine-spacing-sm);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding-inline: 6px;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.row:hover,
+.row[data-active] {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--mantine-spacing-xs);
+}
+
+.shot {
+  position: relative;
+  min-width: 0;
+  cursor: zoom-in;
+}
+
+.shotRemove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
+}
+
+.zoomed {
+  cursor: zoom-out;
+}

@@ -1,7 +1,10 @@
 name: ci
 
 # Merge gate (docs/PLAN.md §1, §9, §10): linux, windows, smoke (linux), smoke (windows) and policy.
-# fs-matrix (P2) joins the required checks once it is green on a pull request.
+# fs-matrix (P2) joins the required checks once it is green on a pull request; e2e (Playwright, P3b)
+# is not a required check until the owner adds it.
+# The package tests live in artifacts.yml: for now they run by hand and from release.yml, and are
+# not a required check (SPEC-P5 A16).
 # Actions are pinned by full commit SHA; Dependabot bumps the SHA and the version comment together.
 
 on:
@@ -74,6 +77,11 @@ jobs:
       - name: npm ci
         run: npm ci
 
+      # THIRD-PARTY-NOTICES-NPM is committed; it must match package-lock.json and node_modules.
+      - name: npm notices are current
+        if: runner.os == 'Linux'
+        run: python3 -I scripts/npm-notices.py --check
+
       - name: Lint (Biome)
         run: npm run lint
 
@@ -94,6 +102,20 @@ jobs:
 
       - name: cargo test
         run: cargo test --workspace --locked
+
+      # Zips crafted by Python (hostile names, flags, forged headers) through the archive reader.
+      - name: Archive fixtures through core
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then PY=python; else PY=python3; fi
+          "$PY" -I scripts/make-archive-fixtures.py "$RUNNER_TEMP/archive-fixtures"
+          REMMODS_ARCHIVE_FIXTURES="$RUNNER_TEMP/archive-fixtures" cargo test -p remmods-core --locked --test archive_fixtures
+
+      # `rar-builtin` is a default feature; without it a RAR is reported as RarDisabled.
+      - name: Build and test without rar-builtin
+        if: runner.os == 'Linux'
+        run: |
+          cargo check -p remmods-core --locked --no-default-features
+          cargo test -p remmods-core --locked --no-default-features --test archive_backends
 
       # PLAN §4's 50 ms warm-scan gate needs an optimised build; the debug run above checks 250 ms.
       - name: Scan performance (release)
@@ -167,8 +189,18 @@ jobs:
           if [[ "$RUNNER_OS" == Windows ]]; then PY=python; else PY=python3; fi
           "$PY" -I scripts/make-fixtures.py smoke "$RUNNER_TEMP/remmods-fixture"
 
+      # The Rust .utoc reader against the independent Python lister on the crafted fixture.
+      - name: Cross-check the .utoc reader
+        if: runner.os == 'Linux'
+        run: bash scripts/utoc-compare.sh "$RUNNER_TEMP/remmods-fixture/steamapps/common/TEKKEN 8/Polaris/Content/Paks"
+
       - name: Build the app (debug, production assets and CSP)
         run: npm run tauri -- build --debug --no-bundle
+
+      # PLAN §10 glibc floor (2.39); the release binary is checked again in release.yml/artifacts.yml.
+      - name: glibc floor
+        if: runner.os == 'Linux'
+        run: bash scripts/check-native.sh --glibc target/debug/remmods
 
       # The smoke run keeps its data under the temp dir; pointing it at runner.temp lets the
       # failure upload below find the log folder.
@@ -188,8 +220,9 @@ jobs:
         run: ./target/debug/remmods.exe --smoke
 
       # Scans the generated fixture (check scanFixture), toggles Standard:Alpha and Logic:Tool off and
-      # on (check toggleRoundTrip) and proves Paks ends as it began. Folder mtimes are ignored: the
-      # round trip renames inside Mods and LogicMods, which bumps their mtimes on every file system.
+      # on (check toggleRoundTrip) and installs install-smoke.zip (check installFixture).
+      # smoke-paks-diff.sh proves the install added exactly Mods/SmokeInstall/ and everything else in
+      # Paks ends as it began.
       - name: Smoke test with fixture (Xvfb)
         if: runner.os == 'Linux'
         timeout-minutes: 5
@@ -200,8 +233,7 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           dbus-run-session -- xvfb-run -a -s "-screen 0 1280x1024x24" ./target/debug/remmods --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
-            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
 
       - name: Smoke test with fixture
         if: runner.os == 'Windows'
@@ -214,8 +246,7 @@ jobs:
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-before.tsv"
           ./target/debug/remmods.exe --smoke --paks "$PAKS"
           bash scripts/paks-snapshot.sh "$PAKS" > "$RUNNER_TEMP/paks-after.tsv"
-          diff -u <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-before.tsv") \
-            <(awk -F'\t' -v OFS='\t' '$4 == "dir" { $3 = "-" } 1' "$RUNNER_TEMP/paks-after.tsv")
+          bash scripts/smoke-paks-diff.sh "$RUNNER_TEMP/paks-before.tsv" "$RUNNER_TEMP/paks-after.tsv"
 
       - name: Upload smoke logs
         if: failure()
@@ -230,7 +261,9 @@ jobs:
 
   # Real file systems (docs/PLAN.md §9, SPEC-P2 §9.2): the batch, rollback and recovery checks run on
   # tmpfs, ext4, btrfs, vfat and exfat mounts, plus read-only, root-owned, full-disk and tiny-inotify-
-  # queue cases. Needs sudo for the mounts, so it builds only remmods-core (no Tauri, no Node).
+  # queue cases. P3 adds the Trash cases F1-F3 (SPEC-P3 §8.1): a topdir trash on every mount, the
+  # nested btrfs subvolume, and a file system without RENAME_NOREPLACE (skipped, none exists). Needs
+  # sudo for the mounts, so it builds only remmods-core (no Tauri, no Node).
   fs-matrix:
     name: fs-matrix
     runs-on: ubuntu-24.04
@@ -266,6 +299,43 @@ jobs:
       - name: File system matrix
         run: cargo test --locked -p remmods-core --test fs_matrix -- --test-threads=1 --nocapture
 
+  # Playwright flows (SPEC-P3B §8): Chromium against `vite --mode e2e`, whose stand-in backend
+  # (e2e/mock) answers every command; no Rust build. Not a required check until the owner adds it.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (.node-version)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Install Playwright's Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright flows
+        run: npm run e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   policy:
     name: policy
     runs-on: ubuntu-24.04
@@ -298,3 +368,35 @@ jobs:
 
       - name: Native-code guard (dependency trees)
         run: bash scripts/check-native.sh
+
+      - name: Install PyYAML (workflow checks)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+
+      - name: Workflow security rules
+        run: |
+          python3 -I scripts/check-workflows.py --self-test
+          python3 -I scripts/check-workflows.py
+
+      - name: Release gate (CI mode) and release script self-tests
+        run: |
+          python3 -I scripts/release-check.py --self-test
+          python3 -I scripts/release-check.py
+          python3 -I scripts/check-latest-json.py --self-test
+          python3 -I scripts/make-latest-json.py --self-test
+          python3 -I scripts/render-pkgbuild.py --self-test
+          python3 -I scripts/inspect-bundle.py --self-test
+          bash -n scripts/seed-appimage-tools.sh
+          bash -n scripts/notices.sh
+
+      - name: Install cargo-about
+        uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
+        with:
+          tool: cargo-about@0.9.3
+          fallback: none
+
+      - name: Rust notices are current
+        run: |
+          cargo fetch --locked
+          bash scripts/notices.sh --check rust

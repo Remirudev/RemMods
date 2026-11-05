@@ -1,6 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { onGameStatusChanged, onModsChanged, onWatchStatusChanged } from '../lib/ipc/events'
+import {
+  onAssetsChanged,
+  onGameStatusChanged,
+  onModsChanged,
+  onWatchStatusChanged,
+} from '../lib/ipc/events'
 import { describeForLog } from '../lib/ipc/ipc-error'
 import type { GameStatus, ModsSnapshot, WatchStatus } from '../lib/ipc/types'
 import { logError } from '../lib/log/frontend-log'
@@ -19,7 +24,14 @@ export function useBackendEvents(): void {
         const cached = queryClient.getQueryData<ModsSnapshot>(queryKeys.mods)
         if (cached?.revision !== revision) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.mods })
+          // Counts, missing mods and the repair list follow the disk.
+          void queryClient.invalidateQueries({ queryKey: queryKeys.repair })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.profiles })
         }
+      }),
+      onAssetsChanged(() => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.assets })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.modItemsAll })
       }),
       onGameStatusChanged((event) => {
         queryClient.setQueryData<GameStatus>(queryKeys.gameStatus, (status) =>

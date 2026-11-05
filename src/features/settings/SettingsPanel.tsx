@@ -5,7 +5,10 @@ import { AboutSection } from './AboutSection'
 import { AppearanceSection } from './AppearanceSection'
 import { DiagnosticsSection } from './DiagnosticsSection'
 import { GameSection } from './GameSection'
+import { GraphicsSection } from './GraphicsSection'
+import { ItemPicturesSection } from './ItemPicturesSection'
 import { SettingsAlerts } from './SettingsAlerts'
+import { UpdatesSection } from './UpdatesSection'
 
 export function SettingsPanel() {
   const { t } = useTranslation('shell')
@@ -18,7 +21,10 @@ export function SettingsPanel() {
       />
       <SettingsAlerts />
       <AppearanceSection />
+      <GraphicsSection />
       <GameSection />
+      <ItemPicturesSection />
+      <UpdatesSection />
       <DiagnosticsSection />
       <AboutSection />
     </Stack>

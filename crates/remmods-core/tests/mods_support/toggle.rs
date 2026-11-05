@@ -1,12 +1,14 @@
 //! A `Core` on a TempDir game with an injected process list, for the toggle tests (spec §8.2).
 
+use std::collections::VecDeque;
+use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use remmods_core::game::{GameOptions, ProcessSource};
 use remmods_core::mods::{ModRow, ScanSnapshot, ToggleOutcome, ToggleRequest, ToggleTarget};
-use remmods_core::platform::ProcessRecord;
+use remmods_core::platform::{ProcessRecord, TrashEnv};
 use remmods_core::{AppPaths, Core, CoreError, CoreOptions};
 use tempfile::TempDir;
 
@@ -22,21 +24,45 @@ pub struct ToggleFixture {
     pub paths: AppPaths,
     /// Flip to make the injected process list show the game.
     pub running: Arc<AtomicBool>,
+    pub planned_scans: Arc<Mutex<VecDeque<PlannedScan>>>,
     pub core: Core,
+    /// Options every `Core` of this fixture gets (marker, trash env).
+    pub extras: Extras,
+}
+
+/// What one process scan reports, ahead of the fixture's `running` flag.
+#[derive(Clone, Copy, Debug)]
+pub enum PlannedScan {
+    Closed,
+    Running,
+    Failed,
+}
+
+/// The P3 options of the fixture's cores; `Default` = `CoreOptions::default()`'s.
+#[derive(Clone, Debug, Default)]
+pub struct Extras {
+    pub marker: Option<String>,
+    pub trash: Option<TrashEnv>,
+    pub save_root: Option<PathBuf>,
 }
 
 impl ToggleFixture {
     pub fn new(entries: &[(&str, &[u8])]) -> Self {
-        Self::build(entries, None)
+        Self::build(entries, |_| Extras::default())
     }
 
     /// Mutations need `<Paks>/remmods-smoke-fixture` (A9).
     pub fn requiring_marker(entries: &[(&str, &[u8])]) -> Self {
-        Self::build(entries, Some(MARKER))
+        Self::build(entries, |_| Extras {
+            marker: Some(MARKER.to_owned()),
+            ..Extras::default()
+        })
     }
 
-    fn build(entries: &[(&str, &[u8])], marker: Option<&str>) -> Self {
+    /// `extras` gets the fixture's root (a canonical TempDir) to place a trash or folders in.
+    pub fn build(entries: &[(&str, &[u8])], extras: impl FnOnce(&Path) -> Extras) -> Self {
         let (dir, root) = crate::support::temp_root();
+        let extras = extras(&root);
         let out = root.join("game");
         paks_tree(
             &out,
@@ -54,7 +80,8 @@ impl ToggleFixture {
         let game_root = out.join("steamapps").join("common").join("TEKKEN 8");
         let paths = AppPaths::under(&root.join("app"));
         let running = Arc::new(AtomicBool::new(false));
-        let core = open_core(&paths, &game_root, &running, marker);
+        let planned_scans = Arc::new(Mutex::new(VecDeque::new()));
+        let core = open_core(&paths, &game_root, &running, &planned_scans, &extras);
         Self {
             _dir: dir,
             root,
@@ -62,13 +89,32 @@ impl ToggleFixture {
             paks,
             paths,
             running,
+            planned_scans,
             core,
+            extras,
         }
     }
 
     /// A second `Core` on the same app folders and game (another process in the real app).
     pub fn second_core(&self) -> Core {
-        open_core(&self.paths, &self.game_root, &self.running, None)
+        let extras = Extras {
+            marker: None,
+            ..self.extras.clone()
+        };
+        open_core(
+            &self.paths,
+            &self.game_root,
+            &self.running,
+            &self.planned_scans,
+            &extras,
+        )
+    }
+
+    pub fn plan_scans(&self, scans: &[PlannedScan]) {
+        self.planned_scans
+            .lock()
+            .expect("scans")
+            .extend(scans.iter().copied());
     }
 
     pub fn snapshot(&self) -> Arc<ScanSnapshot> {
@@ -129,11 +175,19 @@ fn open_core(
     paths: &AppPaths,
     game_root: &Path,
     running: &Arc<AtomicBool>,
-    marker: Option<&str>,
+    planned_scans: &Arc<Mutex<VecDeque<PlannedScan>>>,
+    extras: &Extras,
 ) -> Core {
     let flag = Arc::clone(running);
+    let planned = Arc::clone(planned_scans);
     let processes = ProcessSource(Arc::new(move || {
-        Ok(if flag.load(Ordering::SeqCst) {
+        let game_up = match planned.lock().expect("scans").pop_front() {
+            Some(PlannedScan::Failed) => return Err(io::Error::other("no process list")),
+            Some(PlannedScan::Running) => true,
+            Some(PlannedScan::Closed) => false,
+            None => flag.load(Ordering::SeqCst),
+        };
+        Ok(if game_up {
             vec![ProcessRecord {
                 pid: 4242,
                 name: "TEKKEN 8.exe".to_owned(),
@@ -144,13 +198,18 @@ fn open_core(
         })
     }));
     let options = CoreOptions {
+        save_root: extras.save_root.clone(),
         game: GameOptions {
             steam_detection: false,
             fixed_location: Some(game_root.to_path_buf()),
             steam_hints: None,
             processes: Some(processes),
         },
-        require_marker: marker.map(str::to_owned),
+        require_marker: extras.marker.clone(),
+        trash: extras
+            .trash
+            .clone()
+            .unwrap_or_else(|| CoreOptions::default().trash),
     };
     Core::open_with(paths.clone(), options).expect("open core")
 }

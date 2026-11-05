@@ -13,6 +13,7 @@ use remmods_core::{Core, CoreError};
 use remmods_ipc::WatchState;
 use tauri::AppHandle;
 
+use crate::base_index;
 use crate::events::{self, ModsChanged, WatchStatusChanged};
 
 /// Longest sleep between wakes: a location change made without `rearm` is noticed this late.
@@ -151,6 +152,7 @@ impl Watcher {
     fn refresh(&self) -> Refresh {
         match self.core.mods_refresh() {
             Ok(refreshed) => {
+                base_index::check_soon(&self.app, &self.core);
                 if refreshed.changed {
                     let revision = refreshed.snapshot.revision;
                     events::emit(&self.app, &ModsChanged { revision });

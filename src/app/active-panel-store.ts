@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { isUpdating } from '../shared/update-run-store'
 import { DEFAULT_PANEL, isPanelId } from './panels'
 import type { ActivePanelState, PanelId } from './types'
 
@@ -29,6 +30,8 @@ export const useActivePanelStore = create<ActivePanelState>((set) => ({
   activePanel: initialPanel,
   visited: [initialPanel],
   setActivePanel: (panel) => {
+    // The update progress dialog lives in the Settings panel; hiding the panel would hide it.
+    if (isUpdating()) return
     storePanel(panel)
     set((state) => ({
       activePanel: panel,

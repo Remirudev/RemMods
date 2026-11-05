@@ -3,10 +3,16 @@ import { applySettingsUpdate } from '../features/settings/settings-update'
 import type { Settings, SettingsUpdate } from '../lib/ipc/types'
 import {
   makeGameStatus,
+  makeGraphicsState,
+  TEST_ASSETS_STATUS,
+  TEST_CONTENTS,
   TEST_DETAILS,
+  TEST_NOTICES,
   TEST_PLATFORM_INFO,
   TEST_SETTINGS,
+  TEST_SKINS_VIEW,
   TEST_SNAPSHOT,
+  TEST_UPDATE_CHANNEL,
 } from './fixtures'
 import type { IpcCall, IpcMock, IpcMockOptions } from './types'
 
@@ -21,6 +27,7 @@ export function installIpcMock(
   const gameStatus = options.gameStatus ?? makeGameStatus()
   const snapshot = options.snapshot ?? TEST_SNAPSHOT
   const details = options.details ?? TEST_DETAILS
+  const contents = options.contents ?? TEST_CONTENTS
 
   mockIPC(
     (command, payload) => {
@@ -47,8 +54,25 @@ export function installIpcMock(
           return snapshot
         case 'mods_details':
           return details
+        case 'mods_contents':
+          return contents
+        case 'mods_items':
+          return { modRef: 'm:none', ownPicture: null, items: [] }
         case 'mods_watch_status':
           return { state: 'active' }
+        case 'update_channel':
+          return TEST_UPDATE_CHANNEL
+        case 'graphics_get':
+          return makeGraphicsState()
+        case 'about_notices':
+          return TEST_NOTICES
+        case 'skins_view':
+          return TEST_SKINS_VIEW
+        case 'skins_copies':
+          return []
+        case 'assets_status':
+        case 'assets_refresh':
+          return TEST_ASSETS_STATUS
         default:
           return null
       }

@@ -2,14 +2,17 @@
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
     "targets": ["nsis"],
+    "resources": {
+      "../THIRD-PARTY-NOTICES": "THIRD-PARTY-NOTICES.txt",
+      "../THIRD-PARTY-NOTICES-NPM": "THIRD-PARTY-NOTICES-NPM.txt"
+    },
     "windows": {
-      "webviewInstallMode": {
-        "type": "downloadBootstrapper",
-        "silent": true
-      },
+      "allowDowngrades": false,
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["English", "German"]
+        "languages": ["English", "German"],
+        "displayLanguageSelector": false
       }
     }
   }

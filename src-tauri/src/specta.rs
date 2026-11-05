@@ -1,7 +1,12 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
-use crate::commands::{game, mods, settings, shell};
-use crate::events::{GameStatusChanged, ModsChanged, WatchStatusChanged};
+use crate::commands::{
+    about, assets, game, graphics, install, mods, mods_bulk, mods_manage, profiles, repair,
+    settings, shell, skins, update,
+};
+use crate::events::{
+    AssetsChanged, FolderBusy, GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged,
+};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
 /// from here. Keep the list in sync with `COMMANDS` in `build.rs` (ACL permissions).
@@ -28,15 +33,65 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods::mods_list,
             mods::mods_refresh,
             mods::mods_details,
+            mods::mods_contents,
+            assets::mods_items,
+            assets::assets_status,
+            assets::assets_refresh,
+            assets::assets_picture,
+            assets::pick_picture,
+            assets::mods_set_picture,
+            assets::mods_clear_picture,
+            skins::skins_view,
+            skins::skins_save_new,
+            skins::skins_switch,
+            skins::skins_put_back,
+            skins::skins_copies,
+            skins::skins_keep_copy,
+            skins::skins_edit,
+            skins::skins_delete,
+            skins::pick_screenshots,
+            skins::skins_add_screenshot,
+            skins::skins_remove_screenshot,
             mods::mods_reveal,
             mods::mods_toggle,
             mods::mods_disable_all,
             mods::mods_watch_status,
+            mods_manage::mods_rename,
+            mods_manage::mods_trash,
+            mods_manage::mods_delete_prepare,
+            mods_manage::mods_delete_permanently,
+            mods_manage::mods_set_metadata,
+            mods_bulk::mods_trash_many,
+            mods_bulk::mods_delete_prepare_many,
+            mods_bulk::mods_delete_many,
+            mods_bulk::mods_busy_cancel,
+            repair::repair_list,
+            profiles::profiles_list,
+            profiles::profiles_save,
+            profiles::profiles_delete,
+            profiles::profiles_diff,
+            profiles::profiles_apply,
+            profiles::profiles_transfer,
+            install::pick_archives,
+            install::pick_folder,
+            install::install_inspect,
+            install::install_start,
+            install::install_cancel,
+            update::update_channel,
+            update::update_check,
+            update::update_install,
+            graphics::graphics_get,
+            graphics::graphics_set_mode,
+            graphics::graphics_ack_step,
+            about::about_notices,
         ])
         .events(collect_events![
             ModsChanged,
+            AssetsChanged,
             GameStatusChanged,
-            WatchStatusChanged
+            WatchStatusChanged,
+            InstallDrop,
+            FolderBusy
         ])
         .error_handling(ErrorHandlingMode::Result)
         .disable_serde_phases()

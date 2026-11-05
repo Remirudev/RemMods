@@ -22,9 +22,9 @@ fn windows_names_without_argv() {
             "{exe}"
         );
     }
-    let original = classify(&[record(11, "ModManager.exe", &[])]);
-    assert!(original.game.is_none());
-    assert!(original.original_app);
+    let other = classify(&[record(11, "ModManager.exe", &[])]);
+    assert!(other.game.is_none());
+    assert!(other.other_manager);
 }
 
 #[test]

@@ -5,11 +5,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useBackendEvents } from '../../app/use-backend-events'
 import type { GameStatus } from '../../lib/ipc/types'
 import { useGameStatus } from '../../shared/game/queries'
-import { INSTALL_WITHOUT_MANIFEST, makeGameStatus, TEST_INSTALL } from '../../test/fixtures'
+import {
+  INSTALL_WITHOUT_MANIFEST,
+  makeGameStatus,
+  makeModRow,
+  makeSnapshot,
+  TEST_INSTALL,
+} from '../../test/fixtures'
 import { installIpcMock } from '../../test/ipc-mock'
 import { mockElementLayout } from '../../test/layout'
 import { renderWithProviders } from '../../test/render'
 import type { IpcHandler, IpcMockOptions } from '../../test/types'
+import { NAME_SORTING } from './compare-mods'
 import { ModsPanel } from './ModsPanel'
 import { useModsUiStore } from './mods-ui-store'
 
@@ -38,13 +45,30 @@ function rowNames(): string[] {
   return screen.getAllByTestId('mods-row').map((row) => row.querySelector('bdi')?.textContent ?? '')
 }
 
+function rowNamed(name: string): HTMLElement {
+  const row = screen
+    .getAllByTestId('mods-row')
+    .find((candidate) => candidate.querySelector('bdi')?.textContent === name)
+  if (!row) throw new Error(`no row ${name}`)
+  return row
+}
+
 describe('ModsPanel', () => {
   let restoreLayout: () => void
 
   beforeEach(() => {
     restoreLayout = mockElementLayout()
     useModsUiStore.setState({
-      filter: { text: '', state: 'all', kinds: [], conflictsOnly: false, issuesOnly: false },
+      filter: {
+        text: '',
+        state: 'all',
+        kinds: [],
+        characters: [],
+        conflictsOnly: false,
+        contentConflictsOnly: false,
+        issuesOnly: false,
+      },
+      sorting: NAME_SORTING,
       tab: 'mods',
       detailsRef: null,
       activeIndex: -1,
@@ -122,6 +146,26 @@ describe('ModsPanel', () => {
     expect(rowNames()).toHaveLength(3)
   })
 
+  it('counts only shared upper-body or full-body clothing in the same-files column and filter', async () => {
+    const user = userEvent.setup()
+    const link = { modRef: 'm:other', key: 'other', name: 'Other', shared: 2, sample: [] }
+    const same = makeModRow('Same', { contentConflicts: [{ ...link, outfit: 1 }] })
+    const shoes = makeModRow('Shoes', { contentConflicts: [{ ...link, outfit: 0 }] })
+    renderMods(makeGameStatus(), {
+      snapshot: makeSnapshot([same, shoes, makeModRow('Plain')]),
+    })
+    await screen.findAllByTestId('mods-row')
+
+    expect(screen.getByRole('columnheader', { name: 'Same files' })).toBeVisible()
+    expect(screen.getAllByText('1 mod')).toHaveLength(1)
+    expect(within(rowNamed('Same')).getByText('1 mod')).toBeVisible()
+
+    const filter = screen.getByRole('checkbox', { name: 'Replaces same files' })
+    expect(filter).toHaveAccessibleDescription(/only upper-body and full-body clothing/)
+    await user.click(filter)
+    expect(rowNames()).toEqual(['Same'])
+  })
+
   it('opens the details drawer with ArrowDown and Enter, ignores Space, closes with Escape', async () => {
     const user = userEvent.setup()
     const { ipc } = renderMods()
@@ -197,8 +241,8 @@ describe('ModsPanel', () => {
     })
   })
 
-  it('warns when the original app is running', async () => {
-    renderMods(makeGameStatus({ originalApp: true }))
+  it('warns when another mod manager is running', async () => {
+    renderMods(makeGameStatus({ otherManager: true }))
 
     expect(await screen.findByText('Another mod manager is running')).toBeVisible()
   })
@@ -274,7 +318,7 @@ describe('ModsPanel', () => {
       await emit('game-status-changed', {
         running: 'running',
         session: 1,
-        originalApp: false,
+        otherManager: false,
         update: null,
       })
     })

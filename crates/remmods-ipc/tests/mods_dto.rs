@@ -7,10 +7,10 @@ use remmods_core::mods as core;
 use remmods_core::paths::display_path;
 use remmods_core::platform;
 use remmods_ipc::{
-    ArchiveEntry, ConflictLink, LeftoverEntry, ModDetails, ModInfo, ModInfoDefaulted,
-    ModInfoOrigin, ModIssue, ModKind, ModRow, ModState, ModsSnapshot, NameProblem, OsErrorClass,
-    PayloadCounts, PayloadFile, PayloadKind, RootInfo, RootKind, ScanProblem, ScanStats,
-    UnmanagedEntry, UnmanagedKind,
+    ArchiveEntry, ConflictLink, ContentSummary, LeftoverEntry, ModDetails, ModInfo,
+    ModInfoDefaulted, ModInfoOrigin, ModIssue, ModKind, ModRow, ModState, ModsSnapshot,
+    NameProblem, OsErrorClass, PayloadCounts, PayloadFile, PayloadKind, RootInfo, RootKind,
+    ScanProblem, ScanStats, UnmanagedEntry, UnmanagedKind,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -79,6 +79,8 @@ fn core_row() -> core::ModRow {
             name: "Y".into(),
             paks: vec!["Shared.pak".into()],
         }],
+        content: Default::default(),
+        content_conflicts: Vec::new(),
         ambiguous: true,
         issues: vec![core::ModIssue::AmbiguousKey, core::ModIssue::ContainsLink],
         toggle_block: Some(core::ToggleBlock::Ambiguous),
@@ -94,6 +96,9 @@ fn core_snapshot() -> core::ScanSnapshot {
             dirs_read: 12,
             entries_seen: 40,
             duration: Duration::from_micros(2_500),
+            containers_read: 2,
+            containers_cached: 3,
+            content_duration: Duration::from_millis(1),
         },
         content: core::ScanContent {
             paks: paks.clone(),
@@ -451,6 +456,8 @@ fn mod_row_shape() {
         size_bytes: None,
         info: ModInfo::from(&default_info()),
         conflicts_with: vec![],
+        content: ContentSummary::default(),
+        content_conflicts: vec![],
         ambiguous: false,
         issues: vec![ModIssue::LogicDisabledButLoaded],
         toggle_block: None,
@@ -477,6 +484,16 @@ fn mod_row_shape() {
             "defaulted": { "version": true, "category": true, "description": true, "author": true }
         },
         "conflictsWith": [],
+        "content": {
+            "containers": [],
+            "assets": 0,
+            "characters": [],
+            "slots": [],
+            "internalOverlaps": 0,
+            "sharedIdentical": 0,
+            "sharedOtherVersions": 0
+        },
+        "contentConflicts": [],
         "ambiguous": false,
         "issues": [{ "kind": "logicDisabledButLoaded" }],
         "toggleBlock": null
@@ -538,6 +555,8 @@ fn snapshot_converts_from_core() {
             dirs_read: 12,
             entries_seen: 40,
             duration_ms: 2.5,
+            containers_read: 2,
+            containers_cached: 3,
         }
     );
 }
@@ -637,7 +656,13 @@ fn snapshot_json_uses_camel_case_and_numbers() {
     );
     assert_eq!(
         value["stats"],
-        json!({ "dirsRead": 12, "entriesSeen": 40, "durationMs": 2.5 })
+        json!({
+            "dirsRead": 12,
+            "entriesSeen": 40,
+            "durationMs": 2.5,
+            "containersRead": 2,
+            "containersCached": 3
+        })
     );
     assert!(value.get("paksId").is_none());
     assert!(value["roots"][0].get("path").is_none());
@@ -666,6 +691,8 @@ fn details_convert_from_core() {
         ],
         truncated: true,
         other_files: 7,
+        added: Some("2026-10-30T12:00:00Z".into()),
+        source: None,
     };
 
     let dto = ModDetails::from(&details);
@@ -691,6 +718,8 @@ fn details_convert_from_core() {
             ],
             truncated: true,
             other_files: 7,
+            added: Some("2026-10-30T12:00:00Z".into()),
+            source: None,
         }
     );
     assert_eq!(
@@ -698,6 +727,8 @@ fn details_convert_from_core() {
         json!({ "relPath": "Content/X.pak", "kind": "pak", "live": true, "sizeBytes": 2048.0 })
     );
     assert_eq!(to_json(&dto)["otherFiles"], json!(7));
+    assert_eq!(to_json(&dto)["added"], json!("2026-10-30T12:00:00Z"));
+    assert_eq!(to_json(&dto)["source"], Value::Null);
 }
 
 #[test]

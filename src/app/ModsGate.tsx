@@ -3,10 +3,18 @@ import { IconAlertCircle } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { ModsPanel } from '../features/mods/ModsPanel'
 import { OnboardingPanel } from '../features/onboarding/OnboardingPanel'
+import { GroupsSidebar } from '../features/profiles/GroupsSidebar'
+import { SkinSetsSection } from '../features/skins/SkinSetsSection'
 import { describeError } from '../lib/i18n/error-messages'
+import type { ModRow } from '../lib/ipc/types'
 import { useGameStatus } from '../shared/game/queries'
 
-// The mods panel only exists while a game folder is set; every other state is onboarding.
+function groupsSidebar(rows: readonly ModRow[]) {
+  return <GroupsSidebar rows={rows} footer={<SkinSetsSection />} />
+}
+
+// The mods panel only exists while a game folder is set; every other state is onboarding. The
+// groups sidebar and the skin sets come from their own features, so the app puts them together.
 export function ModsGate() {
   const { t } = useTranslation('game')
   const { t: tMods } = useTranslation('mods')
@@ -41,6 +49,6 @@ export function ModsGate() {
 
   const data = status.data
   if (data.location.kind === 'ready')
-    return <ModsPanel status={data} install={data.location.install} />
+    return <ModsPanel status={data} install={data.location.install} aside={groupsSidebar} />
   return <OnboardingPanel status={data} />
 }

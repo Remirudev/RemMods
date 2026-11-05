@@ -143,6 +143,7 @@ fn read_only_settings_keep_the_location_in_memory() {
 
     let game = install_game(&root.join("lib"), &steam_text("appmanifest_1778820.acf"));
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: false,
             fixed_location: None,
@@ -150,6 +151,7 @@ fn read_only_settings_keep_the_location_in_memory() {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(paths.clone(), options).expect("open");
     let status = core

@@ -1,12 +1,15 @@
-import { ActionIcon, CopyButton, Group, Paper, Stack, Text, Tooltip } from '@mantine/core'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
+import { Button, Group, Paper, Stack } from '@mantine/core'
+import { IconLicense } from '@tabler/icons-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CopyLinkRow } from './CopyLinkRow'
+import { REPOSITORY_URL } from './links'
+import { NoticesModal } from './NoticesModal'
 import { SectionHeading } from './SectionHeading'
-
-const REPOSITORY_URL = 'https://github.com/Remirudev/RemMods'
 
 export function AboutSection() {
   const { t } = useTranslation('settings')
+  const [noticesOpen, setNoticesOpen] = useState(false)
 
   return (
     <Paper withBorder p="lg">
@@ -15,35 +18,18 @@ export function AboutSection() {
           title={t(($) => $.about.title)}
           description={t(($) => $.about.description)}
         />
-        <Text size="sm">{t(($) => $.about.license)}</Text>
-        <Text size="sm">{t(($) => $.about.credit)}</Text>
-        <Group gap="xs" wrap="nowrap">
-          <Text size="sm" fw={600}>
-            {t(($) => $.about.source)}
-          </Text>
-          <Text size="sm" ff="monospace">
-            {REPOSITORY_URL}
-          </Text>
-          <CopyButton value={REPOSITORY_URL}>
-            {({ copied, copy }) => (
-              <Tooltip label={copied ? t(($) => $.about.linkCopied) : t(($) => $.about.copyLink)}>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  aria-label={t(($) => $.about.copyLink)}
-                  onClick={copy}
-                >
-                  {copied ? (
-                    <IconCheck size={18} stroke={1.8} />
-                  ) : (
-                    <IconCopy size={18} stroke={1.8} />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
+        <CopyLinkRow label={t(($) => $.about.source)} url={REPOSITORY_URL} />
+        <Group>
+          <Button
+            variant="default"
+            leftSection={<IconLicense size={18} stroke={1.8} />}
+            onClick={() => setNoticesOpen(true)}
+          >
+            {t(($) => $.about.notices.open)}
+          </Button>
         </Group>
       </Stack>
+      <NoticesModal opened={noticesOpen} onClose={() => setNoticesOpen(false)} />
     </Paper>
   )
 }

@@ -1,13 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { makeGameStatus, makeModRow, makeSnapshot, TEST_INSTALL } from '../../test/fixtures'
+import {
+  makeGameStatus,
+  makeGraphicsState,
+  makeModRow,
+  makeSnapshot,
+  TEST_INSTALL,
+  TEST_NOTICES,
+  TEST_PLATFORM_INFO,
+  TEST_UPDATE_CHANNEL,
+  WINDOWS_PLATFORM_INFO,
+} from '../../test/fixtures'
 import {
   checkCommand,
+  checkEmptyProfiles,
   checkGameStatus,
+  checkGraphics,
   checkMantineCss,
   checkModsListWithoutGame,
   checkModsTable,
+  checkNotices,
   checkOnboarding,
   checkToggleRoundTrip,
+  checkUpdateChannel,
+  checkUpdateRefused,
   expectRowState,
   hasToggleFixture,
 } from './smoke-checks'
@@ -54,6 +69,19 @@ describe('checkCommand', () => {
       ok: false,
       detail: 'not allowed',
     })
+  })
+})
+
+describe('checkEmptyProfiles', () => {
+  const view = { profiles: [], lastApplied: null, readOnly: false, problem: null }
+
+  it('passes an empty, writable view', () => {
+    expect(checkEmptyProfiles({ ok: true, value: view }).ok).toBe(true)
+  })
+
+  it('fails a read-only view and a rejected command', () => {
+    expect(checkEmptyProfiles({ ok: true, value: { ...view, readOnly: true } }).ok).toBe(false)
+    expect(checkEmptyProfiles({ ok: false, error: 'denied' }).detail).toBe('denied')
   })
 })
 
@@ -135,5 +163,55 @@ describe('toggle round trip', () => {
     const failed = checkToggleRoundTrip(['a', 'b'])
     expect(failed.ok).toBe(false)
     expect(failed.detail).toBe('a\nb')
+  })
+})
+
+describe('release checks', () => {
+  const linux = { ok: true, value: TEST_PLATFORM_INFO } as const
+  const windows = { ok: true, value: WINDOWS_PLATFORM_INFO } as const
+
+  it('checkUpdateChannel passes an unconfigured channel and reports the install kind', () => {
+    expect(checkUpdateChannel({ ok: true, value: TEST_UPDATE_CHANNEL }, linux)).toEqual({
+      name: 'updateChannel',
+      ok: true,
+      detail: 'unknown',
+    })
+  })
+
+  it('checkUpdateChannel fails a configured channel, another version or a rejection', () => {
+    const configured = { ...TEST_UPDATE_CHANNEL, configured: true }
+    expect(checkUpdateChannel({ ok: true, value: configured }, linux).ok).toBe(false)
+    const older = { ...TEST_UPDATE_CHANNEL, current: '0.0.9' }
+    expect(checkUpdateChannel({ ok: true, value: older }, linux).ok).toBe(false)
+    expect(checkUpdateChannel({ ok: false, error: 'denied' }, linux).detail).toBe('denied')
+    const noInfo = { ok: false, error: 'gone' } as const
+    expect(checkUpdateChannel({ ok: true, value: TEST_UPDATE_CHANNEL }, noInfo).ok).toBe(false)
+  })
+
+  it('checkUpdateRefused needs both commands refused as not configured', () => {
+    const refused = { rejected: true, kind: 'updateNotConfigured' } as const
+    expect(checkUpdateRefused(refused, refused).ok).toBe(true)
+    expect(checkUpdateRefused({ rejected: false }, refused).detail).toBe('updateCheck succeeded')
+    const stale = { rejected: true, kind: 'stale' } as const
+    expect(checkUpdateRefused(refused, stale).detail).toBe('updateInstall rejected with stale')
+  })
+
+  it('checkGraphics compares the state with the platform feature', () => {
+    const linuxState = { ok: true, value: makeGraphicsState() } as const
+    const windowsState = { ok: true, value: makeGraphicsState({ supported: false }) } as const
+    expect(checkGraphics(linuxState, linux).ok).toBe(true)
+    expect(checkGraphics(windowsState, windows).ok).toBe(true)
+    expect(checkGraphics(windowsState, linux).ok).toBe(false)
+    expect(checkGraphics(linuxState, windows).ok).toBe(false)
+    expect(checkGraphics({ ok: false, error: 'boom' }, linux).detail).toBe('boom')
+  })
+
+  it('checkNotices looks for the cargo-about header and the font licence', () => {
+    expect(checkNotices({ ok: true, value: TEST_NOTICES }).ok).toBe(true)
+    const lowerFont = { ...TEST_NOTICES, npm: 'fonts: sil open font license 1.1' }
+    expect(checkNotices({ ok: true, value: lowerFont }).ok).toBe(true)
+    expect(checkNotices({ ok: true, value: { ...TEST_NOTICES, rust: 'notices' } }).ok).toBe(false)
+    expect(checkNotices({ ok: true, value: { ...TEST_NOTICES, npm: 'react' } }).ok).toBe(false)
+    expect(checkNotices({ ok: false, error: 'missing' }).ok).toBe(false)
   })
 })

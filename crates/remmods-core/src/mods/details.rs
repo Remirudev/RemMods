@@ -41,6 +41,8 @@ pub fn read_details(input: &ScanInput, mod_ref: &ModRef) -> Result<ModDetails, M
         files,
         truncated,
         other_files,
+        added: None,
+        source: None,
     })
 }
 
@@ -156,8 +158,10 @@ fn loose_group(
         .filter(|entry| entry.problem.is_none() && entry.kind.is_file_like())
         .filter_map(|entry| {
             let payload = classify_payload(&entry.name)?;
+            let stat = entry.stat();
             Some(LooseFile {
-                size: entry.size(),
+                size: stat.map(|s| s.size),
+                modified: stat.ok().and_then(|s| s.modified),
                 name: entry.name,
                 key: entry.key,
                 path: entry.path,

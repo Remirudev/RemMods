@@ -1,10 +1,14 @@
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::sync::{Arc, Mutex, PoisonError, TryLockError};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use remmods_core::Core;
+use remmods_core::app_update::InstallKind;
 
+use crate::install_sources::SourceRegistry;
 use crate::monitor::MonitorHandle;
 use crate::smoke::SmokeFixture;
 use crate::watcher::WatcherHandle;
@@ -17,6 +21,39 @@ pub struct AppState {
     pub monitor: MonitorHandle,
     pub watcher: WatcherHandle,
     pub last_focus_rescan: Mutex<Option<Instant>>,
+    /// Picked and dropped install sources (paths stay in Rust).
+    pub install_sources: Mutex<SourceRegistry>,
+    /// How this copy was installed, computed once at startup.
+    pub install_kind: InstallKind,
+    /// The updater plugin is registered (release config, not `--smoke`).
+    pub updater_configured: bool,
+    /// The last update `update_check` found; `update_install` installs only this one.
+    pub update: Mutex<Option<tauri_plugin_updater::Update>>,
+    /// One `update_install` at a time.
+    pub updating: AtomicBool,
+    /// Started on `RunEvent::Exit` (after an AppImage update or a safe-graphics restart).
+    pub relaunch: Mutex<Option<Relaunch>>,
+    /// `true` once `RunEvent::Exit` runs. `update_install` holds the lock from this check through
+    /// the seal, the rewrite and storing the relaunch, so an exit and a seal never overlap.
+    pub exit_gate: Mutex<bool>,
+}
+
+/// A program the exit path starts through `platform::host_command`.
+#[derive(Clone, Debug)]
+pub struct Relaunch {
+    pub program: PathBuf,
+    pub args: Vec<OsString>,
+    /// This session runs from `--appimage-extract-and-run` (FUSE may be missing): the relaunched
+    /// AppImage gets that argument first, which its runtime reads and removes before AppRun, so
+    /// it extracts instead of mounting and no host program inherits a setting.
+    pub extract_and_run: bool,
+}
+
+/// What `on_setup` learned about the install and the updater.
+#[derive(Clone, Copy, Debug)]
+pub struct UpdateSetup {
+    pub install_kind: InstallKind,
+    pub updater_configured: bool,
 }
 
 pub struct SmokeState {
@@ -31,6 +68,7 @@ pub struct SmokeState {
 const RUNNING: u8 = 0;
 const PASSED: u8 = 1;
 const FAILED: u8 = 2;
+const EXIT_POLL: Duration = Duration::from_millis(50);
 
 impl AppState {
     pub fn new(
@@ -38,6 +76,7 @@ impl AppState {
         monitor: MonitorHandle,
         watcher: WatcherHandle,
         smoke: Option<SmokeState>,
+        update: UpdateSetup,
     ) -> Self {
         Self {
             core,
@@ -46,6 +85,55 @@ impl AppState {
             monitor,
             watcher,
             last_focus_rescan: Mutex::new(None),
+            install_sources: Mutex::new(SourceRegistry::default()),
+            install_kind: update.install_kind,
+            updater_configured: update.updater_configured,
+            update: Mutex::new(None),
+            updating: AtomicBool::new(false),
+            relaunch: Mutex::new(None),
+            exit_gate: Mutex::new(false),
+        }
+    }
+
+    /// The updater is rewriting the app (gate sealed, no relaunch stored yet). On Linux the
+    /// plugin has moved `$APPIMAGE` aside and writes the new file; exiting now would leave it
+    /// truncated, so a user close waits. A failed install unseals, a finished one stores the
+    /// relaunch first, and either ends this.
+    pub fn update_install_running(&self) -> bool {
+        self.core.is_sealed_for_update()
+            && self
+                .relaunch
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .is_none()
+    }
+
+    /// Marks the process as exiting, so no update seals any more. A seal that won the race holds
+    /// the lock until it has finished (relaunch stored) or failed (gate unsealed); this waits up
+    /// to `bound` for it. False when the bound passed first.
+    pub fn close_for_exit(&self, bound: Duration) -> bool {
+        let deadline = Instant::now() + bound;
+        let mut logged = false;
+        loop {
+            match self.exit_gate.try_lock() {
+                Ok(mut exiting) => {
+                    *exiting = true;
+                    return true;
+                }
+                Err(TryLockError::Poisoned(poisoned)) => {
+                    *poisoned.into_inner() = true;
+                    return true;
+                }
+                Err(TryLockError::WouldBlock) => {}
+            }
+            if Instant::now() >= deadline {
+                return false;
+            }
+            if !logged {
+                log::info!("exit waits for the update install to finish");
+                logged = true;
+            }
+            thread::sleep(EXIT_POLL);
         }
     }
 }

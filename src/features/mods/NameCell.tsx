@@ -11,7 +11,7 @@ export function NameCell({ row }: ModRowCellProps) {
         <bdi>{row.name}</bdi>
       </Text>
       {row.ambiguous && (
-        <Badge color="red" variant="light" size="sm">
+        <Badge color="red" variant="light" size="sm" style={{ flexShrink: 0 }}>
           {t(($) => $.badges.ambiguous)}
         </Badge>
       )}

@@ -4,7 +4,7 @@ use super::error::ModsError;
 use super::model::{ScanContent, ScanInput};
 use super::service::Refreshed;
 use super::toggle_apply::{
-    Plan, Selection, ToggleOutcome, ToggleRequest, plan_rows, select_disable_all, select_targets,
+    Selection, ToggleOutcome, ToggleRequest, plan_rows, select_disable_all, select_targets,
 };
 use super::toggle_plan::RecordChange;
 use crate::platform;
@@ -47,7 +47,7 @@ impl Core {
         self.check_marker(&input)?;
         let result = self.toggle_under_guard(&guard, &input, &choice, enable, apply_while_running);
         // Always publish what is on disk now; the service directly, never `mods_refresh` (§3).
-        let refreshed = self.mods.refresh(&input);
+        let refreshed = self.final_refresh(&input);
         match (result, refreshed) {
             (Ok(applied), Ok(refreshed)) => Ok(ToggleOutcome {
                 refreshed,
@@ -64,7 +64,7 @@ impl Core {
         }
     }
 
-    fn check_marker(&self, input: &ScanInput) -> Result<(), CoreError> {
+    pub(crate) fn check_marker(&self, input: &ScanInput) -> Result<(), CoreError> {
         let Some(marker) = &self.require_marker else {
             return Ok(());
         };
@@ -114,18 +114,18 @@ impl Core {
             guard.rename_batch(&plan.ops, &options)?;
         }
         if !meta.read_only {
-            self.write_records(guard, &plan);
+            self.write_records(guard, &plan.records);
         }
         Ok(Applied::from(selection))
     }
 
     /// After a successful batch; a failure is logged and the toggle still succeeds (A7).
-    fn write_records(&self, guard: &WriteGuard<'_>, plan: &Plan) {
-        if plan.records.is_empty() {
+    pub(crate) fn write_records(&self, guard: &WriteGuard<'_>, records: &[(String, RecordChange)]) {
+        if records.is_empty() {
             return;
         }
         let written = self.mods.meta().update(guard, |meta| {
-            for (key, change) in &plan.records {
+            for (key, change) in records {
                 match change {
                     RecordChange::Set(record) => meta.set_record(key, Some(record.clone())),
                     RecordChange::Clear => meta.set_record(key, None),

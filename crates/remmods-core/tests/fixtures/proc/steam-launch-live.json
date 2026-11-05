@@ -5,7 +5,7 @@
     "running": true,
     "signal": "steamReaper",
     "pid": 16404,
-    "originalApp": false
+    "otherManager": false
   },
   "processes": [
     {

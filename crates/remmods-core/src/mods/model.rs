@@ -5,6 +5,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 
 use super::issues::ModIssue;
 use super::modref::ModRef;
+use crate::content::{ContentConflictLink, ContentSummary};
 use crate::platform::OsErrorClass;
 
 /// Most payload files `read_details` lists.
@@ -137,6 +138,11 @@ pub struct ModRow {
     pub size: Option<u64>,
     pub info: ModInfo,
     pub conflicts_with: Vec<ConflictLink>,
+    /// What the row's `.utoc` indexes list (P2b).
+    pub content: ContentSummary,
+    /// Rows shipping the same assets in live containers, whatever the slot (`outfit` marks the
+    /// links the badge counts); independent of `conflicts_with`.
+    pub content_conflicts: Vec<ContentConflictLink>,
     pub ambiguous: bool,
     /// In `ModIssue` declaration order.
     pub issues: Vec<ModIssue>,
@@ -192,6 +198,10 @@ pub struct ScanStats {
     pub dirs_read: u32,
     pub entries_seen: u32,
     pub duration: Duration,
+    /// `.utoc` indexes read in this scan (cache misses).
+    pub containers_read: u32,
+    pub containers_cached: u32,
+    pub content_duration: Duration,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -262,4 +272,7 @@ pub struct ModDetails {
     pub files: Vec<PayloadFile>,
     pub truncated: bool,
     pub other_files: u32,
+    /// From `mod-meta.json` (P4 installs), shown read-only.
+    pub added: Option<String>,
+    pub source: Option<String>,
 }

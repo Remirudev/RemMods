@@ -2,9 +2,10 @@ import type { MantineColorSchemeManager } from '@mantine/core'
 import type { IconSettings } from '@tabler/icons-react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react'
-import type { GameStatus, PlatformInfo, Settings } from '../lib/ipc/types'
+import type { FolderBusy, GameStatus, PlatformInfo, Settings } from '../lib/ipc/types'
 
-export type PanelId = 'mods' | 'profiles' | 'settings'
+// Groups (saved profiles) live in the Mods panel's sidebar, not in a panel of their own.
+export type PanelId = 'mods' | 'settings'
 
 // 'scroll' panels scroll as a whole; 'fill' panels get the full height and scroll inside (the mod
 // table keeps its header and filters in view).
@@ -59,3 +60,11 @@ export interface InputGuardOptions {
 }
 
 export type BrowserKeyEvent = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'altKey' | 'metaKey'>
+
+export interface FolderBusyMessageProps {
+  info: FolderBusy
+  cancelling: boolean
+  // Only the first `waiting` of a wait takes the focus, so later updates never steal it back.
+  focusOnMount: boolean
+  onCancel: () => void
+}

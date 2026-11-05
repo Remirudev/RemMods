@@ -1,5 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query'
-import type { GameStatus, ModDetails, ModsSnapshot, PlatformInfo, Settings } from '../lib/ipc/types'
+import type {
+  GameStatus,
+  ModContents,
+  ModDetails,
+  ModsSnapshot,
+  PlatformInfo,
+  Settings,
+} from '../lib/ipc/types'
 
 export interface IpcCall {
   command: string
@@ -13,6 +20,7 @@ export interface IpcMockOptions {
   gameStatus?: GameStatus
   snapshot?: ModsSnapshot
   details?: ModDetails
+  contents?: ModContents
   handlers?: Record<string, IpcHandler>
 }
 

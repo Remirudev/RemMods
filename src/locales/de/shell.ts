@@ -19,13 +19,6 @@ export const shell: LocaleShape<typeof en> = {
       title: 'Mods',
       description: 'Deine installierten TEKKEN-8-Mods.',
     },
-    profiles: {
-      title: 'Profile',
-      description: 'Gespeicherte Zusammenstellungen aktivierter Mods.',
-      emptyTitle: 'Noch keine Profile',
-      emptyDescription:
-        'Gespeicherte Mod-Zusammenstellungen erscheinen hier, sobald es Profile gibt.',
-    },
     settings: {
       title: 'Einstellungen',
       description: 'Darstellung, Diagnose und Informationen zu RemMods.',

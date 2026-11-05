@@ -11,7 +11,7 @@ export function applyGameStatusEvent(
     ...status,
     running: event.running,
     session: event.session,
-    originalApp: event.originalApp,
+    otherManager: event.otherManager,
     update: event.update,
   }
 }

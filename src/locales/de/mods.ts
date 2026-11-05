@@ -9,10 +9,17 @@ export const mods: LocaleShape<typeof en> = {
     conflicts_one: '{{count}} Mod im Konflikt',
     conflicts_other: '{{count}} Mods im Konflikt',
   },
-  tabs: { mods: 'Mods', archives: 'Archive', unmanaged: 'Noch geladen', issues: 'Probleme' },
+  tabs: {
+    mods: 'Mods',
+    archives: 'Archive',
+    unmanaged: 'Noch geladen',
+    issues: 'Probleme',
+    repair: 'Reparieren',
+  },
   filters: {
     search: 'Mods durchsuchen',
     searchPlaceholder: 'Name, Kategorie, Autor oder Typ',
+    characters: 'Charaktere',
     state: 'Status',
     states: {
       all: 'Alle',
@@ -25,8 +32,13 @@ export const mods: LocaleShape<typeof en> = {
     },
     kinds: 'Typ',
     conflictsOnly: 'Konflikte',
+    contentConflictsOnly: 'Ersetzt gleiche Dateien',
+    contentConflictsHint:
+      'Zählt nur Oberkörper- und Ganzkörper-Kleidung, die ein anderer aktiver Mod ebenfalls ersetzt. Schuhe, Unterkörper-Teile und andere gemeinsame Dateien stehen in den Details.',
     issuesOnly: 'Probleme',
     clear: 'Filter zurücksetzen',
+    group: 'Gruppe: {{name}}',
+    clearGroup: 'Wieder alle Mods zeigen',
     count_one: '{{count}} von {{total}} Mod',
     count_other: '{{count}} von {{total}} Mods',
   },
@@ -39,8 +51,11 @@ export const mods: LocaleShape<typeof en> = {
     category: 'Kategorie',
     size: 'Größe',
     conflicts: 'Konflikte',
+    contentConflicts: 'Gleiche Dateien',
     issues: 'Probleme',
+    picture: 'Bild',
   },
+  columnsMenu: { button: 'Spalten', title: 'Spalten anzeigen', reset: 'Spalten zurücksetzen' },
   states: {
     enabled: 'Aktiv',
     partial: 'Teilweise',
@@ -65,7 +80,79 @@ export const mods: LocaleShape<typeof en> = {
     selected_other: '{{count}} ausgewählt',
     enable: 'Aktivieren',
     disable: 'Deaktivieren',
+    trash_one: 'In den {{place}} ({{count}})',
+    trash_other: 'In den {{place}} ({{count}})',
+    delete_one: 'Endgültig löschen… ({{count}})',
+    delete_other: 'Endgültig löschen… ({{count}})',
     clear: 'Auswahl aufheben (Esc)',
+  },
+  bulk: {
+    skippedByMatrix_one:
+      '{{count}} ausgewählte Mod wird übersprungen (verknüpft, lose Dateien oder Archiv).',
+    skippedByMatrix_other:
+      '{{count}} ausgewählte Mods werden übersprungen (verknüpft, lose Dateien oder Archiv).',
+    trashConfirm: {
+      title: 'In den {{place}} verschieben?',
+      body_one:
+        '{{count}} Mod ({{size}}) in den {{place}} verschieben? Du kannst sie dort wiederherstellen.',
+      body_other:
+        '{{count}} Mods ({{size}}) in den {{place}} verschieben? Du kannst sie dort wiederherstellen.',
+      more: 'und {{count}} weitere',
+      confirm: 'In den {{place}}',
+    },
+    deleteFirst: {
+      title: 'Endgültig löschen?',
+      body_one:
+        'Das löscht {{count}} Mod für immer, statt sie in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      body_other:
+        'Das löscht {{count}} Mods für immer, statt sie in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      confirm: 'Weiter',
+    },
+    deleteFinal: {
+      title: 'Diese Mods für immer löschen?',
+      body: 'Diese Mods werden endgültig gelöscht:',
+      skipped: 'Übersprungen: {{reason}}',
+      total: 'Insgesamt: {{size}}',
+      confirm: 'Endgültig löschen ({{count}})',
+    },
+    results: {
+      title: 'Nicht alles hat geklappt',
+      trashed: 'In den Papierkorb verschoben',
+      recycled: 'In den Papierkorb verschoben',
+      deleted: 'Gelöscht',
+      leftover:
+        'Gelöscht, aber ein versteckter Teil ist übrig: {{path}}. Der Reiter Reparieren listet ihn.',
+      unavailable: 'Nicht verschoben: {{reason}}',
+      notDeletable: 'Nicht verschoben, und hier kann sie nicht gelöscht werden: {{reason}}',
+      failed: 'Fehlgeschlagen: {{message}}',
+      cancelled: 'Beim Warten auf den Ordner abgebrochen; diese Mod wurde nicht geändert.',
+      notRun: 'Nicht versucht (abgebrochen)',
+      deleteUnavailable_one: 'Endgültig löschen ({{count}})',
+      deleteUnavailable_other: 'Endgültig löschen ({{count}})',
+      deleteWarning_one: 'Diese Mod ({{size}}) würde stattdessen endgültig gelöscht.',
+      deleteWarning_other: 'Diese {{count}} Mods ({{size}}) würden stattdessen endgültig gelöscht.',
+      total: 'Insgesamt: {{size}}',
+      close: 'Schließen',
+    },
+    done: {
+      trash_one: '{{count}} Mod wurde in den Papierkorb verschoben.',
+      trash_other: '{{count}} Mods wurden in den Papierkorb verschoben.',
+      recycle_one: '{{count}} Mod wurde in den Papierkorb verschoben.',
+      recycle_other: '{{count}} Mods wurden in den Papierkorb verschoben.',
+      delete_one: '{{count}} Mod wurde gelöscht.',
+      delete_other: '{{count}} Mods wurden gelöscht.',
+    },
+    nothingEligible: 'Keine dieser Mods kann gelöscht werden. Nichts wurde geändert.',
+  },
+  folderBusy: {
+    title: 'Warte auf einen belegten Ordner',
+    body: '„{{folder}}“ wird von einem anderen Programm benutzt, zum Beispiel einem Explorer-Fenster, einem Virenscan oder der Suchindizierung. RemMods versucht es bis zu {{limit}} s lang erneut.',
+    bodyUndo:
+      'RemMods stellt „{{folder}}“ wieder her und muss darauf warten; das lässt sich nicht abbrechen.',
+    elapsed: 'Wartet seit {{seconds}} s',
+    cancel: 'Abbrechen',
+    cancelling: 'Wird abgebrochen…',
+    holders: 'Benutzt von: {{names}}',
   },
   watch: {
     limitReached:
@@ -96,8 +183,23 @@ export const mods: LocaleShape<typeof en> = {
     issues_one: '{{count}} Problem',
     issues_other: '{{count}} Probleme',
     ambiguous: 'Mehrdeutig',
+    contentConflicts_one: '{{count}} Mod',
+    contentConflicts_other: '{{count}} Mods',
+    contentConflictsTooltip:
+      'Andere Versionen derselben Oberkörper- oder Ganzkörper-Kleidung in: {{names}}',
   },
-  table: { label: 'Installierte Mods', noMatch: 'Kein Mod passt zu den Filtern.' },
+  view: { label: 'Ansicht', table: 'Tabelle', grid: 'Raster' },
+  grid: {
+    sortBy: 'Sortieren nach',
+    ascending: 'Aufsteigend sortiert. Klicken zum Umkehren.',
+    descending: 'Absteigend sortiert. Klicken zum Umkehren.',
+    moreCharacters: '{{names}} +{{count}}',
+  },
+  table: {
+    label: 'Installierte Mods',
+    noMatch: 'Kein Mod passt zu den Filtern.',
+    resizeColumn: 'Breite der Spalte „{{column}}“ ändern',
+  },
   empty: {
     title: 'Keine Mods gefunden',
     description: 'Mods, ~mods und LogicMods sind in {{paks}} leer oder fehlen.',
@@ -119,6 +221,9 @@ export const mods: LocaleShape<typeof en> = {
     payloadCompanions_one: '{{count}} Begleitdatei',
     payloadCompanions_other: '{{count}} Begleitdateien',
     info: 'modinfo.json',
+    edit: 'Bearbeiten',
+    added: 'Hinzugefügt',
+    source: 'Quelle',
     infoFile: 'Aus modinfo.json gelesen.',
     infoMissing: 'Keine modinfo.json; es werden Standardwerte angezeigt.',
     infoInvalid: 'modinfo.json konnte nicht gelesen werden; es werden Standardwerte angezeigt.',
@@ -143,9 +248,109 @@ export const mods: LocaleShape<typeof en> = {
     reveal: 'Im Dateimanager zeigen',
     close: 'Schließen',
   },
+  cover: {
+    alt: 'Bild von {{name}}',
+    choose: 'Bild auswählen…',
+    change: 'Bild ändern…',
+    remove: 'Bild entfernen',
+    pickTitle: 'Wähle ein Bild für diese Mod',
+    dropLabel: 'Hier ablegen, um es als Bild von {{name}} zu nehmen',
+    dropHint: 'Oder lege hier ein PNG-, JPG- oder WebP-Bild ab.',
+  },
+  replaces: {
+    title: 'Ersetzt',
+    character: 'Charakter',
+    gamePicture: 'Im Spiel: {{name}}',
+    modPicture: 'Mit dieser Mod: {{name}}',
+    newItem: 'Neu',
+    newItemHint: 'Dieses Item gibt es im Spiel nicht: Die Mod fügt es hinzu.',
+    internalName: 'Interner Name: Dafür gibt es keinen Text.',
+    other_one: '{{count}} weiteres Teil ohne eigenes Bild',
+    other_other: '{{count}} weitere Teile ohne eigenes Bild',
+    otherHint: 'Sie gehören zum Outfit, wie versteckte Schuhe. Das Bild des Spiels bleibt.',
+  },
+  content: {
+    title: 'Inhalt',
+    summary_one: '{{count}} Asset in {{containers}} Container(n)',
+    summary_other: '{{count}} Assets in {{containers}} Container(n)',
+    noUtoc: 'Diese Mod hat keine .utoc-Dateien.',
+    characters: 'Charaktere',
+    slots: 'Slots',
+    allCharacters: 'Alle Charaktere',
+    allWomen: 'Alle Frauen',
+    allMen: 'Alle Männer',
+    rawCodeHint: 'Interner Code, noch nicht zugeordnet',
+    filter: 'Assets filtern',
+    showAll: 'Alle {{count}} anzeigen',
+    truncated: 'Nur die ersten {{shown}} von {{total}} Dateien werden gezeigt.',
+    origin: { adds: 'Neu', replaces: 'Ersetzt', unknown: 'Unbekannt' },
+    baseNote: {
+      partial:
+        'Ob eine Datei Spielinhalt ersetzt oder hinzufügt, ist unbekannt: Der Index des Spiels ließ sich nicht vollständig lesen.',
+      unavailable:
+        'Der Index des Spiels ließ sich nicht lesen. RemMods erkennt daher nicht, welche Dateien Spieldateien ersetzen, und prüft keine Konflikte.',
+      loading:
+        'Der Index des Spiels wird noch gelesen. Konflikte zwischen Mods erscheinen, sobald er bereit ist.',
+    },
+    sharedWith_one: 'Andere Version in {{count}} anderen Mod',
+    sharedWith_other: 'Andere Versionen in {{count}} anderen Mods',
+    conflictReplaces_one: 'Beide ersetzen diese Spieldatei',
+    conflictReplaces_other: 'Ersetzt diese Spieldatei, wie {{count}} andere Mods',
+    sharedIdentical_one: '{{count}} Datei teilt diese Mod mit anderen Mods als identische Kopie.',
+    sharedIdentical_other:
+      '{{count}} Dateien teilt diese Mod mit anderen Mods als identische Kopien.',
+    sharedOtherVersions_one:
+      '{{count}} gemeinsame Mod-Datei in anderen Versionen. Sie ist keine Spieldatei, daher kein Konflikt.',
+    sharedOtherVersions_other:
+      '{{count}} gemeinsame Mod-Dateien in anderen Versionen. Sie sind keine Spieldateien, daher kein Konflikt.',
+    internalOverlaps_one: '{{count}} Asset ist in mehreren Containern dieser Mod enthalten.',
+    internalOverlaps_other: '{{count}} Assets sind in mehreren Containern dieser Mod enthalten.',
+    status: {
+      read: 'Gelesen',
+      notIoStore: 'Kein IoStore-Container',
+      unsupportedVersion: 'Nicht unterstützte Version {{version}}',
+      encrypted: 'Verschlüsselt: Inhalt nicht lesbar',
+      noIndex: 'Kein Dateiindex',
+      malformed: 'Beschädigt oder unbekanntes Format',
+      tooLarge: 'Index zu groß',
+      unreadable: 'Nicht lesbar',
+    },
+    unsupportedNote: 'Nicht unterstützt: {{status}}',
+    off: 'deaktiviert',
+  },
+  contentConflicts: {
+    title: 'Ersetzt dieselben Dateien',
+    item_one: '{{count}} Datei in einer anderen Version als {{name}}',
+    item_other: '{{count}} Dateien in einer anderen Version als {{name}}',
+    outfit: 'Oberkörper- oder Ganzkörper-Kleidung: {{files}}',
+    countRule:
+      'In der Mod-Liste zählt „Gleiche Dateien“ nur Mods, die dieselbe Oberkörper- oder Ganzkörper-Kleidung ersetzen.',
+    winner: 'Welche davon das Spiel zeigt, ist noch nicht bekannt; das wird im Spiel geprüft.',
+  },
+  slots: {
+    upper: 'Oberkörper',
+    lower: 'Unterkörper',
+    bottom: 'Hose/Rock',
+    fullBody: 'Ganzkörper',
+    hair: 'Haare',
+    head: 'Kopf',
+    fullHead: 'Ganzer Kopf',
+    hat: 'Hut',
+    face: 'Gesicht',
+    facePaint: 'Gesichtsbemalung',
+    faceHair: 'Gesichtsbehaarung',
+    eyeMakeup: 'Augen-Make-up',
+    eyes: 'Augen',
+    cheek: 'Wange',
+    lips: 'Lippen',
+    glasses: 'Brille',
+    accessory: 'Accessoire',
+    shoes: 'Schuhe',
+    extra: 'Extra',
+  },
   archives: {
     description:
-      'Archive, die in Paks, Mods, ~mods oder LogicMods liegen. Das Spiel ignoriert sie; die Installation kommt in einer späteren Version.',
+      'Archive, die in Paks, Mods, ~mods oder LogicMods liegen. Das Spiel ignoriert sie; installiere eines, um es als Mod zu entpacken.',
     empty: 'Keine Archive.',
     reveal: 'Im Dateimanager zeigen',
   },
@@ -176,7 +381,7 @@ export const mods: LocaleShape<typeof en> = {
     ambiguousKey:
       'Eine andere Zeile hat denselben Schlüssel. Änderungen an diesen Zeilen werden blockiert.',
     caseCollision:
-      'Unterscheidet sich von {{others}} nur in Groß-/Kleinschreibung oder Unicode-Form; Windows oder die Original-App behandeln sie womöglich als einen Namen.',
+      'Unterscheidet sich von {{others}} nur in Groß-/Kleinschreibung oder Unicode-Form; Windows und manche Mod-Programme behandeln sie womöglich als einen Namen.',
     caseVariantRoot:
       'Liegt in {{root}}, das sich nur in Groß- und Kleinschreibung von einem anderen Stammordner unterscheidet.',
     nonUnicodeName: 'Der Name ist kein gültiges Unicode und wird maskiert angezeigt.',
@@ -223,6 +428,131 @@ export const mods: LocaleShape<typeof en> = {
     reservedDeviceName: 'er ist ein reservierter Gerätename wie CON, NUL oder COM1',
     disabledPrefix: 'er beginnt mit .disabled_',
     tempName: 'er sieht wie der Ordner einer unvollständigen Installation aus',
+  },
+  rowMenu: {
+    label: 'Aktionen für {{name}}',
+    rename: 'Umbenennen…',
+    trash: 'In den {{place}}',
+    delete: 'Endgültig löschen…',
+  },
+  confirm: {
+    otherManagerRunning:
+      'Ein anderer Mod-Manager läuft und bemerkt diese Änderung womöglich erst nach einem Neustart.',
+  },
+  rename: {
+    title: 'Mod umbenennen',
+    label: 'Neuer Name',
+    submit: 'Umbenennen',
+    cancel: 'Abbrechen',
+    done: '„{{from}}“ wurde in „{{to}}“ umbenannt.',
+    rekeyFailed:
+      'Die Mod wurde umbenannt, aber Profile oder gespeicherte Daten konnten nicht angepasst werden. Details stehen im Log.',
+  },
+  nameIssue: {
+    empty: 'Der Name darf nicht leer sein.',
+    dot_name: 'Ein oder zwei Punkte sind kein Name.',
+    too_long: 'Der Name ist zu lang (höchstens 255 Bytes).',
+    forbidden_char: 'Der Name darf kein < > : " / \\ | ? * enthalten.',
+    control_char: 'Der Name darf keine Steuerzeichen enthalten.',
+    bidi_control: 'Der Name darf keine Steuerzeichen für die Schreibrichtung enthalten.',
+    trailing_dot_or_space: 'Der Name darf nicht mit Punkt oder Leerzeichen enden.',
+    reserved_device_name: 'Windows reserviert diesen Namen (CON, NUL, COM1 und ähnliche).',
+    disabled_prefix: 'Der Name darf nicht mit „.disabled_“ beginnen.',
+    temp_name: 'Der Name sieht nach einem unfertigen Installationsordner aus.',
+    unchanged: 'Der Name ist derselbe wie vorher.',
+    exists: 'Eine andere Mod oder ein anderer Ordner heißt schon so.',
+    invalid: 'Dieser Name kann nicht verwendet werden.',
+  },
+  trash: {
+    place: { trash: 'Papierkorb', recycleBin: 'Papierkorb' },
+    confirm: {
+      title: 'In den {{place}} verschieben?',
+      body: '„{{name}}“ ({{size}}) in den {{place}} verschieben? Du kannst es dort wiederherstellen.',
+      confirm: 'In den {{place}}',
+    },
+    done: '„{{name}}“ wurde in den Papierkorb verschoben.',
+    doneRecycle: '„{{name}}“ wurde in den Papierkorb von Windows verschoben.',
+    unavailable: {
+      title: 'Der {{place}} ist nicht nutzbar',
+      otherDevice:
+        'Dieser Ordner liegt auf einem anderen Laufwerk als dein Papierkorb, deshalb kann er ihn nicht aufnehmen.',
+      noUsableTrash: 'Für dieses Laufwerk wurde kein nutzbarer Papierkorb gefunden.',
+      notSupported: 'Das Verschieben in den {{place}} ist in diesem Lauf nicht verfügbar.',
+      recycleRefused:
+        'Windows hat diesen Ordner nicht in den Papierkorb verschoben (der Papierkorb ist vielleicht aus oder zu klein dafür, oder das Laufwerk hat keinen).',
+      notShellSafe:
+        'Windows kann diesen Namen nicht in den Papierkorb verschieben. Benenne ihn zuerst unter Reparieren um oder lösche ihn endgültig.',
+      warning: '„{{name}}“ ({{size}}) würde stattdessen endgültig gelöscht.',
+      confirm: 'Endgültig löschen',
+    },
+  },
+  delete: {
+    cancel: 'Abbrechen',
+    confirm: {
+      title: 'Endgültig löschen?',
+      body: 'Das löscht „{{name}}“ für immer, statt es in den {{place}} zu verschieben. Vor dem Löschen wirst du noch einmal gefragt.',
+      confirm: 'Weiter',
+    },
+    final: {
+      title: '{{name}} für immer löschen?',
+      body: '„{{name}}“ ({{size}}) wird endgültig gelöscht.',
+      irreversible: 'Das lässt sich nicht rückgängig machen.',
+      confirm: 'Endgültig löschen',
+    },
+    done: '„{{name}}“ wurde gelöscht.',
+    expired:
+      'Die Bestätigung ist abgelaufen. Nichts wurde gelöscht; starte noch einmal, wenn du es weiter willst.',
+    leftover:
+      'Ein Teil der Mod konnte nicht entfernt werden und bleibt versteckt: {{path}}. Der Reiter Reparieren listet ihn.',
+  },
+  metadata: {
+    save: 'Speichern',
+    cancel: 'Abbrechen',
+    confirmTitle: 'modinfo.json speichern?',
+    ambiguous:
+      'Mehrere Dateien unterscheiden sich nur in der Groß- und Kleinschreibung (modinfo.json). Entferne zuerst die überzähligen.',
+    tooLong: 'Ein Feld ist länger als {{max}} Zeichen.',
+  },
+  repair: {
+    description:
+      'Dinge, die RemMods gefunden hat und die deine Aufmerksamkeit brauchen. Jede Aktion fragt nach, bevor sie etwas ändert.',
+    empty: 'Nichts zu reparieren.',
+    kinds: {
+      leftover: 'Übrig gebliebener Ordner',
+      ambiguousKey: 'Gleicher Name doppelt',
+      invalidName: 'Ungültiger Name',
+      nonUnicodeName: 'Nicht lesbarer Name',
+      logicDisabledButLoaded: 'Per Name aus, aber geladen',
+      logicEnabledNotLoaded: 'Per Name an, aber nicht geladen',
+      tempFolderLive: 'Unfertiger Installationsordner',
+      stuckJournal: 'Unfertige Änderung',
+    },
+    hints: {
+      leftover:
+        'Ein versteckter Ordner von einem unterbrochenen Löschen oder Installieren. Daraus wird nichts geladen.',
+      ambiguousKey:
+        'Mehrere Mods teilen sich einen Namen, deshalb kann RemMods sie nicht unterscheiden. Benenne eine um.',
+      invalidName:
+        'Der Ordnername verletzt eine Namensregel. Ein gültiger Name wird vorgeschlagen.',
+      nonUnicodeName:
+        'Der Ordnername lässt sich nicht als Text lesen. Ein gültiger Name wird vorgeschlagen.',
+      logicDisabledButLoaded: 'Der Ordner ist als aus markiert, das Spiel lädt aber seine Dateien.',
+      logicEnabledNotLoaded:
+        'Der Ordner ist als an markiert, seine Dateien sind aber ausgeschaltet.',
+      tempFolderLive:
+        'Dieser Ordner enthält noch aktive Spieldateien und sieht nach einer nicht beendeten Installation aus.',
+      stuckJournal:
+        'Eine Umbenennung ließ sich nicht rückgängig machen. RemMods versucht es beim nächsten Start erneut; Details stehen im Log.',
+    },
+    actions: {
+      rename: 'Umbenennen…',
+      trash: 'In den {{place}}',
+      deletePermanently: 'Endgültig löschen…',
+      reveal: 'Im Dateimanager zeigen',
+      finishDisable: 'Ausschalten abschließen',
+      finishEnable: 'Einschalten abschließen',
+      openLogs: 'Log öffnen',
+    },
   },
   severity: { error: 'Fehler', warning: 'Warnung', info: 'Hinweis' },
 }

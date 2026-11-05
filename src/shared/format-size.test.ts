@@ -11,8 +11,8 @@ describe('formatSize', () => {
     expect(formatSize(0, 'en')).toBe('0 B')
   })
 
-  it('matches the original for whole kilobytes', () => {
-    expect(formatSize(2048, 'en')).toBe('2 KB')
+  it('shows whole kilobytes without decimals', () => {
+    expect(formatSize(5 * KIB, 'en')).toBe('5 KB')
   })
 
   it('uses the language decimal separator', () => {

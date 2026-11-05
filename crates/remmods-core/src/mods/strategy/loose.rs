@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use crate::mods::model::ScanProblem;
 use crate::mods::payload::Payload;
@@ -15,6 +16,7 @@ pub(crate) struct LooseFile {
     pub path: PathBuf,
     pub payload: Payload,
     pub size: Result<u64, ScanProblem>,
+    pub modified: Option<SystemTime>,
 }
 
 impl LooseFile {

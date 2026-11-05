@@ -7,8 +7,9 @@ use std::thread;
 use std::time::Instant;
 
 use super::FsError;
+use super::busy::{BusyWaits, WaitCtx, wait_loop};
 use super::journal::Journal;
-use super::preflight::{list_folded, preflight};
+use super::preflight::{Chains, list_folded, preflight};
 use super::rename::{RenameMethod, STUCK_UNLINK_OP, rename_one};
 use super::scope::Scope;
 use crate::platform::{self, OsErrorClass, RetryPolicy};
@@ -37,6 +38,30 @@ pub struct FaultPlan {
     pub crash_after: Option<usize>,
     /// The rollback of op k fails, so it is stuck.
     pub fail_rollback_of: Option<usize>,
+    /// A held op: its tries fail with AccessDenied for a while (WG-2 waits).
+    pub busy: Option<BusyFault>,
+    /// Replaces `platform::folder_retry_policy` for InUse/AccessDenied folder renames of this
+    /// batch (Linux has one attempt). Other classes keep one attempt.
+    pub folder_policy: Option<RetryPolicy>,
+    /// Windows recycle: the sink refuses item k as if the shell could not recycle it.
+    pub abort_recycle: Option<usize>,
+}
+
+/// The rename (or, with `undo`, the rollback rename) of expanded op `op` fails with an
+/// AccessDenied error on its first `attempts` tries, then runs for real.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BusyFault {
+    pub op: usize,
+    pub attempts: u32,
+    pub undo: bool,
+}
+
+impl FaultPlan {
+    fn busy_attempts(&self, op: usize, undo: bool) -> u32 {
+        self.busy
+            .filter(|busy| busy.op == op && busy.undo == undo)
+            .map_or(0, |busy| busy.attempts)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -70,10 +95,12 @@ pub struct BatchError {
 pub(crate) fn run(
     scope: &Scope,
     journal: &Journal,
+    busy: &BusyWaits,
     ops: &[RenameOp],
     options: &BatchOptions,
+    chains: Chains,
 ) -> Result<BatchReport, FsError> {
-    let planned = preflight(scope, ops)?;
+    let planned = preflight(scope, ops, chains)?;
     let Some(last) = planned.ops.last() else {
         return Ok(BatchReport {
             done: 0,
@@ -82,12 +109,41 @@ pub(crate) fn run(
     };
     let entry = journal.begin(options.label, &planned.ops)?;
     let fault = options.fault.clone().unwrap_or_default();
+    let wait = WaitCtx {
+        busy,
+        paks: scope.paks(),
+        cancellable: true,
+        policy: fault.folder_policy,
+        injected: 0,
+    };
     let mut methods = Vec::with_capacity(planned.ops.len());
     for (index, op) in planned.ops.iter().enumerate() {
         if fault.crash_after == Some(index) {
             return Err(crash_error(index, op));
         }
-        let outcome = run_op(scope, journal, &entry, op, index, &fault, options.retry);
+        let wait = WaitCtx {
+            injected: fault.busy_attempts(index, false),
+            ..wait
+        };
+        let outcome = if index > 0 && busy.cancel_requested() {
+            Err((
+                FsError::BusyCancelled {
+                    path: op.from.clone(),
+                },
+                false,
+            ))
+        } else {
+            run_op(
+                scope,
+                journal,
+                &entry,
+                op,
+                index,
+                &fault,
+                options.retry,
+                wait,
+            )
+        };
         let outcome = outcome.and_then(|method| {
             if planned.verify.get(index) == Some(&true) {
                 verify_exact_name(&op.to).map_err(|error| (error, true))?;
@@ -107,6 +163,10 @@ pub(crate) fn run(
                     index,
                     cause,
                     &fault,
+                    WaitCtx {
+                        cancellable: false,
+                        ..wait
+                    },
                 ));
             }
         }
@@ -124,6 +184,8 @@ pub(crate) fn run(
 }
 
 /// Rename with the retry policy of its kind; a folder still held afterwards is `FolderBusy`.
+/// With `wait` (batches, not journal recovery) a held folder waits visibly and can be
+/// cancelled (WG-2).
 pub(crate) fn rename_with_retry(
     scope: &Scope,
     from: &Path,
@@ -131,17 +193,28 @@ pub(crate) fn rename_with_retry(
     is_dir: bool,
     retry: RetryMode,
     journal: Option<(&Journal, &str)>,
+    wait: Option<WaitCtx<'_>>,
 ) -> Result<RenameMethod, FsError> {
-    let policy_for: fn(OsErrorClass) -> RetryPolicy = match (retry, is_dir) {
-        (RetryMode::Never, _) => |_| RetryPolicy::ONCE,
-        (RetryMode::Normal, true) => platform::folder_retry_policy,
-        (RetryMode::Normal, false) => platform::retry_policy,
+    let mut injected = wait.map_or(0, |wait| wait.injected);
+    let attempt = || {
+        if injected > 0 {
+            injected -= 1;
+            let held = io::Error::from(io::ErrorKind::PermissionDenied);
+            return Err(FsError::io("rename", from, held));
+        }
+        rename_one(scope, from, to, is_dir, journal)
     };
-    let result = with_retry(policy_for, || rename_one(scope, from, to, is_dir, journal));
+    let result = match (retry, is_dir, wait) {
+        (RetryMode::Normal, true, Some(wait)) => wait_loop(&wait, from, attempt),
+        (RetryMode::Normal, true, None) => with_retry(platform::folder_retry_policy, attempt),
+        (RetryMode::Normal, false, _) => with_retry(platform::retry_policy, attempt),
+        (RetryMode::Never, _, _) => with_retry(|_| RetryPolicy::ONCE, attempt),
+    };
     result.map_err(|error| folder_busy(error, from, is_dir))
 }
 
 /// The op's result; on Err the flag says whether the op itself was done (verify failures).
+#[allow(clippy::too_many_arguments)]
 fn run_op(
     scope: &Scope,
     journal: &Journal,
@@ -150,6 +223,7 @@ fn run_op(
     index: usize,
     fault: &FaultPlan,
     retry: RetryMode,
+    wait: WaitCtx<'_>,
 ) -> Result<RenameMethod, (FsError, bool)> {
     if fault.fail_before == Some(index) {
         let injected = fault.raw_os_error.map_or_else(
@@ -166,6 +240,7 @@ fn run_op(
         op.is_dir,
         retry,
         Some((journal, entry)),
+        Some(wait),
     )
     .map_err(|error| (error, false))
 }
@@ -180,6 +255,7 @@ fn roll_back(
     failed: usize,
     cause: FsError,
     fault: &FaultPlan,
+    wait: WaitCtx<'_>,
 ) -> FsError {
     let mut stuck = Vec::new();
     if let (
@@ -211,6 +287,10 @@ fn roll_back(
                 op.is_dir,
                 RetryMode::Normal,
                 Some((journal, entry)),
+                Some(WaitCtx {
+                    injected: fault.busy_attempts(index, true),
+                    ..wait
+                }),
             )
         };
         match undo {

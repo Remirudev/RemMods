@@ -1,4 +1,5 @@
 use std::io;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::ptr;
 use std::time::Duration;
@@ -16,12 +17,22 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 use super::{OsErrorClass, OsKind, RetryPolicy};
 
 mod fs;
+mod memory;
 mod process;
+mod recycle;
 mod registry;
+mod trash;
 
-pub(super) use fs::{lock_probe, rename_noreplace};
+pub(super) use fs::{
+    create_new_file, create_private_dir, lock_probe, rename_noreplace, rename_noreplace_across,
+};
+pub(super) use memory::total_memory;
 pub(super) use process::processes;
+pub(super) use recycle::{enter_mta_for_tests, recycle};
 pub(super) use registry::{registry_string, steam_hints};
+pub(super) use trash::{
+    current_uid, dir_traits, mount_identity, trash_env_from_env, trash_location,
+};
 
 pub(super) const OS_KIND: OsKind = OsKind::Windows;
 pub(super) const APP_ORIGIN: &str = "http://tauri.localhost";
@@ -67,6 +78,11 @@ pub(super) fn folder_retry_policy(class: OsErrorClass) -> RetryPolicy {
         OsErrorClass::InUse | OsErrorClass::AccessDenied => FOLDER_RETRY,
         _ => RetryPolicy::ONCE,
     }
+}
+
+pub(super) fn save_games_root(_game_root: &Path, _app_id: u32) -> Option<PathBuf> {
+    let local = dirs::data_local_dir()?;
+    Some(local.join("TEKKEN 8").join("Saved").join("SaveGames"))
 }
 
 /// MoveFileExW(REPLACE_EXISTING) reports ACCESS_DENIED, not a sharing violation, when the target

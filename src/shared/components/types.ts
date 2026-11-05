@@ -2,6 +2,14 @@ import type { ReactNode } from 'react'
 import type { DetectionNote, FolderProblem, GameCandidate, GameStatus } from '../../lib/ipc/types'
 import type { FolderChooser } from '../game/types'
 
+export interface ItemPictureProps {
+  // `null` shows an empty tile, for a picture that is not there (yet).
+  id: string | null
+  label: string
+  width: number | string
+  height: number | string
+}
+
 export interface PanelHeaderProps {
   title: string
   description?: string

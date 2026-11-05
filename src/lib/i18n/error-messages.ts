@@ -1,7 +1,26 @@
+import { formatSize } from '../../shared/format-size'
+import { trashPlaceWord } from '../../shared/trash-place'
 import { isIpcError } from '../ipc/ipc-error'
 import type { AppError } from '../ipc/types'
 import { i18n } from './index'
 import type { ErrorDescription } from './types'
+
+const NAME_ISSUES = [
+  'empty',
+  'dot_name',
+  'too_long',
+  'forbidden_char',
+  'control_char',
+  'bidi_control',
+  'trailing_dot_or_space',
+  'reserved_device_name',
+  'disabled_prefix',
+  'temp_name',
+] as const
+
+export function isNameIssue(value: string): value is (typeof NAME_ISSUES)[number] {
+  return (NAME_ISSUES as readonly string[]).includes(value)
+}
 
 type BatchFailure = Extract<AppError, { kind: 'batchFailed' }>
 
@@ -64,6 +83,156 @@ export function describeAppError(error: AppError): ErrorDescription {
     }
     case 'batchFailed':
       return { title: t(($) => $.titles.batchFailed), message: describeBatchFailure(error) }
+    case 'invalidName': {
+      const tMods = i18n.getFixedT(null, 'mods')
+      const issue = isNameIssue(error.issue) ? error.issue : 'invalid'
+      return {
+        title: t(($) => $.titles.invalidName),
+        message: tMods(($) => $.nameIssue[issue]),
+      }
+    }
+    case 'manageBlocked': {
+      const reason = error.reason
+      const action = error.action
+      return {
+        title: t(($) => $.titles.manageBlocked),
+        message: `${t(($) => $.manageBlocked.action[action], { place: trashPlaceWord() })} ${t(($) => $.manageBlocked.reason[reason])}`,
+      }
+    }
+    case 'trashUnavailable': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.trashUnavailable, { place: trashPlaceWord() }),
+        message: t(($) => $.trashUnavailable[reason]),
+      }
+    }
+    case 'deleteTokenInvalid':
+      return {
+        title: t(($) => $.titles.deleteTokenInvalid),
+        message: t(($) => $.messages.deleteTokenInvalid),
+      }
+    case 'modinfoAmbiguous':
+      return {
+        title: t(($) => $.titles.modinfoAmbiguous),
+        message: t(($) => $.messages.modinfoAmbiguous),
+      }
+    case 'profileNotFound':
+      return {
+        title: t(($) => $.titles.profileNotFound),
+        message: t(($) => $.messages.profileNotFound),
+      }
+    case 'profileNameTaken':
+      return {
+        title: t(($) => $.titles.profileNameTaken),
+        message: t(($) => $.messages.profileNameTaken),
+      }
+    case 'importFailed': {
+      const problem = error.problem
+      return {
+        title: t(($) => $.titles.importFailed),
+        message: t(($) => $.importFailed[problem]),
+      }
+    }
+    case 'archiveFailed': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.archiveFailed),
+        message: t(($) => $.archiveFailed[reason]),
+      }
+    }
+    case 'installBlocked': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.installBlocked),
+        message: t(($) => $.installBlocked[reason]),
+      }
+    }
+    case 'installBusy':
+      return {
+        title: t(($) => $.titles.installBusy),
+        message: t(($) => $.messages.installBusy),
+      }
+    case 'installCancelled':
+      return {
+        title: t(($) => $.titles.installCancelled),
+        message: t(($) => $.messages.installCancelled),
+      }
+    case 'noSpace': {
+      const needed = formatSize(error.needed, i18n.language) ?? ''
+      const available = formatSize(error.available, i18n.language) ?? ''
+      return {
+        title: t(($) => $.titles.noSpace),
+        message: t(($) => $.messages.noSpace, { needed, available }),
+      }
+    }
+    case 'sourceRejected': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.sourceRejected),
+        message: t(($) => $.sourceRejected[reason]),
+      }
+    }
+    case 'skinsUnavailable':
+    case 'skinSetNameTaken':
+    case 'skinSetInUse':
+    case 'skinSetBroken':
+    case 'skinSwitchInterrupted':
+    case 'skinSetsReadOnly': {
+      const kind = error.kind
+      return { title: t(($) => $.titles.skins), message: t(($) => $.skins[kind]) }
+    }
+    case 'skinSwitchFailed':
+      return {
+        title: t(($) => $.titles.skins),
+        message: error.restored
+          ? t(($) => $.skins.switchFailedRestored)
+          : t(($) => $.skins.switchFailed),
+      }
+    case 'pictureRefused': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.pictureRefused),
+        message: t(($) => $.pictureRefused[reason]),
+      }
+    }
+    case 'updateNotConfigured':
+      return {
+        title: t(($) => $.titles.updateNotConfigured),
+        message: t(($) => $.messages.updateNotConfigured),
+      }
+    case 'updateNotAllowed': {
+      const install = error.install
+      return {
+        title: t(($) => $.titles.updateNotAllowed),
+        message: t(($) => $.updateNotAllowed[install]),
+      }
+    }
+    case 'updateBlocked': {
+      const reason = error.reason
+      return {
+        title: t(($) => $.titles.updateBlocked),
+        message: t(($) => $.updateBlocked[reason]),
+      }
+    }
+    case 'updateFailed': {
+      const stage = error.stage
+      return {
+        title: t(($) => $.titles.updateFailed),
+        message: t(($) => $.updateFailed[stage]),
+      }
+    }
+    case 'unsupported': {
+      const feature = error.feature
+      return {
+        title: t(($) => $.titles.unsupported),
+        message: t(($) => $.unsupported[feature]),
+      }
+    }
+    case 'busyCancelled':
+      return {
+        title: t(($) => $.titles.busyCancelled),
+        message: t(($) => $.messages.busyCancelled),
+      }
     case 'revealFailed': {
       const reason = error.reason
       return {

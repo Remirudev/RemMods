@@ -12,7 +12,7 @@ use std::os::windows::ffi::OsStringExt;
 use std::path::Path;
 use std::process::Command;
 
-use mods_support::{DATA, fixture, input, paks_tree, row, scan, smoke_tree};
+use mods_support::{DATA, MOUNT, fixture, input, paks_tree, row, scan, smoke_tree, toc};
 use remmods_core::game::GameOptions;
 use remmods_core::mods::{ModIssue, ModState, ModsError, NameProblem, UnmanagedKind, shell_form};
 use remmods_core::platform::{self, OsKind};
@@ -60,6 +60,7 @@ fn reveal_refuses_a_trailing_dot() {
     paks_tree(&paks, &[("Mods/Foo./a.pak", DATA)]);
     let game_root = out.join("steamapps").join("common").join("TEKKEN 8");
     let options = CoreOptions {
+        save_root: None,
         game: GameOptions {
             steam_detection: false,
             fixed_location: Some(game_root),
@@ -67,6 +68,7 @@ fn reveal_refuses_a_trailing_dot() {
             processes: None,
         },
         require_marker: None,
+        ..CoreOptions::default()
     };
     let core = Core::open_with(AppPaths::under(&root.join("app")), options).expect("core");
     let snapshot = core.mods_list().expect("mods_list");
@@ -107,6 +109,33 @@ fn unpaired_surrogates_are_escaped() {
     let content = scan(&paks).content;
     let bad = row(&content, r"Standard:bad\u{D800}");
     assert!(bad.issues.contains(&ModIssue::NonUnicodeName));
+}
+
+/// Unknown rows (here: only a junction, no live pak) are summarised but never conflict.
+#[test]
+fn unknown_state_rows_are_skipped() {
+    let (_dir, paks) = fixture();
+    let elsewhere = paks.parent().expect("parent").join("elsewhere");
+    paks_tree(&elsewhere, &[("Extra/x.pak", DATA)]);
+    let shared = toc(MOUNT, &["Smoke/Shared.uasset"]);
+    paks_tree(
+        &paks,
+        &[
+            ("Mods/OnlyLinked/OnlyLinked.utoc", &shared),
+            ("Mods/Other/Other.pak", DATA),
+            ("Mods/Other/Other.utoc", &shared),
+        ],
+    );
+    junction(
+        &paks.join("Mods").join("OnlyLinked").join("Extra"),
+        &elsewhere.join("Extra"),
+    );
+    let content = scan(&paks).content;
+    let unknown = row(&content, "Standard:OnlyLinked");
+    assert_eq!(unknown.state, ModState::Unknown);
+    assert_eq!(unknown.content.assets, 1);
+    assert!(unknown.content_conflicts.is_empty());
+    assert!(row(&content, "Standard:Other").content_conflicts.is_empty());
 }
 
 #[test]

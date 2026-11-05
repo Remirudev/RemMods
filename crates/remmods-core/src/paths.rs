@@ -30,6 +30,11 @@ impl AppPaths {
         Self::from_dirs(root.join("config"), root.join("data"))
     }
 
+    /// `data_dir/profiles.json`.
+    pub fn profiles_file(&self) -> PathBuf {
+        self.data_dir.join(crate::profiles::PROFILES_FILE)
+    }
+
     fn from_dirs(config_dir: PathBuf, data_dir: PathBuf) -> Self {
         Self {
             log_dir: data_dir.join("logs"),
