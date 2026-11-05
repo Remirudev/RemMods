@@ -1,6 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { onGameStatusChanged, onModsChanged, onWatchStatusChanged } from '../lib/ipc/events'
+import {
+  onAssetsChanged,
+  onGameStatusChanged,
+  onModsChanged,
+  onWatchStatusChanged,
+} from '../lib/ipc/events'
 import { describeForLog } from '../lib/ipc/ipc-error'
 import type { GameStatus, ModsSnapshot, WatchStatus } from '../lib/ipc/types'
 import { logError } from '../lib/log/frontend-log'
@@ -23,6 +28,9 @@ export function useBackendEvents(): void {
           void queryClient.invalidateQueries({ queryKey: queryKeys.repair })
           void queryClient.invalidateQueries({ queryKey: queryKeys.profiles })
         }
+      }),
+      onAssetsChanged(() => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.assets })
       }),
       onGameStatusChanged((event) => {
         queryClient.setQueryData<GameStatus>(queryKeys.gameStatus, (status) =>

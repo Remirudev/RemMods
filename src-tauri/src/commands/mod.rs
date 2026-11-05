@@ -1,4 +1,5 @@
 pub mod about;
+pub mod assets;
 pub mod game;
 pub mod graphics;
 pub mod install;

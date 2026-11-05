@@ -3,6 +3,7 @@
 
 pub mod app_update;
 pub mod archive;
+pub mod assets;
 pub mod content;
 pub mod error;
 pub mod game;
@@ -44,6 +45,8 @@ pub struct Core {
     pub delete_tokens: mods::DeleteTokens,
     /// Inspections and the one install job (P4 spec §5.5).
     pub install: install::InstallService,
+    /// Item pictures and names in `data_dir/assets`.
+    pub assets: assets::AssetStore,
     pub trash_env: TrashEnv,
     require_marker: Option<String>,
     /// Test hook: one entry per following manage mutation (rename, set-aside, profile apply,
@@ -102,6 +105,7 @@ impl Core {
             profiles: profiles::ProfileStore::new(paths.profiles_file()),
             delete_tokens: mods::DeleteTokens::new(),
             install: install::InstallService::default(),
+            assets: assets::AssetStore::new(&paths),
             trash_env: options.trash,
             require_marker: options.require_marker,
             fault: Mutex::new(VecDeque::new()),

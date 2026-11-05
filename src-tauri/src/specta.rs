@@ -1,10 +1,12 @@
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands, collect_events};
 
 use crate::commands::{
-    about, game, graphics, install, mods, mods_bulk, mods_manage, profiles, repair, settings,
-    shell, update,
+    about, assets, game, graphics, install, mods, mods_bulk, mods_manage, profiles, repair,
+    settings, shell, update,
 };
-use crate::events::{FolderBusy, GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged};
+use crate::events::{
+    AssetsChanged, FolderBusy, GameStatusChanged, InstallDrop, ModsChanged, WatchStatusChanged,
+};
 
 /// Single source of the IPC surface: the invoke handler and the TypeScript bindings both come
 /// from here. Keep the list in sync with `COMMANDS` in `build.rs` (ACL permissions).
@@ -32,6 +34,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             mods::mods_refresh,
             mods::mods_details,
             mods::mods_contents,
+            assets::mods_items,
+            assets::assets_status,
+            assets::assets_refresh,
+            assets::assets_picture,
             mods::mods_reveal,
             mods::mods_toggle,
             mods::mods_disable_all,
@@ -67,6 +73,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         ])
         .events(collect_events![
             ModsChanged,
+            AssetsChanged,
             GameStatusChanged,
             WatchStatusChanged,
             InstallDrop,

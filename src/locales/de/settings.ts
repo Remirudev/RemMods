@@ -119,6 +119,16 @@ export const settings: LocaleShape<typeof en> = {
     releases: 'Release-Seite',
     staleCheck: 'Die Update-Informationen sind veraltet. Suche erneut nach Updates.',
   },
+  itemPictures: {
+    title: 'Item-Bilder und -Namen',
+    description:
+      'RemMods liest sie einmal aus deinem eigenen Spiel und deinen Mods und bewahrt sie auf diesem PC auf. Nichts wird irgendwohin gesendet. Neue kommen hinzu, solange das Spiel geschlossen ist.',
+    summary: '{{pictures}} Bilder ({{size}}), {{names}} Namen',
+    empty: 'Noch nichts gespeichert. RemMods füllt das im Hintergrund.',
+    failed_one: '{{count}} Bild konnte nicht gelesen werden.',
+    failed_other: '{{count}} Bilder konnten nicht gelesen werden.',
+    refresh: 'Jetzt prüfen',
+  },
   diagnostics: {
     title: 'Diagnose',
     description: 'Angaben, die bei einer Fehlermeldung helfen.',

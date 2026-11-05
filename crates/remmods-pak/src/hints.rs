@@ -49,6 +49,12 @@ const SLOTS: [(&str, Slot); 19] = [
 const CHARACTERS: [(&str, &str); 2] = [("ker", "Kunimitsu"), ("mnt", "Alisa")];
 
 const COMMON_CODE: &str = "cmn";
+/// Where a shared menu picture sits instead: everyone, then women's and men's items.
+const COMMON_PREFIXES: [&str; 3] = [COMMON_CODE, "cf0", "cm0"];
+const PICTURE_STEM: &str = "t_ui_cus_ch_item_";
+const PREFAB_STEM: &str = "ip_";
+const PREFAB_FOLDER: &str = "item_prefab";
+const ASSET_EXTENSION: &str = ".uasset";
 
 const ITEM_CATEGORIES: [&str; 5] = [
     "Item_Prefab",
@@ -132,6 +138,71 @@ pub fn hint_for(display_path: &str) -> AssetHint {
     rule_model_folders(dirs, &mut hint);
     rule_name_tokens(dirs, stem(file_name), &mut hint);
     hint
+}
+
+/// One game item, all lowercase: the parts of `IP_<character>_<slot>_<name>`. For a menu picture
+/// the `character` can be a shared prefix (`cmn`, `cf0`, `cm0`).
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ItemRef {
+    pub character: String,
+    pub slot: String,
+    pub name: String,
+}
+
+impl ItemRef {
+    /// `<character>_<slot>_<name>`, already lowercase.
+    pub fn parse(text: &str) -> Option<Self> {
+        let (character, rest) = text.split_once('_')?;
+        let (slot, name) = rest.split_once('_')?;
+        (is_code(character) && is_code(slot) && !name.is_empty()).then(|| Self {
+            character: character.to_owned(),
+            slot: slot.to_owned(),
+            name: name.to_owned(),
+        })
+    }
+
+    /// `<character>_<slot>_<name>`.
+    pub fn key(&self) -> String {
+        format!("{}_{}_{}", self.character, self.slot, self.name)
+    }
+
+    /// The keys that can hold this item's picture or text, best first.
+    pub fn lookup_keys(&self) -> impl Iterator<Item = String> {
+        let tail = format!("{}_{}", self.slot, self.name);
+        std::iter::once(self.key()).chain(
+            COMMON_PREFIXES
+                .iter()
+                .map(move |prefix| format!("{prefix}_{tail}")),
+        )
+    }
+}
+
+/// A `.uasset`'s lowercase stem and its folders as written.
+fn asset_stem(display_path: &str) -> Option<(String, &str)> {
+    let (dirs, file) = display_path.rsplit_once('/')?;
+    let lower = file.to_ascii_lowercase();
+    Some((lower.strip_suffix(ASSET_EXTENSION)?.to_owned(), dirs))
+}
+
+/// The item whose prefab sits at this path (`…/Item_Prefab/…/IP_<character>_<slot>_<name>.uasset`).
+pub fn prefab_item(display_path: &str) -> Option<ItemRef> {
+    let (stem, dirs) = asset_stem(display_path)?;
+    dirs.split('/')
+        .any(|dir| dir.eq_ignore_ascii_case(PREFAB_FOLDER))
+        .then_some(())?;
+    ItemRef::parse(stem.strip_prefix(PREFAB_STEM)?)
+}
+
+/// The item shown by the menu picture at this path (`T_UI_CUS_CH_item_<prefix>_<slot>_<name>`).
+pub fn picture_item(display_path: &str) -> Option<ItemRef> {
+    let (stem, _) = asset_stem(display_path)?;
+    ItemRef::parse(stem.strip_prefix(PICTURE_STEM)?)
+}
+
+/// `IP_<character>_<slot>_<name>` as the game's item list spells a prefab.
+pub fn prefab_key(prefab: &str) -> Option<String> {
+    let lower = prefab.to_ascii_lowercase();
+    ItemRef::parse(lower.strip_prefix(PREFAB_STEM)?).map(|item| item.key())
 }
 
 fn rule_category_folders(dirs: &[&str], hint: &mut AssetHint) {

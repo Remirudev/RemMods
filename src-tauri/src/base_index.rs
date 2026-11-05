@@ -1,5 +1,6 @@
 //! Builds the base-game index off the scan's hot path (P2b): after a scan, one background task
-//! checks it and, when it changed the content conflicts, announces the new revision.
+//! checks it and, when it changed the content conflicts, announces the new revision. The same
+//! task keeps the item pictures and names current, which rest on that index.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -8,7 +9,7 @@ use remmods_core::game::GameError;
 use remmods_core::{Core, CoreError};
 use tauri::AppHandle;
 
-use crate::events::{self, ModsChanged};
+use crate::events::{self, AssetsChanged, ModsChanged};
 
 static RUNNING: AtomicBool = AtomicBool::new(false);
 static AGAIN: AtomicBool = AtomicBool::new(false);
@@ -34,7 +35,7 @@ pub fn check_soon(app: &AppHandle, core: &Arc<Core>) {
     });
 }
 
-fn check(app: &AppHandle, core: &Core) {
+pub fn check(app: &AppHandle, core: &Core) {
     match core.mods_base_refresh() {
         Ok(Some(refreshed)) => {
             let revision = refreshed.snapshot.revision;
@@ -42,5 +43,10 @@ fn check(app: &AppHandle, core: &Core) {
         }
         Ok(None) | Err(CoreError::Game(GameError::NotSet)) => {}
         Err(error) => log::warn!("base index check failed: {error}"),
+    }
+    match core.assets_refresh() {
+        Ok(true) => events::emit(app, &AssetsChanged {}),
+        Ok(false) | Err(CoreError::Game(GameError::NotSet)) => {}
+        Err(error) => log::warn!("item pictures check failed: {error}"),
     }
 }

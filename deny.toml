@@ -14,6 +14,7 @@ yanked = "warn"
 
 [licenses]
 # Everything not listed is denied, including GPL, LGPL and the UnRAR licence.
+# oozextract says MIT but derives from GPL-3 code: fine for private use only (PLAN §15, 2026-11-05).
 # MPL-2.0 is needed for Tauri's option-ext and cssparser.
 allow = [
     "MIT",

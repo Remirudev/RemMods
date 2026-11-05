@@ -1,0 +1,25 @@
+[package]
+name = "remmods-unpack"
+description = "RemMods: reads single assets out of IoStore containers (chunks, item pictures, text tables)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "remmods_unpack"
+doctest = false
+
+[dependencies]
+remmods-pak.workspace = true
+thiserror.workspace = true
+oozextract.workspace = true
+texture2ddecoder.workspace = true
+png.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

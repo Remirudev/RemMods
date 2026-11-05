@@ -1,6 +1,7 @@
 //! The game's own file paths from the top-level base `.utoc` indexes (§4.5, §5.3 rule 5). Built
 //! in the background after the first scan, kept in memory only, rebuilt when the base files change.
-//! Content conflicts are limited to asset keys found here.
+//! Content conflicts are limited to asset keys found here. It also notes where the game keeps
+//! item pictures and text tables, for the assets folder.
 
 use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
@@ -13,6 +14,7 @@ use std::time::SystemTime;
 use remmods_pak::{PakError, asset_key, file_key, read_toc};
 
 use super::model::BaseIndexState;
+use crate::assets::GameFiles;
 use crate::mods::payload::is_game_file;
 use crate::platform;
 use crate::safe_fs::names::key_text;
@@ -28,6 +30,7 @@ pub struct BaseIndex {
     files: HashSet<u64>,
     /// `DefaultHasher` hashes of asset keys.
     assets: HashSet<u64>,
+    game_files: GameFiles,
 }
 
 struct BaseContainer {
@@ -104,6 +107,17 @@ impl BaseIndex {
         self.assets.contains(&hash_key(asset_key))
     }
 
+    pub(crate) fn game_files(&self) -> &GameFiles {
+        &self.game_files
+    }
+
+    /// Changes when the base containers change, so with every game update.
+    pub(crate) fn stamp(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.fingerprint.hash(&mut hasher);
+        hasher.finish()
+    }
+
     /// `previous` when it was built for the same Paks and fingerprint, else a fresh build.
     pub(crate) fn current(paks: &Path, previous: Option<Arc<BaseIndex>>) -> Arc<BaseIndex> {
         let containers = base_containers(paks);
@@ -117,6 +131,7 @@ impl BaseIndex {
     fn build(paks: &Path, fingerprint: Fingerprint, containers: &[BaseContainer]) -> BaseIndex {
         let mut files = HashSet::new();
         let mut assets = HashSet::new();
+        let mut game_files = GameFiles::default();
         let (mut indexed, mut failed) = (0u32, 0u32);
         for container in containers {
             match read_toc(&container.path) {
@@ -126,6 +141,7 @@ impl BaseIndex {
                         files.insert(hash_key(&file_key(&file.path)));
                         assets.insert(hash_key(&asset_key(&file.path)));
                     }
+                    game_files.add(&container.path, &listing);
                 }
                 Err(PakError::NoDirectoryIndex) => {}
                 Err(error) => {
@@ -150,6 +166,7 @@ impl BaseIndex {
             state,
             files,
             assets,
+            game_files,
         }
     }
 }

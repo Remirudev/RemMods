@@ -24,6 +24,9 @@ exit criteria (§13), is in [docs/PLAN.md](docs/PLAN.md).
 **Phase 2b (in progress)**: shows what each mod contains (from its `.utoc` index) and flags mods that
 ship the same assets. It only reads mod files.
 
+Item pictures and names come from your own game and mods: RemMods reads them in the background while
+the game is closed and keeps them in its data folder (`assets`). Nothing of the game ships with it.
+
 **Phase 3 (in progress)**: manage mods. Rename a mod (the folder, its files and the profiles that name
 it follow), move it to the Trash (freedesktop.org Trash, restorable from the file manager), delete it
 permanently after a second confirmation, edit its metadata (`modinfo.json`), and fix leftovers of

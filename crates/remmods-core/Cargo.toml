@@ -17,8 +17,10 @@ doctest = false
 
 [dependencies]
 remmods-pak.workspace = true
+remmods-unpack.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+base64.workspace = true
 thiserror.workspace = true
 log.workspace = true
 chrono.workspace = true

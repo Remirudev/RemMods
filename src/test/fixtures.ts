@@ -1,6 +1,7 @@
 import type {
   AppError,
   AppUpdateChannel,
+  AssetsStatus,
   BulkDeletePrepared,
   BulkOutcome,
   BulkRow,
@@ -73,6 +74,8 @@ export function makeGraphicsState(overrides: Partial<GraphicsState> = {}): Graph
     ...overrides,
   }
 }
+
+export const TEST_ASSETS_STATUS: AssetsStatus = { pictures: 0, bytes: 0, names: 0, failed: 0 }
 
 export const TEST_NOTICES: Notices = {
   rust: 'THIRD-PARTY NOTICES\n\nserde 1.0.0',

@@ -13,4 +13,6 @@ export const queryKeys = {
   modDetailsAll: ['mods', 'details'] as const,
   modDetails: (modRef: string) => ['mods', 'details', modRef] as const,
   modContents: (modRef: string) => ['mods', 'details', 'contents', modRef] as const,
+  assets: ['assets'] as const,
+  assetsStatus: (language: string) => ['assets', 'status', language] as const,
 }

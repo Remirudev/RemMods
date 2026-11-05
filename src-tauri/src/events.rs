@@ -19,6 +19,11 @@ pub struct ModsChanged {
     pub revision: u32,
 }
 
+/// `assets-changed`: stored item pictures or names changed.
+#[derive(Serialize, Deserialize, Clone, Debug, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetsChanged {}
+
 /// `game-status-changed`: the running state, session, other-manager flag or update notice changed.
 #[derive(Serialize, Deserialize, Clone, Debug, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]

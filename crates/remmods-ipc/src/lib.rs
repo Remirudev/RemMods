@@ -2,6 +2,7 @@
 //! only) and no `u64` (JavaScript numbers lose precision past 2^53).
 
 mod about;
+mod assets;
 mod bulk;
 mod busy;
 mod content;
@@ -22,6 +23,7 @@ mod toggle;
 mod update;
 
 pub use about::Notices;
+pub use assets::{AssetsStatus, ItemNameSource, ModItem, ModItems};
 pub use bulk::{
     BulkDeletePrepared, BulkDeleteRequest, BulkOutcome, BulkRow, BulkRowResult, BulkTrashRequest,
     PreparedRow,

@@ -4,6 +4,7 @@ import type { Settings, SettingsUpdate } from '../lib/ipc/types'
 import {
   makeGameStatus,
   makeGraphicsState,
+  TEST_ASSETS_STATUS,
   TEST_CONTENTS,
   TEST_DETAILS,
   TEST_NOTICES,
@@ -62,6 +63,9 @@ export function installIpcMock(
           return makeGraphicsState()
         case 'about_notices':
           return TEST_NOTICES
+        case 'assets_status':
+        case 'assets_refresh':
+          return TEST_ASSETS_STATUS
         default:
           return null
       }

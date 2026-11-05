@@ -34,12 +34,17 @@ crates/remmods-core/   all logic, synchronous, no Tauri or specta
   src/game/            Steam detection, game folder layout, status, process tracker, launch
   src/mods/            Paks scan, mod rows, conflicts, ModRef tokens, details
   src/content/         per-container .utoc cache, row content summaries, content conflicts, base index
+  src/assets/          item pictures + names in <data dir>/assets, filled from the user's own game and mods
+                       (pictures/<edge>-<content hash>.png, names.<lang>.json, mod-names.<lang>.json);
+                       read-only on game and mods, nothing new is read while the game runs
   src/archive/         zip/7z/rar/folder readers (one backend file per crate), names, limits, capped sink
   src/install/         inspect (root, name, variants, issues) and start (stage, commit, job), no fs mutator
   src/app_update/      install-kind allowlist, AUR marker, version rules, update preflight + gate seal; no network
   src/graphics/        Linux graphics fallback: modes, env rules, graphics.json, crash marker; cfg-free
   tests/fixtures/      proc/ (fake /proc captures) and steam/ (VDF/ACF files); byte-exact, outside Biome
 crates/remmods-pak/    pure-Rust .utoc reader (header + directory index; no decompression, no Oodle); no core dep
+crates/remmods-unpack/ single assets out of containers: chunks (Oodle via oozextract), textures → PNG, text tables,
+                       the item list; a decoder panic costs one asset (catch_unwind); no core dep
 crates/remmods-ipc/    DTOs + AppError (serde + specta, no Tauri) and their tests
 src-tauri/             thin shell (package remmods, lib remmods_lib); no Rust tests
   src/commands/        one file per domain; async, spawn_blocking, Result<T, AppError>
@@ -151,6 +156,9 @@ A new feature is a core module + `commands/<feature>.rs` + DTOs in `remmods-ipc`
 - The updater is used from Rust only: no `@tauri-apps/plugin-updater`, no `updater:*` permission. The
   plugin is registered only when the config has `plugins.updater` and never under `--smoke`; no test
   and no `--smoke` run touches the network.
+- `oozextract` declares MIT but derives from GPL-3 code and has no licence file. It is in the app only
+  because RemMods is for private use (owner's decision, PLAN §15, 2026-11-05). Before any public
+  build, move the decoder into a separate helper or replace it.
 - `src-tauri/tauri.release.conf.json` (updater config, `createUpdaterArtifacts`) is used only by
   `release.yml`, which builds with `--no-sign` and signs in a separate `sign` job. Never build with it
   locally. The pubkey stays `REMMODS-UPDATER-PUBKEY-NOT-SET` until the owner sets it

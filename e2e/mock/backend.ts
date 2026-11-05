@@ -86,6 +86,11 @@ function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unkn
     case 'graphics_set_mode':
     case 'graphics_ack_step':
       return makeGraphicsState({ supported: state.platform.os === 'linux' })
+    case 'assets_status':
+    case 'assets_refresh':
+      return { pictures: 12, bytes: 480_000, names: 120, failed: 0 }
+    case 'assets_picture':
+      return null
     case 'about_notices':
       return TEST_NOTICES
     case 'set_ui_scale':
@@ -133,6 +138,8 @@ function modsCommand(
       return mods.details(state, arg<string>(args, 'modRef'))
     case 'mods_contents':
       return mods.contents(state, arg<string>(args, 'modRef'))
+    case 'mods_items':
+      return { modRef: arg<string>(args, 'modRef'), items: [] }
     case 'mods_reveal':
       return null
     case 'mods_watch_status':

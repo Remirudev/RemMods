@@ -37,6 +37,14 @@ export const commands = {
 	modsDetails: (modRef: string) => typedError<ModDetails, AppError>(__TAURI_INVOKE("mods_details", { modRef })),
 	/**  The asset list of one row's `.utoc` containers; `base` is `loading` until the index is built. */
 	modsContents: (modRef: string) => typedError<ModContents, AppError>(__TAURI_INVOKE("mods_contents", { modRef })),
+	/**  The items one row touches; pictures and names appear once the background check stored them. */
+	modsItems: (modRef: string, language: string) => typedError<ModItems, AppError>(__TAURI_INVOKE("mods_items", { modRef, language })),
+	/**  What the assets folder holds; `names` counts the texts of `language`. */
+	assetsStatus: (language: string) => typedError<AssetsStatus, AppError>(__TAURI_INVOKE("assets_status", { language })),
+	/**  The check the app runs after every scan, now; waits for a running one. */
+	assetsRefresh: (language: string) => typedError<AssetsStatus, AppError>(__TAURI_INVOKE("assets_refresh", { language })),
+	/**  One stored picture as a `data:` URL; `null` when it is gone. */
+	assetsPicture: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("assets_picture", { id })),
 	/**  Shows a mod, archive or unmanaged entry selected in the file manager. */
 	modsReveal: (modRef: string) => typedError<null, AppError>(__TAURI_INVOKE("mods_reveal", { modRef })),
 	/**  Enables or disables the given rows in one all-or-none rename batch. */
@@ -121,6 +129,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	assetsChanged: makeEvent<AssetsChanged, AssetsChanged>("assets-changed"),
 	folderBusy: makeEvent<FolderBusy, FolderBusy>("folder-busy"),
 	gameStatusChanged: makeEvent<GameStatusChanged, GameStatusChanged>("game-status-changed"),
 	installDrop: makeEvent<InstallDrop, InstallDrop>("install-drop"),
@@ -233,6 +242,16 @@ export type AssetEntry = {
 };
 
 export type AssetOrigin = "adds" | "replaces" | "unknown";
+
+/**  `assets-changed`: stored item pictures or names changed. */
+export type AssetsChanged = Record<string, never>;
+
+export type AssetsStatus = {
+	pictures: number,
+	bytes: number,
+	names: number,
+	failed: number,
+};
 
 export type BaseIndexState = "complete" | "partial" | "unavailable" | "loading";
 
@@ -606,6 +625,8 @@ export type InstalledMod = {
 
 export type IssueSeverity = "block" | "warn" | "info";
 
+export type ItemNameSource = "itemList" | "matched" | "modText" | "internal";
+
 export type KeptReason = "trashUnavailable" | "trashFailed";
 
 export type LastApplied = {
@@ -682,6 +703,24 @@ export type ModInfoOrigin = "file" | "missing" | "invalid";
  *  tagged enum renames the variants only.
  */
 export type ModIssue = { kind: "ambiguousKey" } | { kind: "caseCollision"; others: string[] } | { kind: "caseVariantRoot" } | { kind: "nonUnicodeName" } | { kind: "invalidName"; problem: NameProblem } | { kind: "nameNotPortable"; problem: NameProblem } | { kind: "disabledPrefixName" } | { kind: "emptyName" } | { kind: "logicDisabledButLoaded" } | { kind: "logicEnabledNotLoaded" } | { kind: "modinfoInvalid" } | { kind: "modinfoCaseVariants" } | { kind: "pathTooLong"; longest: number } | { kind: "linkedRoot" } | { kind: "linkedMod" } | { kind: "containsLink" } | { kind: "looseCopy"; files: string[] } | { kind: "looseCaseVariants" } | { kind: "nonUnicodeFiles"; count: number } | { kind: "invalidFileNames"; count: number } | { kind: "nonPortableFileNames"; count: number } | { kind: "unreadable"; problem: ScanProblem };
+
+/**  One item a mod touches. Pictures are ids for `assets_picture`. */
+export type ModItem = {
+	/**  The internal name. */
+	key: string,
+	character: CharacterHint,
+	slot: SlotHint,
+	name: string | null,
+	nameSource: ItemNameSource,
+	gamePicture: string | null,
+	modPicture: string | null,
+	live: boolean,
+};
+
+export type ModItems = {
+	modRef: string,
+	items: ModItem[],
+};
 
 export type ModKind = "standard" | "legacy" | "logic" | "loose";
 

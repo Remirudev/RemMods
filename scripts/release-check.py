@@ -5,8 +5,9 @@ Usage: python3 -I scripts/release-check.py [--tag vX.Y.Z --strict]
        python3 -I scripts/release-check.py --self-test
 
 CI mode (every PR): the version agrees in package.json, package-lock.json (root and packages[""]),
-[workspace.package] of Cargo.toml and the Cargo.lock entries of remmods, remmods-core, remmods-ipc and
-remmods-pak, and tauri.conf.json takes it from "../package.json"; src-tauri/tauri.release.conf.json
+[workspace.package] of Cargo.toml and the Cargo.lock entries of remmods, remmods-core, remmods-ipc,
+remmods-pak and remmods-unpack, and tauri.conf.json takes it from "../package.json";
+src-tauri/tauri.release.conf.json
 has exactly the expected structure (pubkey: the placeholder or a valid minisign key); no
 plugins.updater in tauri{,.linux,.windows}.conf.json; no @tauri-apps/plugin-updater in package.json;
 no `updater:` permission in capabilities/main.json; packaging/release-notes.md exists and names the
@@ -31,7 +32,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 HERE = Path(__file__).resolve().parent
 TAG_RE = re.compile(r"v(\d+)\.(\d+)\.(\d+)", re.ASCII)
-LOCKED_CRATES = ("remmods", "remmods-core", "remmods-ipc", "remmods-pak")
+LOCKED_CRATES = ("remmods", "remmods-core", "remmods-ipc", "remmods-pak", "remmods-unpack")
 BASE_CONFIGS = ("tauri.conf.json", "tauri.linux.conf.json", "tauri.windows.conf.json")
 NOTES_TOKENS = ("2.39", "beta, CI-tested only", "@VERSION@")
 PLACEHOLDER = "REMMODS-UPDATER-PUBKEY-NOT-SET"

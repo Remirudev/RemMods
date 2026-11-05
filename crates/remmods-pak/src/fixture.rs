@@ -3,6 +3,7 @@
 use crate::{ContentHash, INVALID_INDEX, TOC_MAGIC, chunk_meta_size};
 
 const METHOD_NAME_LENGTH: usize = 32;
+const BLOCK_SIZE: usize = 0x1_0000;
 
 #[derive(Clone, Debug)]
 pub struct TocBuilder {
@@ -10,6 +11,10 @@ pub struct TocBuilder {
     files: Vec<String>,
     /// Content hash per entry of `files` (chunk index = position); `None` writes zeros.
     hashes: Vec<Option<ContentHash>>,
+    /// Bytes per entry of `files`; a file without any keeps its zero table entries.
+    payloads: Vec<Vec<u8>>,
+    /// Block bytes as `.ucas` stores them, and the block's method byte.
+    wrap: fn(&[u8]) -> (Vec<u8>, u8),
     version: u8,
     flags: u8,
     signed_hash_size: Option<u32>,
@@ -87,6 +92,8 @@ impl TocBuilder {
             mount_point: mount_point.to_owned(),
             files: Vec::new(),
             hashes: Vec::new(),
+            payloads: Vec::new(),
+            wrap: |block| (block.to_vec(), 0),
             version: 5,
             flags: 0x09,
             signed_hash_size: None,
@@ -99,6 +106,7 @@ impl TocBuilder {
     pub fn file(mut self, path_below_mount: &str) -> Self {
         self.files.push(path_below_mount.to_owned());
         self.hashes.push(None);
+        self.payloads.push(Vec::new());
         self
     }
 
@@ -106,6 +114,27 @@ impl TocBuilder {
     pub fn file_with_hash(mut self, path_below_mount: &str, hash: ContentHash) -> Self {
         self.files.push(path_below_mount.to_owned());
         self.hashes.push(Some(hash));
+        self.payloads.push(Vec::new());
+        self
+    }
+
+    /// Like `file_with_hash`, with these bytes as the chunk `build_with_cas` writes.
+    pub fn file_with_bytes(
+        mut self,
+        path_below_mount: &str,
+        hash: ContentHash,
+        bytes: &[u8],
+    ) -> Self {
+        self.files.push(path_below_mount.to_owned());
+        self.hashes.push(Some(hash));
+        self.payloads.push(bytes.to_vec());
+        self
+    }
+
+    /// How each 64 KiB block lands in the `.ucas`: its stored bytes and its method byte (0 =
+    /// stored, 1 = Oodle).
+    pub fn block_wrap(mut self, wrap: fn(&[u8]) -> (Vec<u8>, u8)) -> Self {
+        self.wrap = wrap;
         self
     }
 
@@ -232,9 +261,42 @@ impl TocBuilder {
         out
     }
 
+    /// The chunk table and block table (bytes as in the `.utoc`) and the `.ucas`.
+    fn stream(&self) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+        let mut chunks = Vec::new();
+        let mut blocks = Vec::new();
+        let mut cas = Vec::new();
+        let mut position = 0usize;
+        for payload in &self.payloads {
+            let entry = [position as u64, payload.len() as u64];
+            for value in entry {
+                chunks.extend_from_slice(&value.to_be_bytes()[3..]);
+            }
+            position += payload.len().div_ceil(BLOCK_SIZE) * BLOCK_SIZE;
+            for block in payload.chunks(BLOCK_SIZE) {
+                let (stored, method) = (self.wrap)(block);
+                blocks.extend_from_slice(&(cas.len() as u64).to_le_bytes()[..5]);
+                blocks.extend_from_slice(&u32_of(stored.len()).to_le_bytes()[..3]);
+                blocks.extend_from_slice(&u32_of(block.len()).to_le_bytes()[..3]);
+                blocks.push(method);
+                cas.extend_from_slice(&stored);
+            }
+            if payload.is_empty() {
+                blocks.resize(blocks.len() + 12, 0);
+            }
+        }
+        (chunks, blocks, cas)
+    }
+
+    /// `.utoc` and `.ucas`, with real chunk and block tables.
+    pub fn build_with_cas(&self) -> (Vec<u8>, Vec<u8>) {
+        (self.build(), self.stream().2)
+    }
+
     /// Whole `.utoc`.
     pub fn build(&self) -> Vec<u8> {
         let index = self.build_index();
+        let (chunk_table, block_table, _) = self.stream();
         let entries = self.entry_count();
         let files = u32_of(self.files.len());
         let seeds = files.div_ceil(2);
@@ -249,7 +311,7 @@ impl TocBuilder {
         for value in [
             144,
             entries,
-            files,
+            u32_of(block_table.len() / 12),
             12,
             1,
             u32_of(METHOD_NAME_LENGTH),
@@ -268,11 +330,13 @@ impl TocBuilder {
         out.resize(144, 0);
         let entries = usize::try_from(entries).unwrap_or(0);
         let zeros = |out: &mut Vec<u8>, n: usize| out.resize(out.len() + n, 0);
-        zeros(&mut out, entries * 22);
+        zeros(&mut out, entries * 12);
+        out.extend_from_slice(&chunk_table);
+        zeros(&mut out, entries * 10 - chunk_table.len());
         if self.version >= 4 {
             zeros(&mut out, usize::try_from(seeds).unwrap_or(0) * 4);
         }
-        zeros(&mut out, self.files.len() * 12);
+        out.extend_from_slice(&block_table);
         let mut method = b"Oodle".to_vec();
         method.resize(METHOD_NAME_LENGTH, 0);
         out.extend_from_slice(&method);

@@ -48,6 +48,13 @@ export const ipc = {
   modsDetails: (modRef: string) => unwrapResult('mods_details', () => commands.modsDetails(modRef)),
   modsContents: (modRef: string) =>
     unwrapResult('mods_contents', () => commands.modsContents(modRef)),
+  modsItems: (modRef: string, language: string) =>
+    unwrapResult('mods_items', () => commands.modsItems(modRef, language)),
+  assetsStatus: (language: string) =>
+    unwrapResult('assets_status', () => commands.assetsStatus(language)),
+  assetsRefresh: (language: string) =>
+    unwrapResult('assets_refresh', () => commands.assetsRefresh(language)),
+  assetsPicture: (id: string) => unwrapResult('assets_picture', () => commands.assetsPicture(id)),
   modsReveal: (modRef: string) => unwrapResult('mods_reveal', () => commands.modsReveal(modRef)),
   modsToggle: (request: ToggleRequest) =>
     unwrapResult('mods_toggle', () => commands.modsToggle(request)),

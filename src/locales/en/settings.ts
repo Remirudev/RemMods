@@ -115,6 +115,16 @@ export const settings = {
     releases: 'Releases page',
     staleCheck: 'The update information is out of date. Check for updates again.',
   },
+  itemPictures: {
+    title: 'Item pictures and names',
+    description:
+      'RemMods reads these once from your own game and mods and keeps them on this PC. Nothing is sent anywhere. New ones are added while the game is closed.',
+    summary: '{{pictures}} pictures ({{size}}), {{names}} names',
+    empty: 'Nothing stored yet. RemMods fills this in the background.',
+    failed_one: '{{count}} picture could not be read.',
+    failed_other: '{{count}} pictures could not be read.',
+    refresh: 'Check now',
+  },
   diagnostics: {
     title: 'Diagnostics',
     description: 'Details to include when you report a problem.',

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/remmods-core", "crates/remmods-ipc", "crates/remmods-pak", "src-tauri"]
+members = ["crates/remmods-core", "crates/remmods-ipc", "crates/remmods-pak", "crates/remmods-unpack", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ repository = "https://github.com/Remirudev/RemMods"
 remmods-core = { path = "crates/remmods-core" }
 remmods-ipc = { path = "crates/remmods-ipc" }
 remmods-pak = { path = "crates/remmods-pak" }
+remmods-unpack = { path = "crates/remmods-unpack" }
 
 tauri = { version = "=2.12.5" }
 tauri-build = { version = "=2.7.4" }
@@ -27,6 +28,7 @@ specta-typescript = { version = "=0.0.13" }
 
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.154" }
+base64 = { version = "=0.23.1" }
 thiserror = { version = "=2.0.21" }
 log = { version = "=0.4.35" }
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }
@@ -45,6 +47,9 @@ rars = { version = "=0.12.3", default-features = false }
 encoding_rs = { version = "=0.8.44" }
 fs4 = { version = "=1.1.0", default-features = false, features = ["sync"] }
 crc32fast = { version = "=1.5.4" }
+oozextract = { version = "=0.5.7", default-features = false }
+texture2ddecoder = { version = "=0.1.2" }
+png = { version = "=0.18.1", default-features = false }
 
 rustix = { version = "=1.1.6", features = ["std", "process", "fs"] }
 windows-sys = { version = "=0.61.2", features = [
@@ -92,6 +97,12 @@ opt-level = 3
 [profile.dev.package.ppmd-rust]
 opt-level = 3
 [profile.dev.package.deflate64]
+opt-level = 3
+[profile.dev.package.oozextract]
+opt-level = 3
+[profile.dev.package.texture2ddecoder]
+opt-level = 3
+[profile.dev.package.png]
 opt-level = 3
 
 [profile.release]

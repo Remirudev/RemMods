@@ -1,6 +1,7 @@
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { events } from './bindings'
 import type {
+  AssetsChanged,
   FolderBusy,
   GameStatusChanged,
   InstallDrop,
@@ -11,6 +12,10 @@ import type {
 // The backend does not buffer events: subscribe first, then fetch what the event would update.
 export function onModsChanged(callback: (payload: ModsChanged) => void): Promise<UnlistenFn> {
   return events.modsChanged.listen((event) => callback(event.payload))
+}
+
+export function onAssetsChanged(callback: (payload: AssetsChanged) => void): Promise<UnlistenFn> {
+  return events.assetsChanged.listen((event) => callback(event.payload))
 }
 
 export function onGameStatusChanged(

@@ -5,7 +5,7 @@ Each licence is printed once, after the list of crates distributed under it.
 The npm packages and fonts of the user interface are listed in THIRD-PARTY-NOTICES-NPM.
 
 Licences used:
-  MIT License (371)
+  MIT License (391)
   Unicode License v3 (20)
   Apache License 2.0 (8)
   BSD 3-Clause "New" or "Revised" License (6)
@@ -2502,6 +2502,7 @@ Used by:
   futures-sink 0.3.34 (https://github.com/rust-lang/futures-rs)
   futures-task 0.3.34 (https://github.com/rust-lang/futures-rs)
   futures-util 0.3.34 (https://github.com/rust-lang/futures-rs)
+  futures 0.3.34 (https://github.com/rust-lang/futures-rs)
 
 Copyright (c) 2016 Alex Crichton
 Copyright (c) 2017 The Tokio Authors
@@ -2616,6 +2617,39 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+================================================================================
+MIT License (MIT)
+
+Used by:
+  utf8parse 0.2.2 (https://github.com/alacritty/vte)
+
+Copyright (c) 2016 Joe Wilm
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 ================================================================================
@@ -4411,6 +4445,16 @@ DEALINGS IN THE SOFTWARE.
 MIT License (MIT)
 
 Used by:
+  anstream 1.0.0 (https://github.com/rust-cli/anstyle.git)
+  anstyle-parse 1.0.0 (https://github.com/rust-cli/anstyle.git)
+  anstyle-query 1.1.5 (https://github.com/rust-cli/anstyle.git)
+  anstyle-wincon 3.0.11 (https://github.com/rust-cli/anstyle.git)
+  anstyle 1.0.14 (https://github.com/rust-cli/anstyle.git)
+  colorchoice 1.0.5 (https://github.com/rust-cli/anstyle.git)
+  env_filter 2.0.0 (https://github.com/rust-cli/env_logger)
+  env_logger 0.11.11 (https://github.com/rust-cli/env_logger)
+  is_terminal_polyfill 1.70.2 (https://github.com/polyfill-rs/is_terminal_polyfill)
+  once_cell_polyfill 1.70.2 (https://github.com/polyfill-rs/once_cell_polyfill)
   serde_spanned 1.1.2 (https://github.com/toml-rs/toml)
   toml 1.1.8+spec-1.1.0 (https://github.com/toml-rs/toml)
   toml_datetime 1.1.2+spec-1.1.0 (https://github.com/toml-rs/toml)
@@ -5004,6 +5048,23 @@ SOFTWARE.
 MIT License (MIT)
 
 Used by:
+  bytemuck 1.25.2 (https://github.com/Lokathor/bytemuck)
+
+MIT License
+
+Copyright (c) 2019 Daniel "Lokathor" Gee.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+================================================================================
+MIT License (MIT)
+
+Used by:
   schemars 0.8.22 (https://github.com/GREsau/schemars)
   schemars_derive 0.8.22 (https://github.com/GREsau/schemars)
 
@@ -5098,6 +5159,37 @@ Used by:
 MIT License
 
 Copyright (c) 2020 Bilal Elmoussaoui
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+MIT License (MIT)
+
+Used by:
+  test-log-core 0.2.21 (https://github.com/d-e-s-o/test-log.git)
+  test-log-macros 0.2.21 (https://github.com/d-e-s-o/test-log.git)
+  test-log 0.2.21 (https://github.com/d-e-s-o/test-log.git)
+
+MIT License
+
+Copyright (c) 2020 Daniel Müller
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -5356,6 +5448,23 @@ SOFTWARE.
 MIT License (MIT)
 
 Used by:
+  safe_arch 0.7.4 (https://github.com/Lokathor/safe_arch)
+
+MIT License
+
+Copyright (c) 2023 Daniel "Lokathor" Gee.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+================================================================================
+MIT License (MIT)
+
+Used by:
   dom_query 0.28.0 (https://github.com/niklak/dom_query)
 
 MIT License
@@ -5454,6 +5563,7 @@ Used by:
   dlopen2_derive 0.4.3 (https://github.com/OpenByteDev/dlopen2)
   dpi 0.1.2 (https://github.com/rust-windowing/winit)
   minisign-verify 0.3.0 (https://github.com/jedisct1/rust-minisign-verify)
+  oozextract 0.5.7 (https://github.com/lvlvllvlvllvlvl/oozextract)
   specta-macros 2.0.0-rc.26 (https://github.com/specta-rs/specta)
   specta-serde 0.0.13 (https://github.com/specta-rs/specta)
   specta-typescript 0.0.13 (https://github.com/specta-rs/specta)
@@ -5469,6 +5579,7 @@ Used by:
   webview2-com-macros 0.8.1 (https://github.com/wravery/webview2-rs)
   webview2-com-sys 0.39.1 (https://github.com/wravery/webview2-rs)
   webview2-com 0.39.1 (https://github.com/wravery/webview2-rs)
+  wide 0.7.33 (https://github.com/Lokathor/wide)
   windows-collections 0.3.2 (https://github.com/microsoft/windows-rs)
   windows-core 0.62.2 (https://github.com/microsoft/windows-rs)
   windows-future 0.3.2 (https://github.com/microsoft/windows-rs)
@@ -5721,6 +5832,7 @@ MIT License (MIT)
 
 Used by:
   rustc-hash 2.1.3 (https://github.com/rust-lang/rustc-hash)
+  texture2ddecoder 0.1.2 (https://github.com/UniversalGameExtraction/texture2ddecoder)
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated

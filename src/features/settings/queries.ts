@@ -81,6 +81,22 @@ export function useOpenLogs() {
   return useMutation({ mutationFn: () => ipc.openLogs() })
 }
 
+export function useAssetsStatus(language: string) {
+  return useQuery({
+    queryKey: queryKeys.assetsStatus(language),
+    queryFn: () => ipc.assetsStatus(language),
+  })
+}
+
+export function useAssetsRefresh(language: string) {
+  return useMutation({
+    mutationFn: () => ipc.assetsRefresh(language),
+    onSuccess: (status, _variables, _result, { client }) => {
+      client.setQueryData(queryKeys.assetsStatus(language), status)
+    },
+  })
+}
+
 export function useUpdateChannel() {
   return useQuery({ queryKey: queryKeys.updateChannel, queryFn: () => ipc.updateChannel() })
 }

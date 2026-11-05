@@ -21,6 +21,15 @@ test('colour scheme and UI scale are saved through settings_update', async ({ pa
   ])
 })
 
+test('the item pictures card shows what is stored and checks on request', async ({ page }) => {
+  await openApp(page)
+  await openPanel(page, 'settings')
+
+  await expect(page.getByText('12 pictures (', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: t('settings.itemPictures.refresh') }).click()
+  await expect.poll(async () => (await callsOf(page, 'assets_refresh')).length).toBe(1)
+})
+
 // RemMods has no language setting: it follows the system language, which the browser locale is
 // here.
 test.describe('in German', () => {

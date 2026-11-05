@@ -1,4 +1,7 @@
-use remmods_pak::hints::{AssetHint, Slot, character_name, hint_for, is_common, slot};
+use remmods_pak::hints::{
+    AssetHint, ItemRef, Slot, character_name, hint_for, is_common, picture_item, prefab_item,
+    prefab_key, slot,
+};
 
 fn hint(character: Option<&str>, slot: Option<&str>) -> AssetHint {
     AssetHint {
@@ -156,4 +159,78 @@ fn unknown_paths_have_no_hint() {
     ] {
         assert_eq!(hint_for(path), AssetHint::default(), "{path}");
     }
+}
+
+fn item(character: &str, slot: &str, name: &str) -> ItemRef {
+    ItemRef {
+        character: character.to_owned(),
+        slot: slot.to_owned(),
+        name: name.to_owned(),
+    }
+}
+
+#[test]
+fn prefabs_name_their_item() {
+    let path = "Polaris/Content/Character/Item/Item_Prefab/rat/bdu/IP_rat_bdu_F_Blouse_v1.uasset";
+    assert_eq!(prefab_item(path), Some(item("rat", "bdu", "f_blouse_v1")));
+    assert_eq!(
+        item("rat", "bdu", "f_blouse_v1").key(),
+        "rat_bdu_f_blouse_v1"
+    );
+}
+
+#[test]
+fn only_prefab_assets_in_the_prefab_folder_count() {
+    for path in [
+        "Polaris/Content/Character/Item/Base_Item/rat/bdu/IP_rat_bdu_blouse.uasset",
+        "Polaris/Content/Character/Item/Item_Prefab/rat/bdu/IP_rat_bdu_blouse.uexp",
+        "Polaris/Content/Character/Item/Item_Prefab/rat/bdu/BI_rat_bdu_blouse.uasset",
+        "Polaris/Content/Character/Item/Item_Prefab/rat/bdu/IP_rat_blouse.uasset",
+        "Polaris/Content/Character/Item/Item_Prefab/rat/bdu/IP_rat_bdu_.uasset",
+        "IP_rat_bdu_blouse.uasset",
+    ] {
+        assert_eq!(prefab_item(path), None, "{path}");
+    }
+}
+
+#[test]
+fn menu_pictures_name_their_item_in_any_case() {
+    for stem in ["T_UI_CUS_CH_item", "T_UI_CUS_CH_Item"] {
+        let path = format!(
+            "Polaris/Content/UI/Rep_Texture/CUS_CH_Item/cf0/{stem}_cf0_sho_barefoot.uasset"
+        );
+        assert_eq!(picture_item(&path), Some(item("cf0", "sho", "barefoot")));
+    }
+    assert_eq!(
+        picture_item("Polaris/Content/UI/T_UI_Other_rat_bdu_x.uasset"),
+        None
+    );
+    assert_eq!(
+        picture_item("Polaris/Content/UI/T_UI_CUS_CH_item_rat_bdu_x.ubulk"),
+        None
+    );
+}
+
+#[test]
+fn an_item_is_looked_up_under_itself_then_the_shared_prefixes() {
+    let keys: Vec<String> = item("rat", "sho", "f_barefoot").lookup_keys().collect();
+    assert_eq!(
+        keys,
+        [
+            "rat_sho_f_barefoot",
+            "cmn_sho_f_barefoot",
+            "cf0_sho_f_barefoot",
+            "cm0_sho_f_barefoot",
+        ]
+    );
+}
+
+#[test]
+fn the_item_list_spells_prefabs_like_the_file_names() {
+    assert_eq!(
+        prefab_key("IP_rat_bdu_F_Blouse").as_deref(),
+        Some("rat_bdu_f_blouse")
+    );
+    assert_eq!(prefab_key("BI_rat_bdu_blouse"), None);
+    assert_eq!(prefab_key("IP_nothing"), None);
 }
