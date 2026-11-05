@@ -24,6 +24,7 @@ pub struct Appearance {
     #[specta(type = specta_typescript::Number)]
     pub ui_scale: f64,
     pub title_bar: TitleBarMode,
+    pub hide_pictures: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
@@ -45,6 +46,8 @@ pub struct AppearanceUpdate {
     pub ui_scale: Option<f64>,
     #[specta(optional)]
     pub title_bar: Option<TitleBarMode>,
+    #[specta(optional)]
+    pub hide_pictures: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, specta::Type)]
@@ -98,6 +101,7 @@ impl From<core::Appearance> for Appearance {
             scheme: appearance.scheme.into(),
             ui_scale: appearance.ui_scale,
             title_bar: appearance.title_bar.into(),
+            hide_pictures: appearance.hide_pictures,
         }
     }
 }
@@ -119,6 +123,7 @@ impl From<AppearanceUpdate> for core::AppearanceUpdate {
             scheme: update.scheme.map(Into::into),
             ui_scale: update.ui_scale,
             title_bar: update.title_bar.map(Into::into),
+            hide_pictures: update.hide_pictures,
         }
     }
 }

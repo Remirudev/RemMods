@@ -19,6 +19,7 @@ export const mods: LocaleShape<typeof en> = {
   filters: {
     search: 'Mods durchsuchen',
     searchPlaceholder: 'Name, Kategorie, Autor oder Typ',
+    characters: 'Charaktere',
     state: 'Status',
     states: {
       all: 'Alle',
@@ -52,6 +53,7 @@ export const mods: LocaleShape<typeof en> = {
     conflicts: 'Konflikte',
     contentConflicts: 'Gleiche Dateien',
     issues: 'Probleme',
+    picture: 'Bild',
   },
   columnsMenu: { button: 'Spalten', title: 'Spalten anzeigen', reset: 'Spalten zurücksetzen' },
   states: {
@@ -185,6 +187,13 @@ export const mods: LocaleShape<typeof en> = {
     contentConflicts_other: '{{count}} Mods',
     contentConflictsTooltip:
       'Andere Versionen derselben Oberkörper- oder Ganzkörper-Kleidung in: {{names}}',
+  },
+  view: { label: 'Ansicht', table: 'Tabelle', grid: 'Raster' },
+  grid: {
+    sortBy: 'Sortieren nach',
+    ascending: 'Aufsteigend sortiert. Klicken zum Umkehren.',
+    descending: 'Absteigend sortiert. Klicken zum Umkehren.',
+    moreCharacters: '{{names}} +{{count}}',
   },
   table: {
     label: 'Installierte Mods',

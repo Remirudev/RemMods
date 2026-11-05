@@ -16,6 +16,7 @@ export const MOD_COLUMN_IDS: readonly ModColumnId[] = [
 ]
 
 export const HIDEABLE_COLUMN_IDS: readonly HideableColumnId[] = [
+  'picture',
   'state',
   'kind',
   'version',

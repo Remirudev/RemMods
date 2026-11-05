@@ -34,10 +34,25 @@ export function fail(error: AppError): never {
 }
 
 export function parseScenario(value: string | null): Scenario {
-  return value === 'onboarding' || value === 'windows' ? value : 'ready'
+  return value === 'onboarding' || value === 'windows' || value === 'many' ? value : 'ready'
 }
 
-function initialRows(): ModRow[] {
+const MANY_MODS = 150
+
+// Enough rows to scroll: every third one is Reina's, the others Kunimitsu's.
+function manyRows(): ModRow[] {
+  return Array.from({ length: MANY_MODS }, (_, index) => {
+    const row = makeModRow(`Mod ${String(index).padStart(3, '0')}`)
+    const character =
+      index % 3 === 0
+        ? { code: 'zbr', name: 'Reina', common: false }
+        : { code: 'ker', name: 'Kunimitsu', common: false }
+    return { ...row, content: { ...row.content, characters: [character] } }
+  })
+}
+
+function initialRows(scenario: Scenario): ModRow[] {
+  if (scenario === 'many') return manyRows()
   return [
     makeModRow('Alpha', { sizeBytes: 3 * MIB }),
     makeModRow('Bravo', { sizeBytes: 5 * MIB }),
@@ -64,7 +79,7 @@ export function createState(scenario: Scenario): MockState {
       scenario === 'onboarding'
         ? makeGameStatus({ location: { kind: 'notSet' } })
         : makeGameStatus(),
-    rows: initialRows(),
+    rows: initialRows(scenario),
     archives: [{ ...ARCHIVE }],
     revision: 1,
     profiles: [],

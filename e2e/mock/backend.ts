@@ -45,6 +45,7 @@ function applySettings(settings: Settings, update: SettingsUpdate): Settings {
       scheme: patch.scheme ?? settings.appearance.scheme,
       uiScale: patch.uiScale ?? settings.appearance.uiScale,
       titleBar: patch.titleBar ?? settings.appearance.titleBar,
+      hidePictures: patch.hidePictures ?? settings.appearance.hidePictures,
     },
   }
 }

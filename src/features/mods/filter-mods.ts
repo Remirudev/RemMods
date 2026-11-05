@@ -1,4 +1,4 @@
-import type { ModRow } from '../../lib/ipc/types'
+import type { CharacterHint, ModRow } from '../../lib/ipc/types'
 import { outfitConflicts } from '../../shared/outfit-conflicts'
 import { displayState } from './display-state'
 import type { KindLabel, ModFilter } from './types'
@@ -7,6 +7,7 @@ export const EMPTY_FILTER: ModFilter = {
   text: '',
   state: 'all',
   kinds: [],
+  characters: [],
   conflictsOnly: false,
   contentConflictsOnly: false,
   issuesOnly: false,
@@ -17,6 +18,7 @@ export function isFilterActive(filter: ModFilter): boolean {
     filter.text.trim() !== '' ||
     filter.state !== 'all' ||
     filter.kinds.length > 0 ||
+    filter.characters.length > 0 ||
     filter.conflictsOnly ||
     filter.contentConflictsOnly ||
     filter.issuesOnly
@@ -30,6 +32,20 @@ function matchesText(row: ModRow, needle: string, kindLabel: KindLabel, locale: 
     if (hint.name !== null) haystack.push(hint.name)
   }
   return haystack.some((value) => value.toLocaleLowerCase(locale).includes(needle))
+}
+
+// A mod for everyone is also a mod for the chosen character.
+function matchesCharacters(row: ModRow, characters: readonly string[]): boolean {
+  if (characters.length === 0) return true
+  return row.content.characters.some((hint) => hint.common || characters.includes(hint.code))
+}
+
+// Every character some mod names, for the filter's list; the "everyone" code is no choice.
+export function characterHints(rows: readonly ModRow[]): CharacterHint[] {
+  const byCode = new Map(
+    rows.flatMap((row) => row.content.characters.map((hint) => [hint.code, hint] as const)),
+  )
+  return [...byCode.values()].filter((hint) => !hint.common)
 }
 
 // The state filter compares the display state, so `disabled` leaves out LogicMods folders that
@@ -49,6 +65,7 @@ export function filterMods(
       (inGroup === null || inGroup.has(row.key)) &&
       (filter.state === 'all' || displayState(row) === filter.state) &&
       (filter.kinds.length === 0 || filter.kinds.includes(row.kind)) &&
+      matchesCharacters(row, filter.characters) &&
       (!filter.conflictsOnly || row.conflictsWith.length > 0) &&
       (!filter.contentConflictsOnly || outfitConflicts(row).length > 0) &&
       (!filter.issuesOnly || row.issues.length > 0) &&

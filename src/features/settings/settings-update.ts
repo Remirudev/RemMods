@@ -5,6 +5,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   scheme: 'dark',
   uiScale: 1,
   titleBar: 'custom',
+  hidePictures: false,
 }
 
 export function appearanceUpdate(patch: AppearancePatch): SettingsUpdate {
@@ -20,6 +21,7 @@ export function applySettingsUpdate(settings: Settings, update: SettingsUpdate):
       scheme: patch.scheme ?? settings.appearance.scheme,
       uiScale: patch.uiScale ?? settings.appearance.uiScale,
       titleBar: patch.titleBar ?? settings.appearance.titleBar,
+      hidePictures: patch.hidePictures ?? settings.appearance.hidePictures,
     },
   }
 }

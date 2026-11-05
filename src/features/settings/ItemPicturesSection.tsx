@@ -1,14 +1,17 @@
-import { Button, Group, Paper, Stack, Text } from '@mantine/core'
+import { Button, Group, Paper, Stack, Switch, Text } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { formatSize } from '../../shared/format-size'
-import { useAssetsRefresh, useAssetsStatus } from './queries'
+import { useAssetsRefresh, useAssetsStatus, useSettings, useUpdateSettings } from './queries'
 import { SectionHeading } from './SectionHeading'
+import { appearanceUpdate } from './settings-update'
 
 export function ItemPicturesSection() {
   const { t, i18n } = useTranslation('settings')
   const status = useAssetsStatus(i18n.language).data
   const refresh = useAssetsRefresh(i18n.language)
+  const settings = useSettings().data
+  const updateSettings = useUpdateSettings()
   const numbers = new Intl.NumberFormat(i18n.language)
 
   return (
@@ -37,6 +40,15 @@ export function ItemPicturesSection() {
             {t(($) => $.itemPictures.failed, { count: status.failed })}
           </Text>
         )}
+        <Switch
+          label={t(($) => $.itemPictures.hide)}
+          description={t(($) => $.itemPictures.hideHint)}
+          checked={settings?.appearance.hidePictures ?? false}
+          disabled={!settings || settings.readOnly}
+          onChange={(event) =>
+            updateSettings.mutate(appearanceUpdate({ hidePictures: event.currentTarget.checked }))
+          }
+        />
         <Group>
           <Button
             variant="default"

@@ -46,6 +46,7 @@ export function useModItems(modRef: string, language: string) {
   })
 }
 
+// Rows of the list ask for this as they scroll into view, so nothing off screen loads.
 // The dialog runs in Rust and hands back an id; cancelling it changes nothing.
 export function usePickModPicture(target: ModTarget) {
   return useMutation({

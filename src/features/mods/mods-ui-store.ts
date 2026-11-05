@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useGroupFilterStore } from '../../shared/group-filter-store'
+import { NAME_SORTING } from './compare-mods'
 import { EMPTY_FILTER } from './filter-mods'
 import { movedRefs, repointRef } from './ref-repoint'
 import type { ModsUiState } from './types'
@@ -7,6 +8,7 @@ import type { ModsUiState } from './types'
 // UI state only; the rows themselves live in the query cache.
 export const useModsUiStore = create<ModsUiState>((set) => ({
   filter: EMPTY_FILTER,
+  sorting: NAME_SORTING,
   tab: 'mods',
   detailsRef: null,
   detailsCharacter: null,
@@ -17,12 +19,22 @@ export const useModsUiStore = create<ModsUiState>((set) => ({
   setStateFilter: (stateFilter) =>
     set((state) => ({ filter: { ...state.filter, state: stateFilter } })),
   setKinds: (kinds) => set((state) => ({ filter: { ...state.filter, kinds } })),
+  // The details then open on the first of them, like the pictures in the list.
+  setCharacters: (characters) =>
+    set((state) => ({
+      filter: { ...state.filter, characters },
+      detailsCharacter: characters[0] ?? state.detailsCharacter,
+    })),
   setConflictsOnly: (conflictsOnly) =>
     set((state) => ({ filter: { ...state.filter, conflictsOnly } })),
   setContentConflictsOnly: (contentConflictsOnly) =>
     set((state) => ({ filter: { ...state.filter, contentConflictsOnly } })),
   setIssuesOnly: (issuesOnly) => set((state) => ({ filter: { ...state.filter, issuesOnly } })),
   // A group picked in the sidebar is a filter too, so "Clear filters" drops it as well.
+  setSorting: (update) =>
+    set((state) => ({
+      sorting: typeof update === 'function' ? update(state.sorting) : update,
+    })),
   clearFilters: () => {
     useGroupFilterStore.getState().clearGroup()
     set({ filter: EMPTY_FILTER })

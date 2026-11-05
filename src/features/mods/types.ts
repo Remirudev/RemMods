@@ -1,5 +1,5 @@
-import type { Header } from '@tanstack/react-table'
-import type { ReactNode, RefObject } from 'react'
+import type { Header, SortingState, Updater } from '@tanstack/react-table'
+import type { KeyboardEvent, MouseEvent, ReactNode, RefObject } from 'react'
 import type {
   ArchiveEntry,
   AssetEntry,
@@ -58,7 +58,7 @@ export type ModColumnId =
   | 'issues'
 
 // Name always stays visible, like the switch and the row menu, which are not data columns.
-export type HideableColumnId = Exclude<ModColumnId, 'name'>
+export type HideableColumnId = Exclude<ModColumnId, 'name'> | 'picture'
 
 export interface ColumnSizeLimits {
   size: number
@@ -96,6 +96,7 @@ export interface ModFilter {
   text: string
   state: StateFilter
   kinds: readonly ModKind[]
+  characters: readonly string[]
   conflictsOnly: boolean
   contentConflictsOnly: boolean
   issuesOnly: boolean
@@ -117,7 +118,15 @@ export type NameIssueCode =
   | 'unchanged'
   | 'exists'
 
-export type NavigationKey = 'ArrowUp' | 'ArrowDown' | 'Home' | 'End' | 'PageUp' | 'PageDown'
+export type NavigationKey =
+  | 'ArrowUp'
+  | 'ArrowDown'
+  | 'ArrowLeft'
+  | 'ArrowRight'
+  | 'Home'
+  | 'End'
+  | 'PageUp'
+  | 'PageDown'
 
 export type TableKeyIntent =
   | { kind: 'space' }
@@ -147,6 +156,8 @@ export type ToggleRows = (rows: readonly ModRow[], enable: boolean) => void
 
 export interface ModsUiState {
   filter: ModFilter
+  // Shared by the table and the grid, so switching views keeps the order.
+  sorting: SortingState
   tab: ModsTab
   detailsRef: string | null
   detailsCharacter: string | null
@@ -156,6 +167,8 @@ export interface ModsUiState {
   setText: (text: string) => void
   setStateFilter: (state: StateFilter) => void
   setKinds: (kinds: readonly ModKind[]) => void
+  setCharacters: (characters: readonly string[]) => void
+  setSorting: (update: Updater<SortingState>) => void
   setConflictsOnly: (conflictsOnly: boolean) => void
   setContentConflictsOnly: (contentConflictsOnly: boolean) => void
   setIssuesOnly: (issuesOnly: boolean) => void
@@ -249,6 +262,7 @@ export interface ModsTabsProps {
 }
 
 export interface ModFiltersProps {
+  rows: readonly ModRow[]
   shown: number
   total: number
   searchRef: RefObject<HTMLInputElement | null>
@@ -260,6 +274,41 @@ export interface ModTableProps {
   onToggle: ToggleRows
   onManage: ManageRows
   onBulk: (action: BulkAction) => void
+}
+
+export type ModsView = 'table' | 'grid'
+
+export interface ModsViewState {
+  view: ModsView
+  setView: (view: ModsView) => void
+}
+
+export interface ModListControlsInput extends Omit<ModTableProps, 'rows'> {
+  // Filtered, in any order: what the keyboard's bulk actions act on.
+  rows: readonly ModRow[]
+  // The same rows in the order shown; indexes count in this list.
+  sorted: readonly ModRow[]
+  columns: number
+  // Whole lines that fit the view.
+  pageSize: () => number
+  scrollTo: (index: number) => void
+}
+
+export interface ModListControls {
+  activeIndex: number
+  selected: ReadonlySet<string>
+  onItemClick: (index: number, event: MouseEvent) => void
+  onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
+}
+
+export interface ModCardProps {
+  row: ModRow
+  index: number
+  active: boolean
+  selected: boolean
+  onClick: (index: number, event: MouseEvent) => void
+  onToggle: ToggleRows
+  onManage: ManageRows
 }
 
 export interface ToggleCellProps {

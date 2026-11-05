@@ -30,6 +30,7 @@ export const TEST_SETTINGS: Settings = {
     scheme: 'dark',
     uiScale: 1,
     titleBar: 'custom',
+    hidePictures: false,
   },
   readOnly: false,
   recovered: false,

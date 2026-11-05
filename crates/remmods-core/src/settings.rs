@@ -83,6 +83,9 @@ pub struct Appearance {
     pub scheme: ColorScheme,
     pub ui_scale: f64,
     pub title_bar: TitleBarMode,
+    /// Empty tiles instead of item pictures. Omitted while off.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub hide_pictures: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -112,6 +115,7 @@ pub struct AppearanceUpdate {
     pub scheme: Option<ColorScheme>,
     pub ui_scale: Option<f64>,
     pub title_bar: Option<TitleBarMode>,
+    pub hide_pictures: Option<bool>,
 }
 
 /// Settings plus how they were loaded: `read_only` = never written back (newer format or
@@ -145,6 +149,7 @@ impl Default for Appearance {
             scheme: ColorScheme::default(),
             ui_scale: UI_SCALE_DEFAULT,
             title_bar: TitleBarMode::default(),
+            hide_pictures: false,
         }
     }
 }
@@ -163,6 +168,7 @@ impl Settings {
             current.scheme = appearance.scheme.unwrap_or(current.scheme);
             current.ui_scale = appearance.ui_scale.unwrap_or(current.ui_scale);
             current.title_bar = appearance.title_bar.unwrap_or(current.title_bar);
+            current.hide_pictures = appearance.hide_pictures.unwrap_or(current.hide_pictures);
         }
         self.normalized()
     }

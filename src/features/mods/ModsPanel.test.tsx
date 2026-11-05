@@ -16,6 +16,7 @@ import { installIpcMock } from '../../test/ipc-mock'
 import { mockElementLayout } from '../../test/layout'
 import { renderWithProviders } from '../../test/render'
 import type { IpcHandler, IpcMockOptions } from '../../test/types'
+import { NAME_SORTING } from './compare-mods'
 import { ModsPanel } from './ModsPanel'
 import { useModsUiStore } from './mods-ui-store'
 
@@ -62,10 +63,12 @@ describe('ModsPanel', () => {
         text: '',
         state: 'all',
         kinds: [],
+        characters: [],
         conflictsOnly: false,
         contentConflictsOnly: false,
         issuesOnly: false,
       },
+      sorting: NAME_SORTING,
       tab: 'mods',
       detailsRef: null,
       activeIndex: -1,

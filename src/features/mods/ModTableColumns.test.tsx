@@ -8,6 +8,7 @@ import { renderWithProviders } from '../../test/render'
 import { ColumnsMenu } from './ColumnsMenu'
 import { COLUMN_LAYOUT_KEY, defaultColumnLayout } from './column-layout'
 import { useColumnLayoutStore } from './column-layout-store'
+import { NAME_SORTING } from './compare-mods'
 import { ModTable } from './ModTable'
 import { useModsUiStore } from './mods-ui-store'
 
@@ -58,7 +59,12 @@ describe('mod table columns', () => {
   beforeEach(() => {
     localStorage.clear()
     useColumnLayoutStore.setState(defaultColumnLayout())
-    useModsUiStore.setState({ activeIndex: -1, selection: [], anchor: null })
+    useModsUiStore.setState({
+      activeIndex: -1,
+      selection: [],
+      anchor: null,
+      sorting: NAME_SORTING,
+    })
     restoreLayout = mockElementLayout()
   })
 
@@ -71,6 +77,7 @@ describe('mod table columns', () => {
 
     expect(headerNames()).toEqual([
       'On',
+      '',
       'Name',
       'State',
       'Type',
@@ -129,7 +136,7 @@ describe('mod table columns', () => {
 
   it('drags Name from the width it is drawn at, then sizes the table to fit', () => {
     renderTable()
-    const drawn = { x: 56, y: 0, top: 0, left: 56, right: 456, bottom: 40, width: 400, height: 40 }
+    const drawn = { x: 64, y: 0, top: 0, left: 64, right: 464, bottom: 40, width: 400, height: 40 }
     vi.spyOn(header('Name'), 'getBoundingClientRect').mockReturnValue({
       ...drawn,
       toJSON: () => drawn,
@@ -138,9 +145,9 @@ describe('mod table columns', () => {
     drag(handle('Name'), 456, 476)
 
     expect(header('Name')).toHaveStyle({ width: '420px' })
-    // On 56 + Name 420 + State 130 + Type 100 + Size 100 + Conflicts 120 + Same files 140
-    // + Issues 110 + menu 52.
-    expect(screen.getByRole('grid')).toHaveStyle({ width: '1228px' })
+    // On 64 + picture 60 + Name 420 + State 130 + Type 100 + Size 100 + Conflicts 120
+    // + Same files 140 + Issues 110 + menu 52.
+    expect(screen.getByRole('grid')).toHaveStyle({ width: '1296px' })
     expect(saved()?.widths).toEqual({ name: 420 })
   })
 
@@ -185,7 +192,7 @@ describe('mod table columns', () => {
     expect(header('Version')).toBeVisible()
     expect(saved()?.hidden).toEqual(['kind', 'category'])
     const firstRow = screen.getAllByTestId('mods-row')[0]!
-    expect(firstRow.querySelectorAll('td')).toHaveLength(9)
+    expect(firstRow.querySelectorAll('td')).toHaveLength(10)
 
     await user.click(within(menu).getByRole('button', { name: 'Reset columns' }))
 

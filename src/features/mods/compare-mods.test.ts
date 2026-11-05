@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeModRow } from '../../test/fixtures'
-import { compareMods, modCollator } from './compare-mods'
+import { compareMods, modCollator, NAME_SORTING, sortMods } from './compare-mods'
 
 const collator = modCollator('en')
 
@@ -82,5 +82,40 @@ describe('compareMods', () => {
     expect(compareMods(a, a, 'kind', collator)).toBe(0)
     const early = makeModRow('Alpha', { modRef: 'm:9' })
     expect(compareMods(early, b, 'kind', collator)).toBeLessThan(0)
+  })
+})
+
+describe('sortMods', () => {
+  const rows = [
+    makeModRow('Bravo', { sizeBytes: 5 }),
+    makeModRow('Alpha', { sizeBytes: 9 }),
+    makeModRow('Mod 10', { sizeBytes: 1 }),
+    makeModRow('Mod 2', { sizeBytes: 3 }),
+  ]
+  const names = (sorted: readonly { name: string }[]) => sorted.map((row) => row.name)
+
+  it('sorts like the table, by name first', () => {
+    expect(names(sortMods(rows, NAME_SORTING, 'en'))).toEqual(['Alpha', 'Bravo', 'Mod 2', 'Mod 10'])
+  })
+
+  it('follows the column and the direction', () => {
+    expect(names(sortMods(rows, [{ id: 'size', desc: true }], 'en'))).toEqual([
+      'Alpha',
+      'Bravo',
+      'Mod 2',
+      'Mod 10',
+    ])
+    expect(names(sortMods(rows, [{ id: 'name', desc: true }], 'en'))).toEqual([
+      'Mod 10',
+      'Mod 2',
+      'Bravo',
+      'Alpha',
+    ])
+  })
+
+  it('falls back to the name for a column it does not know, and keeps the input', () => {
+    const before = [...rows]
+    expect(names(sortMods(rows, [{ id: 'picture', desc: false }], 'en'))[0]).toBe('Alpha')
+    expect(rows).toEqual(before)
   })
 })

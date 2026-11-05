@@ -9,6 +9,7 @@ import { COLUMN_SIZES } from './column-layout'
 import { compareMods, modCollator } from './compare-mods'
 import { displayState } from './display-state'
 import { IssueBadge } from './IssueBadge'
+import { ModThumbnail } from './ModThumbnail'
 import { modInfoText } from './mod-info-text'
 import type { modTableFeatures } from './mod-table-features'
 import { NameCell } from './NameCell'
@@ -27,7 +28,9 @@ const DESC_FIRST: ReadonlySet<ModColumnId> = new Set<ModColumnId>([
   'issues',
 ])
 
-const TOGGLE_COLUMN_WIDTH = 56
+// The switch and the cell's padding; less would cut the switch off with an ellipsis.
+const TOGGLE_COLUMN_WIDTH = 64
+const PICTURE_COLUMN_WIDTH = 60
 const MENU_COLUMN_WIDTH = 52
 
 // Cell functions are component types for the table, so the columns are rebuilt per language.
@@ -60,6 +63,13 @@ export function buildModColumns(
       enableHiding: false,
       size: TOGGLE_COLUMN_WIDTH,
       cell: ({ row }) => <ToggleCell row={row.original} onToggle={onToggle} />,
+    }),
+    columnHelper.display({
+      id: 'picture',
+      header: '',
+      enableSorting: false,
+      size: PICTURE_COLUMN_WIDTH,
+      cell: ({ row }) => <ModThumbnail row={row.original} />,
     }),
     columnHelper.accessor((row) => row.name, {
       ...base('name'),

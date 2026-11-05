@@ -6,6 +6,8 @@ import {
   coverPicture,
   internalName,
   itemGroups,
+  listPicture,
+  replacedNames,
 } from './replaces-model'
 
 const reina = { character: { code: 'zbr', name: 'Reina', common: false } }
@@ -106,5 +108,38 @@ describe('coverPicture', () => {
 
   it('never shows the game’s picture as the mod’s look', () => {
     expect(coverPicture([makeModItem('ker_bdf_a', { modPicture: null })], 'ker')).toBeNull()
+  })
+})
+
+describe('listPicture', () => {
+  const items = [makeModItem('ker_bdf_a'), makeModItem('zbr_bdf_a', reina)]
+
+  it('takes the owner’s picture first', () => {
+    expect(listPicture({ modRef: 'm', ownPicture: 'own', items }, 'zbr')).toBe('own')
+  })
+
+  it('else shows the mod’s look for the character', () => {
+    expect(listPicture({ modRef: 'm', ownPicture: null, items }, 'zbr')).toBe('mod-zbr_bdf_a')
+  })
+
+  it('has nothing to show before the items arrive', () => {
+    expect(listPicture(undefined, 'ker')).toBeNull()
+  })
+})
+
+describe('replacedNames', () => {
+  it('names what the chosen character gets, without hidden pieces, each once', () => {
+    const items = [
+      makeModItem('ker_bdf_a', { name: 'Outfit' }),
+      makeModItem('ker_bdu_b', { name: 'Outfit' }),
+      makeModItem('ker_sho_hidden', { name: 'Barefoot', modPicture: null }),
+      makeModItem('zbr_bdf_a', { ...reina, name: 'Reina outfit' }),
+    ]
+    expect(replacedNames(items, 'ker', 'en')).toEqual(['Outfit'])
+    expect(replacedNames(items, 'zbr', 'en')).toEqual(['Reina outfit'])
+  })
+
+  it('takes the internal name when there is no text', () => {
+    expect(replacedNames([makeModItem('ker_bdf_yor')], 'ker', 'en')).toEqual(['bdf_yor'])
   })
 })

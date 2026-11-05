@@ -13,6 +13,22 @@ export function characterLabel(hint: CharacterHint, t: TFunction<'mods'>): strin
   return hint.code
 }
 
+const CARD_CHARACTERS = 3
+
+// A card's one line: the first few names, then how many more.
+export function characterSummary(
+  hints: readonly CharacterHint[],
+  t: TFunction<'mods'>,
+  locale: string,
+): string {
+  const labels = hints
+    .map((hint) => characterLabel(hint, t))
+    .sort((a, b) => a.localeCompare(b, locale))
+  const names = labels.slice(0, CARD_CHARACTERS).join(', ')
+  const count = labels.length - CARD_CHARACTERS
+  return count > 0 ? t(($) => $.grid.moreCharacters, { names, count }) : names
+}
+
 export function slotLabel(hint: SlotHint, t: TFunction<'mods'>): string {
   const slot = hint.slot
   if (slot === null) return hint.code

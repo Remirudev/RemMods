@@ -1,12 +1,15 @@
 import { Image } from '@mantine/core'
 import { IconPhotoOff } from '@tabler/icons-react'
 import { useItemPicture } from '../item-picture'
+import { useHidePictures } from '../use-hide-pictures'
 import classes from './item-picture.module.css'
 import type { ItemPictureProps } from './types'
 
-// Transparent pictures sit on a tile, so light and dark themes show them alike.
+// Transparent pictures sit on a tile, so light and dark themes show them alike. With "Hide
+// pictures" on nothing is even loaded.
 export function ItemPicture({ id, label, width, height }: ItemPictureProps) {
-  const picture = useItemPicture(id)
+  const hidden = useHidePictures()
+  const picture = useItemPicture(hidden ? null : id)
   const box = { width, height }
 
   if (!picture.data) {

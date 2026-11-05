@@ -12,7 +12,7 @@ import type {
   TrashUnavailableReason,
 } from '../../src/lib/ipc/types'
 
-export type Scenario = 'ready' | 'onboarding' | 'windows'
+export type Scenario = 'ready' | 'onboarding' | 'windows' | 'many'
 
 export interface RecordedCall {
   cmd: string

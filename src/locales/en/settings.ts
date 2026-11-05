@@ -124,6 +124,8 @@ export const settings = {
     failed_one: '{{count}} picture could not be read.',
     failed_other: '{{count}} pictures could not be read.',
     refresh: 'Check now',
+    hide: 'Hide pictures',
+    hideHint: 'Shows empty tiles instead, in the mod list and in a mod’s details.',
   },
   diagnostics: {
     title: 'Diagnostics',

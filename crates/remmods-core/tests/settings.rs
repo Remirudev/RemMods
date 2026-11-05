@@ -72,6 +72,7 @@ fn update_round_trips_through_disk_as_pretty_json() {
             scheme: Some(ColorScheme::Light),
             ui_scale: Some(1.25),
             title_bar: Some(TitleBarMode::System),
+            hide_pictures: None,
         }))
         .expect("update settings");
 
@@ -99,6 +100,7 @@ fn partial_update_keeps_the_other_fields() {
     let snapshot = store.update(&scale_update(0.9)).expect("second update");
 
     assert_eq!(snapshot.settings.appearance.title_bar, TitleBarMode::System);
+    assert!(!snapshot.settings.appearance.hide_pictures);
     assert_eq!(snapshot.settings.appearance.scheme, ColorScheme::Dark);
     assert_eq!(snapshot.settings.appearance.ui_scale, 0.9);
 }
@@ -313,4 +315,28 @@ fn update_is_busy_while_another_process_holds_the_app_lock() {
 
     assert!(matches!(result, Err(SettingsError::Fs(FsError::Busy))));
     assert!(!paths.settings_file.exists());
+}
+
+#[test]
+fn hide_pictures_is_saved_only_while_on() {
+    let (_dir, root) = support::temp_root();
+    let paths = AppPaths::under(&root);
+    let store = SettingsStore::load(&paths);
+    let update = |hide_pictures| {
+        appearance(AppearanceUpdate {
+            hide_pictures: Some(hide_pictures),
+            ..AppearanceUpdate::default()
+        })
+    };
+
+    let on = store.update(&update(true)).expect("turn on");
+    assert!(on.settings.appearance.hide_pictures);
+    let text = fs::read_to_string(&paths.settings_file).expect("read");
+    assert!(text.contains("\"hidePictures\": true"), "{text}");
+    let reloaded = SettingsStore::load(&paths).snapshot();
+    assert!(reloaded.settings.appearance.hide_pictures);
+
+    store.update(&update(false)).expect("turn off");
+    let text = fs::read_to_string(&paths.settings_file).expect("read");
+    assert!(!text.contains("hidePictures"), "{text}");
 }

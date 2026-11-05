@@ -16,6 +16,7 @@ export const mods = {
   filters: {
     search: 'Search mods',
     searchPlaceholder: 'Name, category, author or type',
+    characters: 'Characters',
     state: 'State',
     states: {
       all: 'All',
@@ -49,6 +50,7 @@ export const mods = {
     conflicts: 'Conflicts',
     contentConflicts: 'Same files',
     issues: 'Issues',
+    picture: 'Picture',
   },
   columnsMenu: { button: 'Columns', title: 'Show columns', reset: 'Reset columns' },
   states: {
@@ -176,6 +178,13 @@ export const mods = {
     contentConflicts_other: '{{count}} mods',
     contentConflictsTooltip:
       'Other versions of the same upper-body or full-body clothing in: {{names}}',
+  },
+  view: { label: 'View', table: 'Table', grid: 'Grid' },
+  grid: {
+    sortBy: 'Sort by',
+    ascending: 'Sorted ascending. Click to reverse.',
+    descending: 'Sorted descending. Click to reverse.',
+    moreCharacters: '{{names}} +{{count}}',
   },
   table: {
     label: 'Installed mods',

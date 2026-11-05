@@ -7,10 +7,12 @@ import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { ActionBar } from './ActionBar'
 import { filterMods } from './filter-mods'
 import { ModFilters } from './ModFilters'
+import { ModGrid } from './ModGrid'
 import { ModTable } from './ModTable'
 import { rowSubject } from './manage-model'
 import { selectedRows } from './mod-actions'
 import { useModsUiStore } from './mods-ui-store'
+import { useModsViewStore } from './mods-view-store'
 import { pruneSelection } from './selection'
 import { rowsToChange, toggleTargets } from './toggle-model'
 import type { BulkAction, ManageRows, ModsListTabProps, ToggleRows } from './types'
@@ -24,6 +26,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   const clearFilters = useModsUiStore((state) => state.clearFilters)
   const openDetails = useModsUiStore((state) => state.openDetails)
   const groupKeys = useGroupFilterStore((state) => state.group?.keys ?? null)
+  const view = useModsViewStore((state) => state.view)
   const toggle = useToggleMods()
   const { mutate } = toggle
   const manage = useManageActions()
@@ -85,9 +88,11 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
     )
   }
 
+  const List = view === 'grid' ? ModGrid : ModTable
+
   return (
     <Stack gap="md" flex={1} mih={0}>
-      <ModFilters shown={visible.length} total={rows.length} searchRef={searchRef} />
+      <ModFilters rows={rows} shown={visible.length} total={rows.length} searchRef={searchRef} />
       <ActionBar rows={visible} onToggle={toggleRows} onTrash={bulk.trash} onDelete={bulk.remove} />
       {visible.length === 0 ? (
         <Stack gap="sm" align="flex-start" py="lg">
@@ -97,7 +102,7 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
           </Button>
         </Stack>
       ) : (
-        <ModTable
+        <List
           rows={visible}
           onOpen={openDetails}
           onToggle={toggleRows}

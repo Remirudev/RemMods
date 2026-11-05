@@ -1,7 +1,11 @@
+import type { SortingState } from '@tanstack/react-table'
 import type { ModKind, ModRow } from '../../lib/ipc/types'
 import { outfitConflicts } from '../../shared/outfit-conflicts'
+import { isModColumnId } from './column-layout'
 import { displayState } from './display-state'
 import type { ModColumnId, ModDisplayState } from './types'
+
+export const NAME_SORTING: SortingState = [{ id: 'name', desc: false }]
 
 const STATE_ORDER: Record<ModDisplayState, number> = {
   enabled: 0,
@@ -73,4 +77,13 @@ export function compareMods(
     collator.compare(a.name, b.name) ||
     compareCodeUnits(a.modRef, b.modRef)
   )
+}
+
+// The order the table's sort gives, for the view that has no table.
+export function sortMods(rows: readonly ModRow[], sorting: SortingState, locale: string): ModRow[] {
+  const collator = modCollator(locale)
+  const sort = sorting[0]
+  const column = sort && isModColumnId(sort.id) ? sort.id : 'name'
+  const direction = sort?.desc ? -1 : 1
+  return [...rows].sort((a, b) => direction * compareMods(a, b, column, collator))
 }

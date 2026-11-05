@@ -1,4 +1,4 @@
-import type { CharacterHint, ModItem, Slot } from '../../lib/ipc/types'
+import type { CharacterHint, ModItem, ModItems, Slot } from '../../lib/ipc/types'
 import type { ItemGroups } from './types'
 
 const SLOT_ORDER: readonly Slot[] = [
@@ -70,4 +70,21 @@ export function coverPicture(items: readonly ModItem[], character: string | null
   const pictured = items.filter((item) => item.modPicture !== null).sort(compareItems)
   const own = pictured.find((item) => item.character.code === character)
   return (own ?? pictured[0])?.modPicture ?? null
+}
+
+// What the list shows for a mod: the owner's picture, else the mod's look.
+export function listPicture(items: ModItems | undefined, character: string | null): string | null {
+  if (!items) return null
+  return items.ownPicture ?? coverPicture(items.items, character)
+}
+
+// The names of what a mod changes for this character, each once.
+export function replacedNames(
+  items: readonly ModItem[],
+  wanted: string | null,
+  locale: string,
+): string[] {
+  const character = chosenCharacter(charactersOf(items, locale), wanted)
+  const names = itemGroups(items, character).main.map((item) => item.name ?? internalName(item))
+  return [...new Set(names)]
 }

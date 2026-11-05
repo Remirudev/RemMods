@@ -12,13 +12,17 @@ import {
   VisuallyHidden,
 } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
-import { useId } from 'react'
+import { useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModKind } from '../../lib/ipc/types'
 import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { ColumnsMenu } from './ColumnsMenu'
-import { isFilterActive } from './filter-mods'
+import { characterLabel } from './content-hints'
+import { characterHints, isFilterActive } from './filter-mods'
+import { ModSortMenu } from './ModSortMenu'
+import { ModsViewSwitch } from './ModsViewSwitch'
 import { useModsUiStore } from './mods-ui-store'
+import { useModsViewStore } from './mods-view-store'
 import type { ModFiltersProps, StateFilter } from './types'
 
 const STATE_OPTIONS: readonly StateFilter[] = [
@@ -32,17 +36,26 @@ const STATE_OPTIONS: readonly StateFilter[] = [
 ]
 const KIND_OPTIONS: readonly ModKind[] = ['standard', 'legacy', 'logic', 'loose']
 
-export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
-  const { t } = useTranslation('mods')
+export function ModFilters({ rows, shown, total, searchRef }: ModFiltersProps) {
+  const { t, i18n } = useTranslation('mods')
   const contentHintId = useId()
   const contentHint = t(($) => $.filters.contentConflictsHint)
   const filter = useModsUiStore((state) => state.filter)
   const group = useGroupFilterStore((state) => state.group)
   const clearGroup = useGroupFilterStore((state) => state.clearGroup)
+  const view = useModsViewStore((state) => state.view)
+  const characters = useMemo(
+    () =>
+      characterHints(rows)
+        .map((hint) => ({ value: hint.code, label: characterLabel(hint, t) }))
+        .sort((a, b) => a.label.localeCompare(b.label, i18n.language)),
+    [rows, t, i18n.language],
+  )
   const {
     setText,
     setStateFilter,
     setKinds,
+    setCharacters,
     setConflictsOnly,
     setContentConflictsOnly,
     setIssuesOnly,
@@ -53,7 +66,7 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
     <Group gap="md" align="flex-end" wrap="wrap">
       <TextInput
         ref={searchRef}
-        w={280}
+        w={240}
         label={t(($) => $.filters.search)}
         placeholder={t(($) => $.filters.searchPlaceholder)}
         leftSection={<IconSearch size={16} stroke={1.8} />}
@@ -61,7 +74,7 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
         onChange={(event) => setText(event.currentTarget.value)}
       />
       <Select
-        w={200}
+        w={170}
         label={t(($) => $.filters.state)}
         allowDeselect={false}
         data={STATE_OPTIONS.map((value) => ({
@@ -75,11 +88,19 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
         }}
       />
       <MultiSelect
-        w={220}
+        w={170}
         label={t(($) => $.filters.kinds)}
         data={KIND_OPTIONS.map((value) => ({ value, label: t(($) => $.kinds[value]) }))}
         value={[...filter.kinds]}
         onChange={(values) => setKinds(KIND_OPTIONS.filter((kind) => values.includes(kind)))}
+      />
+      <MultiSelect
+        w={200}
+        searchable
+        label={t(($) => $.filters.characters)}
+        data={characters}
+        value={[...filter.characters]}
+        onChange={setCharacters}
       />
       <Group gap="md" h={36}>
         <Checkbox
@@ -137,7 +158,8 @@ export function ModFilters({ shown, total, searchRef }: ModFiltersProps) {
             {t(($) => $.filters.clear)}
           </Button>
         )}
-        <ColumnsMenu />
+        {view === 'table' ? <ColumnsMenu /> : <ModSortMenu />}
+        <ModsViewSwitch />
       </Group>
     </Group>
   )

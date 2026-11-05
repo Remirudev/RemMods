@@ -501,3 +501,23 @@ game stays closed except to look at its menu. Each step ends with a "Result:" li
    Drag an image with no details open: a notice asks which mod it is for, nothing installs. Rename
    that mod: its picture stays. "Remove picture" brings the mod's own look back.
    Result:
+
+## Mod list steps (pictures and grid)
+
+Only looking: nothing in Paks changes and the game stays closed. Each step ends with a "Result:" line.
+
+1. Scroll the table from top to bottom with the mouse wheel, then quickly with the scrollbar. It stays
+   smooth in the real window (WebKitGTK); pictures appear within a moment and stay when you scroll
+   back.
+   Result:
+2. Switch to the grid (top right of the list). Scroll the same way. Close and reopen RemMods: the grid
+   is still chosen.
+   Result:
+3. In the grid: click into the list, then use the arrow keys, Home, End, Space (switches the mod) and
+   Enter (opens it). Ctrl+click and Shift+click select several, and the action bar works on them.
+   Result:
+4. Pick a character in the Characters filter: only their mods and mods for everyone stay, and the
+   pictures show that character.
+   Result:
+5. In Settings turn "Hide pictures" on: the list and the details show empty tiles. Turn it off again.
+   Result:

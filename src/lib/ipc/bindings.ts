@@ -198,6 +198,7 @@ export type Appearance = {
 	/**  Always finite (core normalizes it), so never the `null` serde_json writes for NaN. */
 	uiScale: number,
 	titleBar: TitleBarMode,
+	hidePictures: boolean,
 };
 
 /**  Partial update: omitted or `null` fields keep their current value. */
@@ -205,6 +206,7 @@ export type AppearanceUpdate = {
 	scheme?: ColorScheme | null,
 	uiScale?: number | null,
 	titleBar?: TitleBarMode | null,
+	hidePictures?: boolean | null,
 };
 
 /**  `on` applies the profile; `off` turns off the mods it lists as on and nothing else. */

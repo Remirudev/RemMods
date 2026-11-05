@@ -128,6 +128,8 @@ export const settings: LocaleShape<typeof en> = {
     failed_one: '{{count}} Bild konnte nicht gelesen werden.',
     failed_other: '{{count}} Bilder konnten nicht gelesen werden.',
     refresh: 'Jetzt prüfen',
+    hide: 'Bilder ausblenden',
+    hideHint: 'Zeigt stattdessen leere Felder, in der Mod-Liste und in den Details einer Mod.',
   },
   diagnostics: {
     title: 'Diagnose',

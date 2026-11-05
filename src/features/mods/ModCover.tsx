@@ -7,7 +7,7 @@ import { usePictureDropStore } from '../../shared/picture-drop-store'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
 import { useClearModPicture, useModItems, usePickModPicture } from './queries'
-import { charactersOf, chosenCharacter, coverPicture } from './replaces-model'
+import { charactersOf, chosenCharacter, listPicture } from './replaces-model'
 import type { ModCoverProps } from './types'
 
 const COVER_HEIGHT = 220
@@ -21,13 +21,11 @@ export function ModCover({ row }: ModCoverProps) {
   const target = useMemo(() => ({ modRef: row.modRef, key: row.key }), [row.modRef, row.key])
   const pick = usePickModPicture(target)
   const clear = useClearModPicture(target)
-  const list = items?.items
   const own = items?.ownPicture ?? null
   const shown = useMemo(() => {
-    if (own !== null) return own
-    const characters = charactersOf(list ?? [], i18n.language)
-    return coverPicture(list ?? [], chosenCharacter(characters, wanted))
-  }, [own, list, wanted, i18n.language])
+    const characters = charactersOf(items?.items ?? [], i18n.language)
+    return listPicture(items, chosenCharacter(characters, wanted))
+  }, [items, wanted, i18n.language])
 
   useEffect(() => {
     const { setTarget, clearTarget } = usePictureDropStore.getState()

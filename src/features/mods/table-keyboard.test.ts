@@ -65,3 +65,40 @@ describe('tableKeyIntent', () => {
     expect(tableKeyIntent('Tab', true)).toBeNull()
   })
 })
+
+describe('nextActiveIndex in a grid of four columns', () => {
+  const move = (from: number, key: string, count = 10, page = 2) =>
+    nextActiveIndex(from, key, count, page, 4)
+
+  it('moves sideways by one and stops at both ends', () => {
+    expect(move(1, 'ArrowRight')).toBe(2)
+    expect(move(3, 'ArrowRight')).toBe(4)
+    expect(move(1, 'ArrowLeft')).toBe(0)
+    expect(move(0, 'ArrowLeft')).toBe(0)
+    expect(move(9, 'ArrowRight')).toBe(9)
+  })
+
+  it('moves a whole line up and down', () => {
+    expect(move(1, 'ArrowDown')).toBe(5)
+    expect(move(5, 'ArrowUp')).toBe(1)
+    expect(move(1, 'ArrowUp')).toBe(1)
+  })
+
+  it('lands on the last card when the last line is shorter', () => {
+    expect(move(7, 'ArrowDown')).toBe(9)
+    expect(move(9, 'ArrowDown')).toBe(9)
+    expect(move(8, 'ArrowDown')).toBe(8)
+  })
+
+  it('pages by whole lines', () => {
+    expect(move(1, 'PageDown', 40)).toBe(9)
+    expect(move(9, 'PageUp', 40)).toBe(1)
+  })
+})
+
+describe('nextActiveIndex in the table', () => {
+  it('leaves left and right to the sideways scrolling', () => {
+    expect(nextActiveIndex(3, 'ArrowLeft', 10, 5)).toBeNull()
+    expect(nextActiveIndex(3, 'ArrowRight', 10, 5)).toBeNull()
+  })
+})

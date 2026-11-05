@@ -44,4 +44,16 @@ describe('ItemPicturesSection', () => {
     expect(await screen.findByText(/1,234 pictures/)).toBeVisible()
     await waitFor(() => expect(ipc.callsOf('assets_refresh')).toHaveLength(1))
   })
+
+  it('hides pictures through the settings', async () => {
+    const ipc = installIpcMock()
+    renderWithProviders(<ItemPicturesSection />)
+
+    await userEvent.click(screen.getByRole('switch', { name: /Hide pictures/ }))
+
+    await waitFor(() => expect(ipc.callsOf('settings_update')).toHaveLength(1))
+    expect(ipc.callsOf('settings_update')[0]?.payload).toEqual({
+      update: { appearance: { hidePictures: true } },
+    })
+  })
 })
