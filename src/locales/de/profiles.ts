@@ -33,6 +33,16 @@ export const profiles: LocaleShape<typeof en> = {
     clashes_other:
       '{{count}} Paare Mods in dieser Gruppe ersetzen dieselben Teile. Im Spiel erscheint jeweils nur eine.',
     rowMenu: 'Optionen für „{{name}}“',
+    allOn: 'Alle an',
+    allOff: 'Alle aus',
+    allOnHint: 'Jede Gruppe einschalten',
+    allOffHint: 'Jede Gruppe ausschalten',
+    selectedOn: 'An',
+    selectedOff: 'Aus',
+    selectedOnHint: 'Die {{amount}} ausgewählten Gruppen einschalten',
+    selectedOffHint: 'Die {{amount}} ausgewählten Gruppen ausschalten',
+    selected: '{{amount}} ausgewählt',
+    clearSelection: 'Auswahl aufheben',
   },
   menu: {
     saveCurrent: 'Aktuellen Stand als Gruppe speichern…',
@@ -51,10 +61,15 @@ export const profiles: LocaleShape<typeof en> = {
   },
   mode: {
     additive: {
-      hint: 'Schaltet die Mods ein, die die Gruppe als an führt, und die aus, die sie als aus führt. Andere Mods bleiben, wie sie sind.',
+      hint_one:
+        'Schaltet die Mods ein, die die Gruppe als an führt, und die aus, die sie als aus führt. Andere Mods bleiben, wie sie sind.',
+      hint_other:
+        'Schaltet die Mods ein, die eine dieser Gruppen als an führt, und die aus, die sie nur als aus führen. Andere Mods bleiben, wie sie sind.',
     },
     exclusive: {
-      hint: 'Schaltet die Mods ein, die die Gruppe als an führt, und jede andere Mod aus.',
+      hint_one: 'Schaltet die Mods ein, die die Gruppe als an führt, und jede andere Mod aus.',
+      hint_other:
+        'Schaltet die Mods ein, die eine dieser Gruppen als an führt, und jede andere Mod aus.',
     },
   },
   form: {
@@ -106,7 +121,13 @@ export const profiles: LocaleShape<typeof en> = {
   diff: {
     titleOn: '„{{name}}“ einschalten',
     titleOff: '„{{name}}“ ausschalten',
-    offHint: 'Schaltet die Mods aus, die diese Gruppe als an führt. Sonst ändert sich nichts.',
+    titleOnMany_one: '{{count}} Gruppe einschalten',
+    titleOnMany_other: '{{count}} Gruppen einschalten',
+    titleOffMany_one: '{{count}} Gruppe ausschalten',
+    titleOffMany_other: '{{count}} Gruppen ausschalten',
+    offHint_one: 'Schaltet die Mods aus, die diese Gruppe als an führt. Sonst ändert sich nichts.',
+    offHint_other:
+      'Schaltet die Mods aus, die diese Gruppen als an führen. Sonst ändert sich nichts.',
     error: 'Die Änderungen konnten nicht berechnet werden.',
     changed:
       'Die Mods haben sich auf der Platte geändert. Die Liste unten ist aktuell; prüfe sie und wende erneut an.',
@@ -118,7 +139,8 @@ export const profiles: LocaleShape<typeof en> = {
     skipped_other: 'Übersprungen ({{count}})',
     missing_one: 'Nicht installiert ({{count}})',
     missing_other: 'Nicht installiert ({{count}})',
-    notInProfile: 'nicht in dieser Gruppe',
+    notInProfile_one: 'nicht in dieser Gruppe',
+    notInProfile_other: 'nicht in diesen Gruppen',
     skipReason: {
       ambiguous: 'mehrere Mods haben diesen Namen',
       linked: 'verknüpfter Ordner',
@@ -140,6 +162,7 @@ export const profiles: LocaleShape<typeof en> = {
       switched: 'Skins zu {{name}} gewechselt.',
       gameRunning: 'Die Skins bleiben, solange das Spiel läuft: Wechsle danach zu {{name}}.',
       failed: 'Das Skin-Set {{name}} ließ sich nicht wechseln.',
+      several: 'Die Skins bleiben, wie sie sind, weil diese Gruppen verschiedene Skin-Sets nennen.',
     },
     undo: 'Rückgängig',
   },

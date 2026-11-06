@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { callsOf, expect, modsGrid, openApp, openPanel, test } from './app'
+import { callsOf, expect, modRow, modsGrid, openApp, openPanel, test } from './app'
 import { t } from './i18n'
 
 async function showGrid(page: Page) {
@@ -111,4 +111,89 @@ test('Hide pictures empties the list and the details', async ({ page }) => {
   await page.getByTestId('mods-card').first().click()
   await expect(page.getByTestId('mod-details').getByRole('img').first()).toBeVisible()
   await expect(page.getByTestId('mod-details').locator('img')).toHaveCount(0)
+})
+
+test('the mods take the whole window and the pictures fill the cards', async ({ page }) => {
+  await page.setViewportSize({ width: 2000, height: 1000 })
+  await openApp(page)
+  await showGrid(page)
+
+  const grid = await modsGrid(page).boundingBox()
+  expect(grid?.width).toBeGreaterThan(1500)
+  const picture = await page
+    .getByTestId('mods-card')
+    .first()
+    .getByAltText(/Picture/)
+    .boundingBox()
+  const card = await page.getByTestId('mods-card').first().boundingBox()
+  expect(picture?.height).toBeGreaterThan((card?.width ?? 0) - 4)
+  await expect(page.getByTestId('mods-card').first()).not.toContainText(t('mods.states.enabled'))
+})
+
+test('the checkboxes, the count and the view switch stay on one line', async ({ page }) => {
+  await openApp(page)
+  await page.getByRole('textbox', { name: t('mods.filters.search') }).fill('a')
+  const middle = async (name: string) => {
+    const box = await page.getByRole('button', { name }).boundingBox()
+    return (box?.y ?? 0) + (box?.height ?? 0) / 2
+  }
+  const checkbox = page.getByRole('checkbox', { name: t('mods.filters.issuesOnly') })
+
+  for (const view of ['table', 'grid']) {
+    if (view === 'grid') await showGrid(page)
+    for (const width of [900, 1200, 1600, 2250]) {
+      await page.setViewportSize({ width, height: 760 })
+      const box = await checkbox.boundingBox()
+      const line = (box?.y ?? 0) + (box?.height ?? 0) / 2
+      expect(Math.abs((await middle(t('mods.filters.clear'))) - line)).toBeLessThan(6)
+    }
+  }
+})
+
+test('a right-click opens the row’s menu in the grid and in the table', async ({ page }) => {
+  await openApp(page)
+  const rename = page.getByRole('menuitem', { name: t('mods.rowMenu.rename') })
+  await modRow(page, 'Bravo').click({ button: 'right' })
+  await expect(rename).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.getByRole('columnheader', { name: t('mods.columns.name') }).click({ button: 'right' })
+  await expect(rename).toHaveCount(0)
+
+  await showGrid(page)
+  await page.getByTestId('mods-card').nth(1).click({ button: 'right' })
+  await expect(rename).toBeVisible()
+  await page.getByTestId('mods-card').nth(3).click({ button: 'right' })
+  await rename.click()
+
+  await expect(page.getByRole('dialog').getByRole('textbox')).toHaveValue('Delta')
+  await expect(page.getByTestId('mod-details')).toHaveCount(0)
+})
+
+test('a picture shows large after half a second, unless that is turned off', async ({ page }) => {
+  await openApp(page)
+  await showGrid(page)
+  const picture = page.getByTestId('mods-card').first().getByAltText('Picture of Alpha')
+  const preview = page.getByTestId('picture-preview')
+
+  await picture.hover()
+  await expect(preview).toBeVisible()
+  const box = await preview.boundingBox()
+  expect(box?.width).toBeGreaterThan((await picture.boundingBox())?.width ?? 0)
+  await page.mouse.move(5, 5)
+  await expect(preview).toHaveCount(0)
+
+  await picture.hover()
+  await expect(preview).toBeVisible()
+  await page.mouse.wheel(0, 100)
+  await expect(preview).toHaveCount(0)
+  await page.mouse.move(5, 5)
+
+  await openPanel(page, 'settings')
+  await page
+    .getByRole('switch', { name: t('settings.itemPictures.hoverPreview') })
+    .click({ force: true })
+  await openPanel(page, 'mods')
+  await picture.hover()
+  await page.waitForTimeout(800)
+  await expect(preview).toHaveCount(0)
 })

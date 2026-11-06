@@ -1,6 +1,7 @@
 import { AppShell } from '@mantine/core'
 import { InstallHost } from '../features/install/InstallHost'
 import { GraphicsStepBanner } from '../features/settings/GraphicsStepBanner'
+import { PicturePreview } from '../shared/components/PicturePreview'
 import { useActivePanelStore } from './active-panel-store'
 import { CommandPalette } from './CommandPalette'
 import { DropOverlay } from './DropOverlay'
@@ -50,6 +51,7 @@ export function App() {
       <CommandPalette />
       <InstallHost />
       <DropOverlay />
+      <PicturePreview />
     </>
   )
 }

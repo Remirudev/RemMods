@@ -50,18 +50,18 @@ pub async fn profiles_delete(
     .await
 }
 
-/// What switching the profile on or off would change; its `fingerprint` goes back in
-/// `profiles_apply` with the same direction.
+/// What switching these profiles on or off together would change; its `fingerprint` goes back in
+/// `profiles_apply` with the same ids and direction.
 #[tauri::command]
 #[specta::specta]
 pub async fn profiles_diff(
     state: State<'_, AppState>,
-    id: String,
+    ids: Vec<String>,
     direction: ApplyDirection,
 ) -> Result<ProfileDiff, AppError> {
     let direction = direction.into();
     run_blocking(state.core.clone(), move |core| {
-        core.profiles_diff(&id, direction)
+        core.profiles_diff(&ids, direction)
             .map(|diff| ProfileDiff::from(&diff))
     })
     .await

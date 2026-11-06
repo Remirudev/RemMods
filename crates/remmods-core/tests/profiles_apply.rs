@@ -47,14 +47,14 @@ fn apply_stale_fingerprint_changes_nothing() {
     let (fixture, id) = with_off_profile();
     let diff = fixture
         .core
-        .profiles_diff(&id, ApplyDirection::On)
+        .profiles_diff(std::slice::from_ref(&id), ApplyDirection::On)
         .expect("diff");
     fixture
         .toggle(&["Standard:A"], false)
         .expect("disk changes");
     let before = tree(&fixture);
     let result = fixture.core.profiles_apply(&ApplyRequest {
-        profile_id: id,
+        profile_ids: vec![id],
         fingerprint: diff.fingerprint,
         apply_while_running: false,
         direction: ApplyDirection::On,
@@ -103,10 +103,10 @@ fn apply_while_running_needs_flag() {
     fixture.running.store(true, Ordering::SeqCst);
     let diff = fixture
         .core
-        .profiles_diff(&id, ApplyDirection::On)
+        .profiles_diff(std::slice::from_ref(&id), ApplyDirection::On)
         .expect("diff");
     let mut request = ApplyRequest {
-        profile_id: id,
+        profile_ids: vec![id],
         fingerprint: diff.fingerprint,
         apply_while_running: false,
         direction: ApplyDirection::On,
@@ -156,7 +156,7 @@ fn apply_exclusive_disables_unlisted_on_rows() {
     let id = custom(&fixture, "OnlyB", Exclusive, &[("Standard:B", Enabled)]);
     let diff = fixture
         .core
-        .profiles_diff(&id, ApplyDirection::On)
+        .profiles_diff(std::slice::from_ref(&id), ApplyDirection::On)
         .expect("diff");
     assert_eq!(diff.unchanged, 1);
     let keys: Vec<(&str, bool, ChangeReason)> = diff

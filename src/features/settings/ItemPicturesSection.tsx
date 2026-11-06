@@ -49,6 +49,15 @@ export function ItemPicturesSection() {
             updateSettings.mutate(appearanceUpdate({ hidePictures: event.currentTarget.checked }))
           }
         />
+        <Switch
+          label={t(($) => $.itemPictures.hoverPreview)}
+          description={t(($) => $.itemPictures.hoverPreviewHint)}
+          checked={settings?.appearance.hoverPreview ?? true}
+          disabled={!settings || settings.readOnly}
+          onChange={(event) =>
+            updateSettings.mutate(appearanceUpdate({ hoverPreview: event.currentTarget.checked }))
+          }
+        />
         <Group>
           <Button
             variant="default"

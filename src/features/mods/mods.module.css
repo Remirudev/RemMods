@@ -232,6 +232,17 @@
   box-shadow: inset 0 0 0 1px var(--mantine-primary-color-filled);
 }
 
+.cardPictureArea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.cardPicture {
+  position: absolute;
+  inset: 0;
+}
+
 .card[data-off] .cardPicture {
   opacity: 0.45;
 }
@@ -246,14 +257,127 @@
 
 .cardBody {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
   padding: var(--mantine-spacing-xs);
 }
 
+/* Over the picture, so a warning takes nothing from it. */
 .cardBadges {
-  margin-top: auto;
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px;
   overflow: hidden;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
+}
+
+.cardBadges:empty {
+  display: none;
+}
+
+.filters {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  container-type: inline-size;
+}
+
+.filterFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+}
+
+.filterField {
+  flex: 1 1 110px;
+  min-width: 0;
+}
+
+.searchField {
+  flex: 2 1 150px;
+  min-width: 0;
+}
+
+.filterPicks {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* The search field only takes room from the picks while it is in use. */
+.filterPicks input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+
+.filterPicks input:focus {
+  min-width: 40px;
+}
+
+.filterPick {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--mantine-font-size-sm);
+  white-space: nowrap;
+}
+
+.filterPickName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filterPickMore {
+  flex: none;
+  color: var(--qc-text-2);
+}
+
+/* Always one line: when the width runs out the labels shorten, the row never breaks. */
+.filterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  min-height: 34px;
+}
+
+.filterChecks {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.filterCheck {
+  min-width: 0;
+}
+
+.filterChecks :global(.mantine-Checkbox-root),
+.filterChecks :global(.mantine-Checkbox-body),
+.filterChecks :global(.mantine-Checkbox-labelWrapper) {
+  min-width: 0;
+}
+
+.filterChecks :global(.mantine-Checkbox-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterStatus {
+  flex: none;
+}
+
+/* The narrowest window: the count makes way so the labels stay readable. */
+@container (max-width: 640px) {
+  .filterCount {
+    display: none;
+  }
 }

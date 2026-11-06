@@ -130,6 +130,8 @@ export const settings: LocaleShape<typeof en> = {
     refresh: 'Jetzt prüfen',
     hide: 'Bilder ausblenden',
     hideHint: 'Zeigt stattdessen leere Felder, in der Mod-Liste und in den Details einer Mod.',
+    hoverPreview: 'Großes Bild beim Darüberfahren',
+    hoverPreviewHint: 'Zeigt ein Bild groß, wenn die Maus eine halbe Sekunde darauf bleibt.',
   },
   diagnostics: {
     title: 'Diagnose',

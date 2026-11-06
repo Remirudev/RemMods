@@ -47,6 +47,7 @@ pub enum LinkedSkins {
     Switched { name: String },
     GameRunning { name: String },
     Failed { name: String },
+    Several,
 }
 
 impl From<&core::SkinSetView> for SkinSet {
@@ -94,6 +95,7 @@ impl From<&core::LinkedSkins> for LinkedSkins {
             core::LinkedSkins::Switched { name } => Self::Switched { name: name.clone() },
             core::LinkedSkins::GameRunning { name } => Self::GameRunning { name: name.clone() },
             core::LinkedSkins::Failed { name } => Self::Failed { name: name.clone() },
+            core::LinkedSkins::Several => Self::Several,
         }
     }
 }

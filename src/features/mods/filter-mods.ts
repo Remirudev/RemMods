@@ -1,13 +1,14 @@
-import type { CharacterHint, ModRow } from '../../lib/ipc/types'
+import type { CharacterHint, ModInfo, ModRow } from '../../lib/ipc/types'
 import { outfitConflicts } from '../../shared/outfit-conflicts'
 import { displayState } from './display-state'
-import type { KindLabel, ModFilter } from './types'
+import type { AuthorChoice, KindLabel, ModFilter } from './types'
 
 export const EMPTY_FILTER: ModFilter = {
   text: '',
   state: 'all',
   kinds: [],
   characters: [],
+  authors: [],
   conflictsOnly: false,
   contentConflictsOnly: false,
   issuesOnly: false,
@@ -19,6 +20,7 @@ export function isFilterActive(filter: ModFilter): boolean {
     filter.state !== 'all' ||
     filter.kinds.length > 0 ||
     filter.characters.length > 0 ||
+    filter.authors.length > 0 ||
     filter.conflictsOnly ||
     filter.contentConflictsOnly ||
     filter.issuesOnly
@@ -48,6 +50,16 @@ export function characterHints(rows: readonly ModRow[]): CharacterHint[] {
   return [...byCode.values()].filter((hint) => !hint.common)
 }
 
+// Every author among the rows, once. Values stay raw like the filter's comparison; `label` is what
+// the list shows, so the "unknown" default reads translated.
+export function authorChoices(
+  rows: readonly ModRow[],
+  label: (info: ModInfo) => string,
+): AuthorChoice[] {
+  const byAuthor = new Map(rows.map((row) => [row.info.author, label(row.info)]))
+  return [...byAuthor].map(([value, text]) => ({ value, label: text }))
+}
+
 // The state filter compares the display state, so `disabled` leaves out LogicMods folders that
 // are disabled by name only and still loaded. `groupKeys` (a group picked in the sidebar) keeps
 // only the rows with one of those keys; null keeps every row.
@@ -66,6 +78,7 @@ export function filterMods(
       (filter.state === 'all' || displayState(row) === filter.state) &&
       (filter.kinds.length === 0 || filter.kinds.includes(row.kind)) &&
       matchesCharacters(row, filter.characters) &&
+      (filter.authors.length === 0 || filter.authors.includes(row.info.author)) &&
       (!filter.conflictsOnly || row.conflictsWith.length > 0) &&
       (!filter.contentConflictsOnly || outfitConflicts(row).length > 0) &&
       (!filter.issuesOnly || row.issues.length > 0) &&

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import type {
   ApplyDirection,
   ApplyOutcome,
@@ -49,7 +49,8 @@ export interface SnapshotListProps {
 }
 
 export interface ProfileDiffModalProps {
-  profile: Profile
+  // Several ids switch together, as one change list.
+  ids: readonly string[]
   direction: ApplyDirection
   onClose: () => void
   // The modal that hosts the diff, locked while the apply runs.
@@ -127,7 +128,15 @@ export interface GroupRowProps {
   busy: boolean
   readOnly: boolean
   onSwitch: (item: GroupItem) => void
-  onShow: (item: GroupItem) => void
+  onShow: (item: GroupItem, event: MouseEvent) => void
+}
+
+export interface GroupBulkBarProps {
+  // How many groups are picked; below 2 the buttons act on every group.
+  selected: number
+  disabled: boolean
+  onSwitch: (direction: ApplyDirection) => void
+  onClear: () => void
 }
 
 export interface GroupRowMenuProps {
@@ -138,7 +147,7 @@ export interface GroupRowMenuProps {
 
 export interface CollapsedGroupsProps {
   items: readonly GroupItem[]
-  busyId: string | null
+  busyIds: readonly string[]
   readOnly: boolean
   onSwitch: (item: GroupItem) => void
 }

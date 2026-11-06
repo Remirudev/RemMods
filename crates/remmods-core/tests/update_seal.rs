@@ -167,7 +167,7 @@ fn s4_s5_sealed_refuses_mutations_but_scans_and_unseal_reopens() {
     let diff = fixture
         .fx
         .core
-        .profiles_diff(&profile, ApplyDirection::On)
+        .profiles_diff(std::slice::from_ref(&profile), ApplyDirection::On)
         .expect("diff");
     let zip = fixture.zip("Cool.zip", COOL);
     let inspection = fixture.inspect(&zip);
@@ -189,7 +189,7 @@ fn s4_s5_sealed_refuses_mutations_but_scans_and_unseal_reopens() {
     assert!(is_busy(&renamed), "{renamed:?}");
     let applied = core
         .profiles_apply(&ApplyRequest {
-            profile_id: profile,
+            profile_ids: vec![profile],
             fingerprint: diff.fingerprint,
             apply_while_running: false,
             direction: ApplyDirection::On,

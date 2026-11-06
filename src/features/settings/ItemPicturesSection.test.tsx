@@ -45,6 +45,20 @@ describe('ItemPicturesSection', () => {
     await waitFor(() => expect(ipc.callsOf('assets_refresh')).toHaveLength(1))
   })
 
+  it('turns the big picture on hover off through the settings', async () => {
+    const ipc = installIpcMock()
+    renderWithProviders(<ItemPicturesSection />)
+    const hover = screen.getByRole('switch', { name: /Big picture on hover/ })
+    expect(hover).toBeChecked()
+
+    await userEvent.click(hover)
+
+    await waitFor(() => expect(ipc.callsOf('settings_update')).toHaveLength(1))
+    expect(ipc.callsOf('settings_update')[0]?.payload).toEqual({
+      update: { appearance: { hoverPreview: false } },
+    })
+  })
+
   it('hides pictures through the settings', async () => {
     const ipc = installIpcMock()
     renderWithProviders(<ItemPicturesSection />)

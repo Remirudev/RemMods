@@ -3,7 +3,8 @@ import { IconPackages } from '@tabler/icons-react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../../shared/components/EmptyState'
-import { useGroupFilterStore } from '../../shared/group-filter-store'
+import { pickedKeys, useGroupFilterStore } from '../../shared/group-filter-store'
+import { pruneSelection } from '../../shared/selection'
 import { ActionBar } from './ActionBar'
 import { filterMods } from './filter-mods'
 import { ModFilters } from './ModFilters'
@@ -13,7 +14,6 @@ import { rowSubject } from './manage-model'
 import { selectedRows } from './mod-actions'
 import { useModsUiStore } from './mods-ui-store'
 import { useModsViewStore } from './mods-view-store'
-import { pruneSelection } from './selection'
 import { rowsToChange, toggleTargets } from './toggle-model'
 import type { BulkAction, ManageRows, ModsListTabProps, ToggleRows } from './types'
 import { useBulkActions } from './use-bulk-actions'
@@ -25,7 +25,9 @@ export function ModsListTab({ rows, paks, searchRef }: ModsListTabProps) {
   const filter = useModsUiStore((state) => state.filter)
   const clearFilters = useModsUiStore((state) => state.clearFilters)
   const openDetails = useModsUiStore((state) => state.openDetails)
-  const groupKeys = useGroupFilterStore((state) => state.group?.keys ?? null)
+  const groups = useGroupFilterStore((state) => state.groups)
+  const pickedGroups = useGroupFilterStore((state) => state.picked)
+  const groupKeys = useMemo(() => pickedKeys(groups, pickedGroups), [groups, pickedGroups])
   const view = useModsViewStore((state) => state.view)
   const toggle = useToggleMods()
   const { mutate } = toggle

@@ -10,18 +10,18 @@ import type { ApplyHandlers, ApplyMutate } from './types'
 // list instead); a running game asks first and then sends the same request again.
 export async function applyDirect(
   mutate: ApplyMutate,
-  profileId: string,
+  profileIds: string[],
   direction: ApplyDirection,
   handlers: ApplyHandlers,
 ): Promise<void> {
   let fingerprint: string
   try {
-    fingerprint = (await ipc.profilesDiff(profileId, direction)).fingerprint
+    fingerprint = (await ipc.profilesDiff(profileIds, direction)).fingerprint
   } catch (error) {
     showErrorToast(error)
     return
   }
-  await send(mutate, { profileId, fingerprint, applyWhileRunning: false, direction }, handlers)
+  await send(mutate, { profileIds, fingerprint, applyWhileRunning: false, direction }, handlers)
 }
 
 async function send(

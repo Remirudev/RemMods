@@ -112,10 +112,10 @@ export const commands = {
 	profilesSave: (save: ProfileSave) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_save", { save })),
 	profilesDelete: (id: string) => typedError<ProfilesView, AppError>(__TAURI_INVOKE("profiles_delete", { id })),
 	/**
-	 *  What switching the profile on or off would change; its `fingerprint` goes back in
-	 *  `profiles_apply` with the same direction.
+	 *  What switching these profiles on or off together would change; its `fingerprint` goes back in
+	 *  `profiles_apply` with the same ids and direction.
 	 */
-	profilesDiff: (id: string, direction: ApplyDirection) => typedError<ProfileDiff, AppError>(__TAURI_INVOKE("profiles_diff", { id, direction })),
+	profilesDiff: (ids: string[], direction: ApplyDirection) => typedError<ProfileDiff, AppError>(__TAURI_INVOKE("profiles_diff", { ids, direction })),
 	/**  Applies the shown diff as one rename batch after an automatic snapshot profile. */
 	profilesApply: (request: ApplyRequest) => typedError<ApplyOutcome, AppError>(__TAURI_INVOKE("profiles_apply", { request })),
 	/**
@@ -231,6 +231,7 @@ export type Appearance = {
 	uiScale: number,
 	titleBar: TitleBarMode,
 	hidePictures: boolean,
+	hoverPreview: boolean,
 };
 
 /**  Partial update: omitted or `null` fields keep their current value. */
@@ -239,6 +240,7 @@ export type AppearanceUpdate = {
 	uiScale?: number | null,
 	titleBar?: TitleBarMode | null,
 	hidePictures?: boolean | null,
+	hoverPreview?: boolean | null,
 };
 
 /**  `on` applies the profile; `off` turns off the mods it lists as on and nothing else. */
@@ -253,7 +255,7 @@ export type ApplyOutcome = {
 };
 
 export type ApplyRequest = {
-	profileId: string,
+	profileIds: string[],
 	fingerprint: string,
 	applyWhileRunning: boolean,
 	direction: ApplyDirection,
@@ -682,7 +684,7 @@ export type LeftoverEntry = {
 };
 
 /**  What switching a group on did to its linked skin set. */
-export type LinkedSkins = { kind: "switched"; name: string } | { kind: "gameRunning"; name: string } | { kind: "failed"; name: string };
+export type LinkedSkins = { kind: "switched"; name: string } | { kind: "gameRunning"; name: string } | { kind: "failed"; name: string } | { kind: "several" };
 
 /**  Input of `game_set_location`. */
 export type LocationChoice = { kind: "candidate"; id: string } | { kind: "path"; path: string };

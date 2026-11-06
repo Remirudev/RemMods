@@ -6,27 +6,30 @@ import { useGroupPrefs } from './group-prefs-store'
 import { openSwitchDiff } from './profile-modals'
 import { useApplyProfile } from './use-profile-mutations'
 
-// A group switch: the change list first (the default), or straight away when the user turned
-// "Ask before switching" off. Both end in a toast whose Undo restores the previous state.
+// A switch of one group or several: the change list first (the default), or straight away when the
+// user turned "Ask before switching" off. Several groups are one batch, so both ways end in one
+// toast whose Undo restores the previous state.
 export function useGroupSwitch() {
   const ask = useGroupPrefs((state) => state.askBeforeSwitch)
   const { mutateAsync } = useApplyProfile()
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busyIds, setBusyIds] = useState<readonly string[]>([])
 
-  const switchGroup = useCallback(
-    (profile: Profile, direction: ApplyDirection) => {
+  const switchGroups = useCallback(
+    (profiles: readonly Profile[], direction: ApplyDirection) => {
+      if (profiles.length === 0) return
       if (ask) {
-        openSwitchDiff(profile, direction)
+        openSwitchDiff(profiles, direction)
         return
       }
-      setBusyId(profile.id)
-      void applyDirect(mutateAsync, profile.id, direction, {
+      const ids = profiles.map((profile) => profile.id)
+      setBusyIds(ids)
+      void applyDirect(mutateAsync, ids, direction, {
         onDone: showApplyToast,
-        onStale: () => openSwitchDiff(profile, direction),
-      }).finally(() => setBusyId(null))
+        onStale: () => openSwitchDiff(profiles, direction),
+      }).finally(() => setBusyIds([]))
     },
     [ask, mutateAsync],
   )
 
-  return { switchGroup, busyId }
+  return { switchGroups, busyIds }
 }

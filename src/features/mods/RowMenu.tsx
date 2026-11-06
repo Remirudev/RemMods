@@ -1,14 +1,12 @@
-import { ActionIcon, Box, Kbd, Menu } from '@mantine/core'
-import { IconDots, IconPencil, IconTrash, IconTrashX } from '@tabler/icons-react'
+import { ActionIcon, Box, Menu } from '@mantine/core'
+import { IconDots } from '@tabler/icons-react'
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { trashPlaceWord } from '../../shared/trash-place'
-import { canManage, rowSubject } from './manage-model'
+import { RowMenuItems } from './RowMenuItems'
 import type { RowMenuProps } from './types'
 
 export function RowMenu({ row, onManage }: RowMenuProps) {
   const { t } = useTranslation('mods')
-  const subject = rowSubject(row)
 
   // Like the switch cell: using the menu never opens the drawer or moves the selection.
   return (
@@ -28,33 +26,7 @@ export function RowMenu({ row, onManage }: RowMenuProps) {
             <IconDots size={18} stroke={1.8} />
           </ActionIcon>
         </Menu.Target>
-        <Menu.Dropdown>
-          <Menu.Item
-            leftSection={<IconPencil size={16} stroke={1.8} />}
-            rightSection={<Kbd size="xs">F2</Kbd>}
-            disabled={!canManage(subject, 'rename')}
-            onClick={() => onManage('rename', row)}
-          >
-            {t(($) => $.rowMenu.rename)}
-          </Menu.Item>
-          <Menu.Item
-            leftSection={<IconTrash size={16} stroke={1.8} />}
-            rightSection={<Kbd size="xs">Del</Kbd>}
-            disabled={!canManage(subject, 'trash')}
-            onClick={() => onManage('trash', row)}
-          >
-            {t(($) => $.rowMenu.trash, { place: trashPlaceWord() })}
-          </Menu.Item>
-          <Menu.Item
-            color="red"
-            leftSection={<IconTrashX size={16} stroke={1.8} />}
-            rightSection={<Kbd size="xs">⇧Del</Kbd>}
-            disabled={!canManage(subject, 'delete')}
-            onClick={() => onManage('delete', row)}
-          >
-            {t(($) => $.rowMenu.delete)}
-          </Menu.Item>
-        </Menu.Dropdown>
+        <RowMenuItems row={row} onManage={onManage} />
       </Menu>
     </Box>
   )

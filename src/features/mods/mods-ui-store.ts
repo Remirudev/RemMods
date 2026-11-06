@@ -25,6 +25,7 @@ export const useModsUiStore = create<ModsUiState>((set) => ({
       filter: { ...state.filter, characters },
       detailsCharacter: characters[0] ?? state.detailsCharacter,
     })),
+  setAuthors: (authors) => set((state) => ({ filter: { ...state.filter, authors } })),
   setConflictsOnly: (conflictsOnly) =>
     set((state) => ({ filter: { ...state.filter, conflictsOnly } })),
   setContentConflictsOnly: (contentConflictsOnly) =>
@@ -36,7 +37,7 @@ export const useModsUiStore = create<ModsUiState>((set) => ({
       sorting: typeof update === 'function' ? update(state.sorting) : update,
     })),
   clearFilters: () => {
-    useGroupFilterStore.getState().clearGroup()
+    useGroupFilterStore.getState().clearPicks()
     set({ filter: EMPTY_FILTER })
   },
   toggleConflictsView: () =>

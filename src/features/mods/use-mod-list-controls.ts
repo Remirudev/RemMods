@@ -1,8 +1,8 @@
 import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef } from 'react'
+import { applyClick, extendTo } from '../../shared/selection'
 import { canManage, rowSubject } from './manage-model'
 import { bulkCount, spaceAction } from './mod-actions'
 import { useModsUiStore } from './mods-ui-store'
-import { applyClick, extendTo } from './selection'
 import { nextActiveIndex, tableKeyIntent } from './table-keyboard'
 import type { ModListControls, ModListControlsInput } from './types'
 

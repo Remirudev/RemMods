@@ -20,6 +20,8 @@ export const mods: LocaleShape<typeof en> = {
     search: 'Mods durchsuchen',
     searchPlaceholder: 'Name, Kategorie, Autor oder Typ',
     characters: 'Charaktere',
+    authors: 'Autoren',
+    groups: 'Gruppen',
     state: 'Status',
     states: {
       all: 'Alle',
@@ -37,8 +39,7 @@ export const mods: LocaleShape<typeof en> = {
       'Zählt nur Oberkörper- und Ganzkörper-Kleidung, die ein anderer aktiver Mod ebenfalls ersetzt. Schuhe, Unterkörper-Teile und andere gemeinsame Dateien stehen in den Details.',
     issuesOnly: 'Probleme',
     clear: 'Filter zurücksetzen',
-    group: 'Gruppe: {{name}}',
-    clearGroup: 'Wieder alle Mods zeigen',
+    clearField: '{{name}} leeren',
     count_one: '{{count}} von {{total}} Mod',
     count_other: '{{count}} von {{total}} Mods',
   },

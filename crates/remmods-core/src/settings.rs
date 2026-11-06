@@ -86,6 +86,13 @@ pub struct Appearance {
     /// Empty tiles instead of item pictures. Omitted while off.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub hide_pictures: bool,
+    /// A picture shows large while the pointer rests on it. Omitted while on.
+    #[serde(skip_serializing_if = "is_on")]
+    pub hover_preview: bool,
+}
+
+fn is_on(value: &bool) -> bool {
+    *value
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,6 +123,7 @@ pub struct AppearanceUpdate {
     pub ui_scale: Option<f64>,
     pub title_bar: Option<TitleBarMode>,
     pub hide_pictures: Option<bool>,
+    pub hover_preview: Option<bool>,
 }
 
 /// Settings plus how they were loaded: `read_only` = never written back (newer format or
@@ -150,6 +158,7 @@ impl Default for Appearance {
             ui_scale: UI_SCALE_DEFAULT,
             title_bar: TitleBarMode::default(),
             hide_pictures: false,
+            hover_preview: true,
         }
     }
 }
@@ -169,6 +178,7 @@ impl Settings {
             current.ui_scale = appearance.ui_scale.unwrap_or(current.ui_scale);
             current.title_bar = appearance.title_bar.unwrap_or(current.title_bar);
             current.hide_pictures = appearance.hide_pictures.unwrap_or(current.hide_pictures);
+            current.hover_preview = appearance.hover_preview.unwrap_or(current.hover_preview);
         }
         self.normalized()
     }

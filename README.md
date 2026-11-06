@@ -29,8 +29,10 @@ Item pictures and names come from your own game and mods: RemMods reads them in 
 the game is closed and keeps them in its data folder (`assets`). Nothing of the game ships with it.
 A mod's details show what it replaces, character by character, with the game's picture next to the
 mod's, and a mod can have a picture of your own: choose one, or drop it on the open details. The mod
-list shows these pictures in its table or as a grid of cards, and can be narrowed to one character;
-"Hide pictures" in Settings turns them all off.
+list shows these pictures in its table or as a grid of cards, and can be narrowed by character, author
+or group; "Hide pictures" in Settings turns them all off. Resting the mouse on a picture for half a
+second shows it large ("Big picture on hover" in Settings turns that off), and a right-click on a mod
+opens its menu.
 
 Skin sets get past the game's slot limit. A set is a stored copy of your five skin files
 (`customize_save_data_{0..4}_1.sav`, about 42 MB), named by you, kept per Steam account in RemMods' data
@@ -59,6 +61,8 @@ and shows a toast with Cancel. Cancelling stops there: the mod in progress is le
 move had already finished, and in a bulk action mods already moved or deleted stay that way and the
 rest are skipped. Saved sets of mods are groups, listed in a sidebar beside the mod list: one switch
 turns a group on or off, its name shows only its mods, and every switch can be undone from its toast.
+Ctrl+click and Shift+click pick several groups, which then show and switch together, and All on and
+All off move every group in one step.
 
 **Phase 4 (in progress)**: install mods. Drop zip, 7z or rar archives onto the window or pick them (or
 a folder) with the file picker. The preview shows the detected root, the mod name, the filename

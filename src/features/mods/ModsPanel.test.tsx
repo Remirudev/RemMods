@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useBackendEvents } from '../../app/use-backend-events'
 import type { GameStatus } from '../../lib/ipc/types'
 import { useGameStatus } from '../../shared/game/queries'
+import { useGroupFilterStore } from '../../shared/group-filter-store'
 import {
   INSTALL_WITHOUT_MANIFEST,
   makeGameStatus,
@@ -64,6 +65,7 @@ describe('ModsPanel', () => {
         state: 'all',
         kinds: [],
         characters: [],
+        authors: [],
         conflictsOnly: false,
         contentConflictsOnly: false,
         issuesOnly: false,
@@ -73,6 +75,7 @@ describe('ModsPanel', () => {
       detailsRef: null,
       activeIndex: -1,
     })
+    useGroupFilterStore.setState({ groups: [], picked: [], anchor: null })
   })
 
   afterEach(() => {
@@ -116,6 +119,44 @@ describe('ModsPanel', () => {
 
     expect(rowNames()).toEqual(['Beta Stage'])
     expect(screen.getByTestId('mods-count')).toHaveTextContent('1 of 3 mod')
+  })
+
+  it('narrows the list to the chosen authors, and clears them in one go', async () => {
+    const user = userEvent.setup()
+    const info = makeModRow('x').info
+    const byRem = { ...info, author: 'Rem', defaulted: { ...info.defaulted, author: false } }
+    const snapshot = makeSnapshot([makeModRow('Alpha', { info: byRem }), makeModRow('Beta')])
+    renderMods(makeGameStatus(), { snapshot })
+    await screen.findAllByTestId('mods-row')
+
+    await user.click(screen.getByRole('combobox', { name: 'Authors' }))
+    await user.click(await screen.findByRole('option', { name: 'Rem' }))
+    expect(rowNames()).toEqual(['Alpha'])
+
+    await user.click(screen.getByRole('button', { name: 'Clear Authors' }))
+    expect(rowNames()).toEqual(['Alpha', 'Beta'])
+  })
+
+  it('offers the groups as a filter and shows the mods of all picked ones', async () => {
+    const user = userEvent.setup()
+    useGroupFilterStore.setState({
+      groups: [
+        { id: 'g1', name: 'Rem', keys: ['alpha'] },
+        { id: 'g2', name: 'Kiro', keys: ['beta'] },
+        { id: 'g3', name: 'Other', keys: ['nothing'] },
+      ],
+    })
+    const snapshot = makeSnapshot([makeModRow('Alpha'), makeModRow('Beta'), makeModRow('Gamma')])
+    renderMods(makeGameStatus(), { snapshot })
+    await screen.findAllByTestId('mods-row')
+
+    await user.click(screen.getByRole('combobox', { name: 'Groups' }))
+    await user.click(await screen.findByRole('option', { name: 'Rem' }))
+    await user.click(await screen.findByRole('option', { name: 'Kiro' }))
+
+    expect(useGroupFilterStore.getState().picked).toEqual(['g1', 'g2'])
+    expect(rowNames()).toEqual(['Alpha', 'Beta'])
+    expect(screen.getByText('+1')).toBeVisible()
   })
 
   it('offers to clear the filters when nothing matches', async () => {

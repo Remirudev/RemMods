@@ -53,9 +53,28 @@ function renderSidebar(
   return ipc
 }
 
+const THREE = makeView(
+  ['First', 'Second', 'Third'].map((name, index) =>
+    makeSummary(
+      makeProfile(`g${index + 1}`, { name, mods: [{ key: 'apron', state: 'enabled' }] }),
+      { enabled: 1, matchesCurrent: false },
+    ),
+  ),
+)
+
+function renderThree(handlers: Record<string, IpcHandler> = {}) {
+  return renderSidebar(handlers, THREE)
+}
+
+async function threeNames() {
+  const name = (title: string) =>
+    screen.findByRole('button', { name: `Show only the mods of “${title}”` })
+  return [await name('First'), await name('Second'), await name('Third')] as const
+}
+
 beforeEach(() => {
   useGroupPrefs.setState({ askBeforeSwitch: true, collapsed: false })
-  useGroupFilterStore.setState({ group: null })
+  useGroupFilterStore.setState({ groups: [], picked: [], anchor: null })
 })
 
 describe('GroupsSidebar', () => {
@@ -80,7 +99,7 @@ describe('GroupsSidebar', () => {
     await user.click(await screen.findByRole('switch', { name: 'Switch off “FineMods”' }))
 
     expect(await screen.findByRole('dialog', { name: 'Switch off “FineMods”' })).toBeVisible()
-    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ id: 'p1', direction: 'off' })
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ ids: ['p1'], direction: 'off' })
     expect(ipc.callsOf('profiles_apply')).toHaveLength(0)
   })
 
@@ -101,7 +120,7 @@ describe('GroupsSidebar', () => {
     await waitFor(() => expect(ipc.callsOf('profiles_apply')).toHaveLength(1))
     expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
       request: {
-        profileId: 'p2',
+        profileIds: ['p2'],
         fingerprint: '+mavis\n-apron\n',
         applyWhileRunning: false,
         direction: 'on',
@@ -131,7 +150,8 @@ describe('GroupsSidebar', () => {
     const name = await screen.findByRole('button', { name: 'Show only the mods of “FineMods”' })
 
     await user.click(name)
-    expect(useGroupFilterStore.getState().group).toEqual({
+    expect(useGroupFilterStore.getState().picked).toEqual(['p1'])
+    expect(useGroupFilterStore.getState().groups).toContainEqual({
       id: 'p1',
       name: 'FineMods',
       keys: ['apron'],
@@ -139,15 +159,187 @@ describe('GroupsSidebar', () => {
     expect(name).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(name)
-    expect(useGroupFilterStore.getState().group).toBeNull()
+    expect(useGroupFilterStore.getState().picked).toEqual([])
   })
 
-  it('ends the list filter when its group is gone', async () => {
-    useGroupFilterStore.setState({ group: { id: 'gone', name: 'Old', keys: ['x'] } })
+  it('drops a group that is gone from the list filter', async () => {
+    useGroupFilterStore.setState({ picked: ['gone', 'p1'], anchor: 'gone' })
     renderSidebar()
 
     await screen.findByRole('switch', { name: 'Switch off “FineMods”' })
-    await waitFor(() => expect(useGroupFilterStore.getState().group).toBeNull())
+    await waitFor(() => expect(useGroupFilterStore.getState().picked).toEqual(['p1']))
+    expect(useGroupFilterStore.getState().anchor).toBeNull()
+  })
+
+  it('picks several with Ctrl and a range with Shift, like a file list', async () => {
+    const user = userEvent.setup()
+    renderThree()
+    const [first, second, third] = await threeNames()
+
+    await user.click(first)
+    await user.keyboard('{Control>}')
+    await user.click(third)
+    await user.keyboard('{/Control}')
+    expect(useGroupFilterStore.getState().picked).toEqual(['g1', 'g3'])
+    expect(second).toHaveAttribute('aria-pressed', 'false')
+
+    await user.keyboard('{Control>}')
+    await user.click(first)
+    await user.keyboard('{/Control}')
+    expect(useGroupFilterStore.getState().picked).toEqual(['g3'])
+
+    await user.keyboard('{Shift>}')
+    await user.click(third)
+    await user.keyboard('{/Shift}')
+    expect(useGroupFilterStore.getState().picked).toEqual(['g1', 'g2', 'g3'])
+    expect(screen.getByTestId('group-selected')).toHaveTextContent('3 selected')
+  })
+
+  it('marks everything between two Shift clicks', async () => {
+    const user = userEvent.setup()
+    renderThree()
+    const [first, , third] = await threeNames()
+
+    await user.keyboard('{Shift>}')
+    await user.click(first)
+    await user.click(third)
+    await user.keyboard('{/Shift}')
+
+    expect(useGroupFilterStore.getState().picked).toEqual(['g1', 'g2', 'g3'])
+  })
+
+  it('goes back to one group on a plain click', async () => {
+    const user = userEvent.setup()
+    renderThree()
+    const [first, second, third] = await threeNames()
+
+    await user.click(first)
+    await user.keyboard('{Shift>}')
+    await user.click(third)
+    await user.keyboard('{/Shift}')
+    await user.click(second)
+
+    expect(useGroupFilterStore.getState().picked).toEqual(['g2'])
+    expect(screen.queryByTestId('group-selected')).not.toBeInTheDocument()
+  })
+
+  it('moves all picked groups with one switch, in its direction', async () => {
+    const user = userEvent.setup()
+    const ipc = renderThree({ profiles_diff: () => makeDiff() })
+    const [first, second] = await threeNames()
+
+    await user.click(first)
+    await user.keyboard('{Control>}')
+    await user.click(second)
+    await user.keyboard('{/Control}')
+    await user.click(screen.getByRole('switch', { name: 'Switch on “Second”' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Switch on 2 groups' })).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({
+      ids: ['g1', 'g2'],
+      direction: 'on',
+    })
+  })
+
+  it('moves only its own group from a switch outside the selection', async () => {
+    const user = userEvent.setup()
+    const ipc = renderThree({ profiles_diff: () => makeDiff() })
+    const [first, second] = await threeNames()
+
+    await user.click(first)
+    await user.keyboard('{Control>}')
+    await user.click(second)
+    await user.keyboard('{/Control}')
+    await user.click(screen.getByRole('switch', { name: 'Switch on “Third”' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Switch on “Third”' })).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ ids: ['g3'], direction: 'on' })
+  })
+
+  it('switches every group on or off at once', async () => {
+    const user = userEvent.setup()
+    const ipc = renderThree({ profiles_diff: () => makeDiff() })
+
+    await user.click(await screen.findByRole('button', { name: 'Switch off every group' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Switch off 3 groups' })).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({
+      ids: ['g1', 'g2', 'g3'],
+      direction: 'off',
+    })
+  })
+
+  it('still means every group while one group filters the list', async () => {
+    const user = userEvent.setup()
+    const ipc = renderThree({ profiles_diff: () => makeDiff() })
+    const [first] = await threeNames()
+
+    await user.click(first)
+    await user.click(screen.getByRole('button', { name: 'Switch on every group' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Switch on 3 groups' })).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({
+      ids: ['g1', 'g2', 'g3'],
+      direction: 'on',
+    })
+  })
+
+  it('switches only the selection while several groups are picked, and forgets it on request', async () => {
+    const user = userEvent.setup()
+    const ipc = renderThree({ profiles_diff: () => makeDiff() })
+    const [first, , third] = await threeNames()
+
+    await user.click(first)
+    await user.keyboard('{Control>}')
+    await user.click(third)
+    await user.keyboard('{/Control}')
+    await user.click(screen.getByRole('button', { name: 'Switch on the 2 selected groups' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Switch on 2 groups' })).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({
+      ids: ['g1', 'g3'],
+      direction: 'on',
+    })
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await user.click(screen.getByRole('button', { name: 'Clear the selection' }))
+    expect(useGroupFilterStore.getState().picked).toEqual([])
+    expect(screen.getByRole('button', { name: 'Switch on every group' })).toBeVisible()
+  })
+
+  it('applies several groups at once in one batch when asking first is off', async () => {
+    useGroupPrefs.setState({ askBeforeSwitch: false })
+    const user = userEvent.setup()
+    const ipc = renderThree({
+      profiles_diff: () => makeDiff({ fingerprint: '+apron\n' }),
+      profiles_apply: () => OUTCOME,
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Switch on every group' }))
+
+    await waitFor(() => expect(ipc.callsOf('profiles_apply')).toHaveLength(1))
+    expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
+      request: {
+        profileIds: ['g1', 'g2', 'g3'],
+        fingerprint: '+apron\n',
+        applyWhileRunning: false,
+        direction: 'on',
+      },
+    })
+  })
+
+  it('needs no All on or All off for a single group', async () => {
+    renderSidebar({}, makeView([makeSummary(FINE)]))
+
+    await screen.findByRole('switch', { name: 'Switch off “FineMods”' })
+    expect(screen.queryByTestId('group-bulk')).not.toBeInTheDocument()
+  })
+
+  it('locks All on and All off for a read-only store', async () => {
+    renderSidebar({}, makeView(VIEW.profiles, { readOnly: true }))
+
+    expect(await screen.findByRole('button', { name: 'Switch on every group' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Switch off every group' })).toBeDisabled()
   })
 
   it('warns when a group switches on two mods that replace the same files', async () => {

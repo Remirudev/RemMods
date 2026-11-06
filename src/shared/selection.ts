@@ -1,9 +1,4 @@
-import type { SelectionState } from './types'
-
-export interface ClickModifiers {
-  shift: boolean
-  ctrl: boolean
-}
+import type { ClickModifiers, SelectionState } from './types'
 
 function rangeBetween(ids: readonly string[], from: string, to: string): string[] | null {
   const start = ids.indexOf(from)

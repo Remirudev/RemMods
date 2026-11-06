@@ -126,6 +126,8 @@ export const settings = {
     refresh: 'Check now',
     hide: 'Hide pictures',
     hideHint: 'Shows empty tiles instead, in the mod list and in a mod’s details.',
+    hoverPreview: 'Big picture on hover',
+    hoverPreviewHint: 'Shows a picture large when the mouse stays on it for half a second.',
   },
   diagnostics: {
     title: 'Diagnostics',

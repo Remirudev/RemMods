@@ -92,6 +92,7 @@ fn settings_shape() {
             ui_scale: 1.25,
             title_bar: TitleBarMode::Custom,
             hide_pictures: true,
+            hover_preview: false,
         },
         read_only: false,
         recovered: true,
@@ -103,7 +104,8 @@ fn settings_shape() {
             "scheme": "dark",
             "uiScale": 1.25,
             "titleBar": "custom",
-            "hidePictures": true
+            "hidePictures": true,
+            "hoverPreview": false
         },
         "readOnly": false,
         "recovered": true
@@ -135,11 +137,18 @@ fn settings_update_fields_may_be_omitted_or_null() {
             ui_scale: None,
             title_bar: Some(TitleBarMode::System),
             hide_pictures: None,
+            hover_preview: None,
         })
     );
     assert_eq!(
         to_json(&AppearanceUpdate::default()),
-        json!({ "scheme": null, "uiScale": null, "titleBar": null, "hidePictures": null })
+        json!({
+            "scheme": null,
+            "uiScale": null,
+            "titleBar": null,
+            "hidePictures": null,
+            "hoverPreview": null
+        })
     );
 }
 
@@ -199,6 +208,7 @@ fn core_types_convert_into_dtos() {
                 ui_scale: 0.9,
                 title_bar: core::TitleBarMode::System,
                 hide_pictures: true,
+                hover_preview: false,
             },
             game: Default::default(),
         },
@@ -212,6 +222,7 @@ fn core_types_convert_into_dtos() {
     assert_eq!(settings.appearance.scheme, ColorScheme::System);
     assert_eq!(settings.appearance.ui_scale, 0.9);
     assert!(settings.appearance.hide_pictures);
+    assert!(!settings.appearance.hover_preview);
     assert_eq!(settings.appearance.title_bar, TitleBarMode::System);
     assert!(settings.read_only);
     assert!(!settings.recovered);
@@ -242,6 +253,7 @@ fn settings_update_converts_into_the_core_update() {
             ui_scale: Some(1.4),
             title_bar: Some(TitleBarMode::Custom),
             hide_pictures: Some(true),
+            hover_preview: Some(false),
         }),
     };
 
@@ -254,6 +266,7 @@ fn settings_update_converts_into_the_core_update() {
             ui_scale: Some(1.4),
             title_bar: Some(core::TitleBarMode::Custom),
             hide_pictures: Some(true),
+            hover_preview: Some(false),
         })
     );
     assert_eq!(
