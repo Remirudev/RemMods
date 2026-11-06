@@ -490,6 +490,22 @@ mods on and every other mod left alone.
    confirm the mods are off in the game. Quit.
    Result:
 
+## Author folders steps
+
+Same backup rule as above: this switches mods. Sort at least two mods into one folder in `LogicMods`
+first, like `LogicMods/PRD/AnnaCS_P`, and leave another mod where it is.
+
+1. The list shows each mod in that folder as its own row, and the Authors filter offers the folder's
+   name. Picking it shows just those mods.
+   Result:
+2. Switch one of them off: its folder becomes `.disabled_<name>` in the same place and its paks get
+   `-x`. Launch, and confirm that mod is gone in the game while the others of the folder still load.
+   Quit, switch it back on, and confirm it returns.
+   Result:
+3. Rename one and Move another to Trash: the rename stays in the folder, and Restore puts the other
+   one back there. Delete a third permanently: nothing is left in the folder but its other mods.
+   Result:
+
 ## Replaces steps (details drawer)
 
 Only reading: the app reads the game and mods, and nothing in Paks changes. No backup needed, and the

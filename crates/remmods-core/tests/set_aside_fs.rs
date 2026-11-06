@@ -47,7 +47,7 @@ fn remove_aside_refuses_live_payload_at_depth_3() {
 fn remove_aside_refuses_paks_level_and_nested() {
     let fixture = support::fs_fixture();
     let name = format!("_x_tmp_{HEX}");
-    let nested = format!("Mods/Cool/{name}");
+    let nested = format!("Mods/Cool/Sub/{name}");
     support::write_tree(
         &fixture.paks,
         &[
@@ -68,6 +68,21 @@ fn remove_aside_refuses_paks_level_and_nested() {
         matches!(inside_mod, FsError::NotAnAside { .. }),
         "{inside_mod}"
     );
+}
+
+#[test]
+fn remove_aside_reaches_an_author_folder() {
+    let fixture = support::fs_fixture();
+    let rel = format!("Mods/Me/_x_tmp_{HEX}");
+    support::write_tree(
+        &fixture.paks,
+        &[(&format!("{rel}/a.pak-x"), b"a"), ("Mods/Me/B/b.pak", b"b")],
+    );
+    let gate = fixture.gate();
+    let guard = gate.write(fixture.scope()).expect("write guard");
+    guard.remove_aside(&fixture.path(&rel)).expect("removed");
+    assert!(!fixture.path(&rel).exists());
+    assert!(fixture.path("Mods/Me/B/b.pak").exists());
 }
 
 #[test]

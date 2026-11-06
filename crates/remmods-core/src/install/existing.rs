@@ -12,7 +12,8 @@ use crate::safe_fs::names::{fold_key, key_text};
 
 /// The row of `kind` named `name` (bytes, fold, or in Logic `.disabled_<name>`) and the other
 /// roots holding the same fold name. Several matching rows make the match ambiguous. A loose
-/// `<name>.pak` is not a match.
+/// `<name>.pak` is not a match, nor is a mod in an author folder: an install lands directly in the
+/// root, so it would not replace that folder.
 pub(crate) fn find_existing(
     content: &ScanContent,
     kind: RootKind,
@@ -22,7 +23,7 @@ pub(crate) fn find_existing(
     let mut matches: Vec<(&ModRow, ExistingRelation)> = content
         .rows
         .iter()
-        .filter(|row| row_kind(row) == Some(kind))
+        .filter(|row| row_kind(row) == Some(kind) && !row.in_author_folder())
         .filter_map(|row| relation(row, name, &wanted).map(|relation| (row, relation)))
         .collect();
     matches.sort_by_key(|(_, relation)| relation_rank(*relation));

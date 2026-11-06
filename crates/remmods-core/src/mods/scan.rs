@@ -2,6 +2,7 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::path::Path;
 use std::time::Instant;
 
@@ -14,7 +15,7 @@ use super::model::{
 };
 use super::modref::{ModRef, RefKind};
 use super::payload::{classify_payload, is_archive, is_game_file};
-use super::rows::{RootRef, RowDraft, folder_row, loose_row, toggle_block};
+use super::rows::{RootRef, RowDraft, folder_row, loose_row, marks_a_mod, toggle_block};
 use super::strategy::{LooseFile, group_loose_files};
 use super::unmanaged::{UnmanagedDraft, mark_loose_copies};
 use super::walk::{Walk, WalkOptions, display_rel_path, walk};
@@ -25,6 +26,10 @@ use crate::safe_fs::names::{
     display_escaped, fold_key, has_disabled_prefix_ascii, is_install_temp_name, order_key,
     utf16_len,
 };
+
+/// Subfolders with paks that make a folder without its own an author folder. A single one is the
+/// usual wrapper folder of an unpacked archive, so it stays one mod (PLAN §7).
+const AUTHOR_FOLDER_MIN_MODS: usize = 2;
 
 pub fn scan_paks(input: &ScanInput) -> Result<ScanOutput, ModsError> {
     scan_paks_with(input, &ContentCache::new())
@@ -188,17 +193,53 @@ impl Scan<'_> {
         }
     }
 
-    /// A folder in a root: an install temp folder or a mod folder row.
+    /// A folder in a root: an author folder, or what `mod_folder` makes of it.
     fn root_folder(&mut self, root: &RootRef, entry: &Entry) {
+        let walked = self.walk_folder(root, None, entry);
+        if is_author_folder(entry, &walked) && self.author_folder(root, entry) {
+            return;
+        }
+        self.mod_folder(root, None, entry, walked);
+    }
+
+    /// The folders in `author` become rows of their own; `false` when it cannot be listed.
+    fn author_folder(&mut self, root: &RootRef, author: &Entry) -> bool {
+        let Ok(entries) = self.lister.list(&author.path) else {
+            return false;
+        };
+        for child in entries {
+            if child.problem.is_some() {
+                continue;
+            }
+            if child.kind.is_dir_like() {
+                let walked = self.walk_folder(root, Some(author), &child);
+                self.mod_folder(root, Some(author), &child, walked);
+            } else if child.kind.is_file_like() && is_archive(&child.name) {
+                self.push_archive(&child, &[&root.key, &author.key, &child.key]);
+            }
+        }
+        true
+    }
+
+    fn walk_folder(&mut self, root: &RootRef, author: Option<&Entry>, entry: &Entry) -> Walk {
+        let author_units = author.map_or(0, |author| {
+            utf16_len(&author.name.to_string_lossy()).saturating_add(1)
+        });
         let options = WalkOptions {
             game_view_len: self.input.game_view_len,
-            root_rel_len: root.units + 1 + utf16_len(&entry.name.to_string_lossy()),
+            root_rel_len: root.units + 1 + author_units + utf16_len(&entry.name.to_string_lossy()),
             logic_unprefixed: root.kind == RootKind::Logic
                 && !has_disabled_prefix_ascii(&entry.name),
             collect_files: false,
         };
-        let walked = walk(&mut self.lister, &entry.path, options);
-        let keys = [root.key.as_str(), entry.key.as_str()];
+        walk(&mut self.lister, &entry.path, options)
+    }
+
+    /// An install temp folder or a mod folder row.
+    fn mod_folder(&mut self, root: &RootRef, author: Option<&Entry>, entry: &Entry, walked: Walk) {
+        let mut keys = vec![root.key.as_str()];
+        keys.extend(author.map(|author| author.key.as_str()));
+        keys.push(entry.key.as_str());
         self.push_links(&keys, &walked);
         if is_install_temp_name(&entry.name) {
             let live = walked.live_payload_files();
@@ -221,7 +262,8 @@ impl Scan<'_> {
             return;
         }
         let mod_ref = self.mod_ref(RefKind::Dir, &entry.path, &keys);
-        self.drafts.push(folder_row(root, entry, walked, mod_ref));
+        self.drafts
+            .push(folder_row(root, author, entry, walked, mod_ref));
     }
 
     fn non_root_folder(&mut self, entry: &Entry) {
@@ -334,6 +376,21 @@ impl Scan<'_> {
         };
         (content, attached)
     }
+}
+
+/// A real folder with no mod of its own, whose subfolders hold mods (PLAN §7).
+fn is_author_folder(entry: &Entry, walked: &Walk) -> bool {
+    let mods = walked
+        .payload_folders
+        .iter()
+        .filter(|key| !is_install_temp_name(OsStr::new(key.as_str())))
+        .count();
+    mods >= AUTHOR_FOLDER_MIN_MODS
+        && entry.kind == EntryKind::Dir
+        && !walked.top_payload
+        && !is_install_temp_name(&entry.name)
+        && !has_disabled_prefix_ascii(&entry.name)
+        && !walked.top_files.iter().any(|file| marks_a_mod(&file.name))
 }
 
 fn root_kind(entry: &Entry) -> Option<RootKind> {

@@ -52,6 +52,14 @@ fn trash(
 }
 
 #[test]
+fn trash_takes_one_mod_out_of_its_author_folder() {
+    let fixture = core_with_trash(&[("Mods/Me/A/a.pak", DATA), ("Mods/Me/B/b.pak", DATA)]);
+    trash(&fixture, "Standard:Me/A");
+    assert!(!fixture.exists("Mods/Me/A"));
+    assert!(fixture.exists("Mods/Me/B/b.pak"));
+}
+
+#[test]
 fn delete_removal_failure_leaves_hidden_inert_leftover() {
     let fixture = core_with_trash(&[("Mods/Cool/Cool.pak", DATA), ("Mods/Cool/Sub/x.txt", DATA)]);
     let sub = fixture.paks.join("Mods").join("Cool").join("Sub");

@@ -21,12 +21,19 @@ pub(crate) fn mark_ambiguous(drafts: &mut [RowDraft]) {
     }
 }
 
-/// Rows of one kind (loose rows: of one key root) whose names fold alike but differ.
+/// Rows of one kind (loose rows: of one key root) and author folder whose names fold alike but
+/// differ.
 pub(crate) fn mark_case_collisions(drafts: &mut [RowDraft]) {
-    type Group = (ModKind, Option<RootKind>, String);
+    type Group = (ModKind, Option<RootKind>, Option<String>, String);
     let mut groups: BTreeMap<Group, BTreeSet<(String, Vec<u8>)>> = BTreeMap::new();
     let group_of = |draft: &RowDraft| -> Group {
-        (draft.row.kind, draft.loose_root, fold_key(&draft.row.name))
+        let author = draft.row.root.split_once('/');
+        (
+            draft.row.kind,
+            draft.loose_root,
+            author.map(|(_, author)| fold_key(author)),
+            fold_key(&draft.row.name),
+        )
     };
     for draft in drafts.iter() {
         groups

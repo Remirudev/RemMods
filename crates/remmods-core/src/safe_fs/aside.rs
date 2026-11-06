@@ -20,8 +20,9 @@ const LIVE_EXTENSIONS: [&[u8]; 4] = [b"pak", b"ucas", b"utoc", b"sig"];
 
 impl WriteGuard<'_> {
     /// Permanently removes a set-aside folder. Refuses (nothing removed) unless all hold: in scope;
-    /// its parent is a mod root; an install-temp name; a real folder (no link or junction); no live
-    /// `.pak/.ucas/.utoc/.sig` at any depth; no journal record names it or anything below it.
+    /// its parent is a mod root or an author folder; an install-temp name; a real folder (no link
+    /// or junction); no live `.pak/.ucas/.utoc/.sig` at any depth; no journal record names it or
+    /// anything below it.
     pub fn remove_aside(&self, aside: &Path) -> Result<(), FsError> {
         let raw = check_inert_temp_tree(self.scope(), aside)?;
         if self.is_journaled(aside)? {
@@ -40,18 +41,16 @@ pub(crate) fn remove_inert_temp_tree(scope: &Scope, path: &Path) -> Result<(), F
     remove_tree(&raw, path)
 }
 
-/// In scope, directly in a mod root, an install-temp name, a real folder, no live payload.
-/// Returns the file-system form of `path`.
+/// In scope, directly in a mod root or an author folder, an install-temp name, a real folder, no
+/// live payload. Returns the file-system form of `path`.
 pub(crate) fn check_inert_temp_tree(scope: &Scope, path: &Path) -> Result<PathBuf, FsError> {
     scope.check(path)?;
     let not_an_aside = || FsError::NotAnAside {
         path: path.to_path_buf(),
     };
-    let parent_is_root = path
-        .parent()
-        .is_some_and(|parent| scope.is_mod_root(parent));
+    let parent_holds_mods = path.parent().is_some_and(|parent| scope.holds_mods(parent));
     let temp_named = path.file_name().is_some_and(is_install_temp_name);
-    if !parent_is_root || !temp_named {
+    if !parent_holds_mods || !temp_named {
         return Err(not_an_aside());
     }
     let raw = platform::fs_path(path).map_err(|error| FsError::io("remove_aside", path, error))?;

@@ -3,7 +3,7 @@ use crate::mods::ModRef;
 
 /// Longest edge of a stored picture, sharp in the big hover preview. The game's own pictures are
 /// 232 to 364 px, so only mods' pictures reach it.
-pub const PICTURE_EDGE: u32 = 512;
+pub const PICTURE_EDGE: u32 = 1024;
 /// The game's text folders that match the app's languages.
 pub const NAME_LANGUAGES: [&str; 2] = ["en", "de"];
 
