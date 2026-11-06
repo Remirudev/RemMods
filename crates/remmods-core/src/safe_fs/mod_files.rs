@@ -7,8 +7,8 @@ use super::scope::ScopeViolation;
 use super::{FsError, backup_file, write_atomic};
 
 impl WriteGuard<'_> {
-    /// `modinfo.json` writes: in scope, directly inside a mod folder (exactly one level below a
-    /// mod root, no link on the way), then `write_atomic`.
+    /// `modinfo.json` writes: in scope, directly inside a mod folder (one level below a mod root,
+    /// or two in an author folder; no link on the way), then `write_atomic`.
     pub fn write_mod_file(&self, path: &Path, bytes: &[u8]) -> Result<(), FsError> {
         self.check_mod_file(path)?;
         write_atomic(path, bytes)
@@ -26,7 +26,7 @@ impl WriteGuard<'_> {
         let in_mod_folder = path
             .parent()
             .and_then(Path::parent)
-            .is_some_and(|root| self.scope().is_mod_root(root));
+            .is_some_and(|holder| self.scope().holds_mods(holder));
         if in_mod_folder {
             Ok(())
         } else {

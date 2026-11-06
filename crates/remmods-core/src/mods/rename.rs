@@ -87,12 +87,13 @@ pub fn plan_rename(
     })
 }
 
-/// `{Kind}:{new_name}` with the prefix of `old_key`.
+/// `old_key` with `new_name` as its last part: only the mod's own folder changes name.
 pub(crate) fn new_key(old_key: &str, new_name: &str) -> String {
-    let prefix = old_key
-        .split_once(':')
-        .map_or(old_key, |(prefix, _)| prefix);
-    format!("{prefix}:{new_name}")
+    let (prefix, name) = old_key.split_once(':').unwrap_or((old_key, ""));
+    match name.rsplit_once('/') {
+        Some((author, _)) => format!("{prefix}:{author}/{new_name}"),
+        None => format!("{prefix}:{new_name}"),
+    }
 }
 
 fn invalid(issue: NameIssue) -> ModsError {

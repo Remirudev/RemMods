@@ -100,6 +100,11 @@ impl Scope {
                 }))
     }
 
+    /// True when `folder` is a mod root or an author folder, a folder directly in a mod root.
+    pub(crate) fn holds_mods(&self, folder: &Path) -> bool {
+        self.is_mod_root(folder) || folder.parent().is_some_and(|root| self.is_mod_root(root))
+    }
+
     /// True when `path` (existing or not) is a mod root or an app dir or lies below one, judged
     /// on the lexical path and on the path with its existing part resolved.
     pub(crate) fn contains(&self, path: &Path) -> bool {

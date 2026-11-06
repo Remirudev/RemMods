@@ -153,6 +153,13 @@ fn p11_names_are_fixed_on_request() {
 }
 
 #[test]
+fn p12_a_mod_in_an_author_folder_is_not_replaced() {
+    let fixture = fixture(&[("Mods/Me/Cool/a.pak", b"a"), ("Mods/Me/Other/b.pak", b"b")]);
+    let found = fixture.inspect(&fixture.zip("Cool.zip", &[("Cool/x.pak", b"p")]));
+    assert!(found.candidates[0].existing.is_none());
+}
+
+#[test]
 fn p12_existing_mods() {
     let fixture = fixture(&[
         ("Mods/Cool/a.pak", b"a"),

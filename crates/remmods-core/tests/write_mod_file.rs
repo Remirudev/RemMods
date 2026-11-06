@@ -23,7 +23,7 @@ fn write_mod_file_refuses_root_level_and_paks() {
     for rel in [
         "Mods/modinfo.json",
         "modinfo.json",
-        "Mods/Cool/sub/modinfo.json",
+        "Mods/Cool/sub/deeper/modinfo.json",
     ] {
         let result = write(&fixture, rel, b"new");
         assert!(
@@ -32,6 +32,17 @@ fn write_mod_file_refuses_root_level_and_paks() {
         );
     }
     assert_eq!(tree_listing(&fixture.paks), before);
+}
+
+#[test]
+fn write_mod_file_reaches_a_mod_in_an_author_folder() {
+    let fixture = support::fs_fixture();
+    support::write_tree(&fixture.paks, &[("Mods/Me/Cool/Cool.pak", b"p")]);
+    write(&fixture, "Mods/Me/Cool/modinfo.json", b"new").expect("written");
+    assert_eq!(
+        fs::read(fixture.path("Mods/Me/Cool/modinfo.json")).expect("read"),
+        b"new"
+    );
 }
 
 #[test]

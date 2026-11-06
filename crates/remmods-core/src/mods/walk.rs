@@ -1,6 +1,6 @@
 //! One folder walk per mod (spec §4.5 step 3): iterative, never follows links below the walk root.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
@@ -64,6 +64,10 @@ pub(crate) struct Walk {
     pub longest_file: usize,
     pub longest_dir: usize,
     pub top_files: Vec<TopFile>,
+    /// A payload file lies directly in the walk root.
+    pub top_payload: bool,
+    /// Key texts of the immediate subfolders with payload files at any depth.
+    pub payload_folders: BTreeSet<String>,
     pub links: Vec<LinkedDir>,
     /// `collect_files` only.
     pub files: Vec<PayloadFile>,
@@ -185,13 +189,17 @@ fn visit_file(
             size,
         });
     }
-    match payload {
-        Some(payload) => record_payload(walk, &entry.key, payload),
-        None => walk.other_files = walk.other_files.saturating_add(1),
-    }
     let Some(payload) = payload else {
+        walk.other_files = walk.other_files.saturating_add(1);
         return;
     };
+    record_payload(walk, &entry.key, payload);
+    match dir_keys.first() {
+        Some(folder) => {
+            walk.payload_folders.insert(folder.clone());
+        }
+        None => walk.top_payload = true,
+    }
     let is_utoc = payload.kind == PayloadKind::Utoc;
     if !options.collect_files && !is_utoc {
         return;

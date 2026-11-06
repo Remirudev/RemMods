@@ -1,6 +1,7 @@
 //! Building one row: folder rows of the three roots and loose groups (spec §4.5 steps 4–5, §4.6).
 
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::path::PathBuf;
 
 use super::issues::{ModIssue, NameProblem};
@@ -13,7 +14,7 @@ use super::model::{
 use super::modref::{ModRef, RefKind};
 use super::path_length::path_too_long;
 use super::strategy::{LooseGroup, StateInput, logic_state, pak_state};
-use super::walk::{TopFile, Walk, insert_smallest};
+use super::walk::{TopFile, Walk, display_rel_path, insert_smallest};
 use crate::content::{ContentSummary, UtocRef};
 use crate::safe_fs::names::{
     DISABLED_PREFIX, LOGIC_NAME_MAX_BYTES, NAME_MAX_BYTES, PAYLOAD_NAME_MAX_BYTES, display_escaped,
@@ -21,6 +22,7 @@ use crate::safe_fs::names::{
 };
 
 const MODINFO_NAME: &str = "modinfo.json";
+const LOGIC_SCRIPT_NAME: &str = "config.lua";
 const OFF_SUFFIX_UNITS: usize = 2;
 
 /// A root folder as the row builders need it.
@@ -53,14 +55,32 @@ pub(crate) struct RowDraft {
     pub utocs: Vec<UtocRef>,
 }
 
-pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: ModRef) -> RowDraft {
+/// A file that says the folder it lies in is one mod, whatever its subfolders hold.
+pub(crate) fn marks_a_mod(name: &OsStr) -> bool {
+    let name = name.as_encoded_bytes();
+    name.eq_ignore_ascii_case(MODINFO_NAME.as_bytes())
+        || name.eq_ignore_ascii_case(LOGIC_SCRIPT_NAME.as_bytes())
+}
+
+/// `author`: the author folder holding `entry`, when it is not directly in the root.
+pub(crate) fn folder_row(
+    root: &RootRef,
+    author: Option<&Entry>,
+    entry: &Entry,
+    walk: Walk,
+    mod_ref: ModRef,
+) -> RowDraft {
     let prefixed = root.kind == RootKind::Logic && has_disabled_prefix_ascii(&entry.name);
-    let logical_key = if prefixed {
+    let logical_name = if prefixed {
         entry.key.get(DISABLED_PREFIX.len()..).unwrap_or_default()
     } else {
         entry.key.as_str()
     }
     .to_owned();
+    let logical_key = author.map_or_else(
+        || logical_name.clone(),
+        |author| format!("{}/{logical_name}", author.key),
+    );
     let state_input = StateInput {
         counts: walk.counts,
         unreadable: walk.root_unreadable,
@@ -74,15 +94,19 @@ pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: Mod
     } else {
         pak_state(state_input)
     };
-    issues.extend(folder_name_issue(root.kind, entry, &logical_key, prefixed));
+    issues.extend(folder_name_issue(root.kind, entry, &logical_name, prefixed));
     if root.kind != RootKind::Logic && has_disabled_prefix_ascii(&entry.name) {
         issues.push(ModIssue::DisabledPrefixName);
     }
-    let info = if walk.root_unreadable {
+    let mut info = if walk.root_unreadable {
         ModInfo::defaults(ModInfoOrigin::Missing)
     } else {
         read_modinfo(&walk.top_files, &mut issues)
     };
+    if let Some(author) = author.filter(|_| info.defaulted.author) {
+        info.author = display_escaped(&author.key);
+        info.defaulted.author = false;
+    }
     issues.extend(path_too_long(walk.longest_file, walk.longest_dir));
     common_issues(root, &mut issues);
     if entry.kind.is_link() {
@@ -99,9 +123,12 @@ pub(crate) fn folder_row(root: &RootRef, entry: &Entry, walk: Walk, mod_ref: Mod
         mod_ref,
         key: format!("{}:{logical_key}", root.kind.key_prefix()),
         kind: mod_kind(root.kind),
-        name: display_escaped(&logical_key),
+        name: display_escaped(&logical_name),
         folder_name: display_escaped(&entry.key),
-        root: display_escaped(&root.key),
+        root: author.map_or_else(
+            || display_escaped(&root.key),
+            |author| display_rel_path(&[&root.key, &author.key]),
+        ),
         path: entry.path.clone(),
         state,
         logic_prefixed: prefixed,
@@ -370,7 +397,7 @@ pub(crate) fn toggle_block(row: &ModRow) -> Option<ToggleBlock> {
     match row.state {
         ModState::Unknown => Some(ToggleBlock::UnknownState),
         ModState::NoPakFiles => Some(ToggleBlock::NoPakFiles),
-        _ if row.kind == ModKind::Logic && row.key == "Logic:" => {
+        _ if row.kind == ModKind::Logic && row.name.is_empty() => {
             Some(ToggleBlock::InvalidLogicName)
         }
         _ => None,

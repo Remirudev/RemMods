@@ -120,14 +120,16 @@ pub struct ScanProblem {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModRow {
     pub mod_ref: ModRef,
-    /// `"{prefix}:{key text}"`; loose rows `"Loose:{root folder}/{stem key text}"`.
+    /// `"{prefix}:{key text}"`, in an author folder `"{prefix}:{author}/{key text}"`; loose rows
+    /// `"Loose:{root folder}/{stem key text}"`.
     pub key: String,
     pub kind: ModKind,
     /// Display form of the logical key text (Logic rows without `.disabled_`).
     pub name: String,
     /// Display form of the on-disk key text; loose rows: the stem.
     pub folder_name: String,
-    /// Display form of the root folder as spelled on disk.
+    /// Display form of the folder holding the row, as spelled on disk: the root, or
+    /// `{root}/{author}` for a mod in an author folder.
     pub root: String,
     /// Mod folder (loose rows: the root folder), mod-side form.
     pub path: PathBuf,
@@ -148,6 +150,13 @@ pub struct ModRow {
     pub issues: Vec<ModIssue>,
     /// `None` = toggleable.
     pub toggle_block: Option<ToggleBlock>,
+}
+
+impl ModRow {
+    /// In an author folder, not directly in the root.
+    pub(crate) fn in_author_folder(&self) -> bool {
+        self.root.contains('/')
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
