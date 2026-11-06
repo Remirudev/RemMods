@@ -11,9 +11,11 @@ export const skins = {
   interrupted: 'A switch to {{name}} did not finish. Your skins may be mixed until it does.',
   finish: 'Finish the switch',
   readOnly: 'This list comes from a newer RemMods, so it cannot be changed here.',
+  sharedNote:
+    'Keep the same number of skins in the Shared tab in every set. If it differs, the game calls the data corrupted. Never delete it: quit and switch back to your last set.',
   newSet: {
     title: 'Save current skins as a set',
-    hint: 'Copies your saved skins into a new set, which then counts as the one in the game. Close the game first. Fight Money, items and replays are not part of a set.',
+    hint: 'Copies your saved skins into a new set, which then counts as the one in the game. Close the game first. What you change later goes into this set when you switch to another one. Fight Money, items and replays are not part of a set.',
     name: 'Name',
     create: 'Save set',
     cancel: 'Cancel',

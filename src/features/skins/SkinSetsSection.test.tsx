@@ -37,6 +37,12 @@ describe('SkinSetsSection', () => {
     expect(await screen.findByText(/more than the game has slots/)).toBeVisible()
     expect(screen.getByRole('button', { name: 'Save current skins as a set' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Save my skins' })).toBeVisible()
+    expect(screen.queryByText(/Shared tab/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the Shared tab rule under the sets', async () => {
+    renderSection(TWO_SETS)
+    expect(await screen.findByText(/same number of skins in the Shared tab/)).toBeVisible()
   })
 
   it('hides the automatic copies when the game’s saves are not there', async () => {

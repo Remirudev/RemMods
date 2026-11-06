@@ -17,9 +17,11 @@ export const skins: LocaleShape<typeof en> = {
     'Ein Wechsel zu {{name}} wurde nicht beendet. Bis dahin können deine Skins gemischt sein.',
   finish: 'Wechsel beenden',
   readOnly: 'Diese Liste stammt von einem neueren RemMods und lässt sich hier nicht ändern.',
+  sharedNote:
+    'Behalte im Shared-Reiter in jedem Set gleich viele Skins. Weicht die Zahl ab, meldet das Spiel beschädigte Daten. Lösche sie nie: Beende das Spiel und wechsle zu deinem letzten Set zurück.',
   newSet: {
     title: 'Aktuelle Skins als Set speichern',
-    hint: 'Kopiert deine gespeicherten Skins in ein neues Set, das dann als das Set im Spiel gilt. Schließe vorher das Spiel. Kampfgeld, Gegenstände und Replays gehören nicht zu einem Set.',
+    hint: 'Kopiert deine gespeicherten Skins in ein neues Set, das dann als das Set im Spiel gilt. Schließe vorher das Spiel. Spätere Änderungen landen in diesem Set, wenn du zu einem anderen wechselst. Kampfgeld, Gegenstände und Replays gehören nicht zu einem Set.',
     name: 'Name',
     create: 'Set speichern',
     cancel: 'Abbrechen',

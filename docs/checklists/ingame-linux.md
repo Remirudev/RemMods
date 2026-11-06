@@ -576,8 +576,10 @@ Backup first, together: Claude prepares and runs the commands, you play offline 
 report. Every command works in fish. Each step ends with a "Result:" line. Never run a step without the
 backup of step 1. RemMods must be the build with skin sets, and Steam Cloud stays as it is.
 
-If the game ever says the character customization data is corrupted: choose **Return to title**, never
-"Delete saved data", quit, and stop here. Claude restores the backup. If Steam shows a cloud conflict
+If the game ever says the character customization data is corrupted: choose **Return to title** (**Nein**
+on the German prompt), never "Delete saved data" (**Ja**), quit, and stop here. If the Shared tab holds
+a different number of skins than in the set you played last, switching back to that set clears it
+(PLAN §15, found 2026-11-06); otherwise Claude restores the backup. If Steam shows a cloud conflict
 window, stop and ask before choosing anything.
 
 1. Game closed. Claude copies the whole `SaveGames` folder to `~/RemMods-backups/<date>-skinsets/` and

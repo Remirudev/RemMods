@@ -90,6 +90,11 @@ export function SkinSetsSection() {
           </Stack>
         </ScrollArea.Autosize>
       )}
+      {view.sets.length > 0 && (
+        <Text size="xs" c="var(--qc-text-2)">
+          {t(($) => $.sharedNote)}
+        </Text>
+      )}
     </Stack>
   )
 }
