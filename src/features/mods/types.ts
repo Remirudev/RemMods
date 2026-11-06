@@ -1,5 +1,5 @@
 import type { Header, SortingState, Updater } from '@tanstack/react-table'
-import type { KeyboardEvent, MouseEvent, ReactNode, RefObject } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode, RefObject } from 'react'
 import type {
   ArchiveEntry,
   AssetEntry,
@@ -97,9 +97,15 @@ export interface ModFilter {
   state: StateFilter
   kinds: readonly ModKind[]
   characters: readonly string[]
+  authors: readonly string[]
   conflictsOnly: boolean
   contentConflictsOnly: boolean
   issuesOnly: boolean
+}
+
+export interface AuthorChoice {
+  value: string
+  label: string
 }
 
 export type KindLabel = (kind: ModKind) => string
@@ -136,11 +142,6 @@ export type TableKeyIntent =
   | { kind: 'move'; key: NavigationKey }
   | { kind: 'extend'; key: NavigationKey }
 
-export interface SelectionState {
-  selection: string[]
-  anchor: string | null
-}
-
 export type ModActionId = 'enable' | 'disable' | 'trash' | 'delete'
 
 export type BulkAction = 'trash' | 'delete'
@@ -168,6 +169,7 @@ export interface ModsUiState {
   setStateFilter: (state: StateFilter) => void
   setKinds: (kinds: readonly ModKind[]) => void
   setCharacters: (characters: readonly string[]) => void
+  setAuthors: (authors: readonly string[]) => void
   setSorting: (update: Updater<SortingState>) => void
   setConflictsOnly: (conflictsOnly: boolean) => void
   setContentConflictsOnly: (contentConflictsOnly: boolean) => void
@@ -268,6 +270,20 @@ export interface ModFiltersProps {
   searchRef: RefObject<HTMLInputElement | null>
 }
 
+export interface GridLayout {
+  columns: number
+  cardHeight: number
+  lineHeight: number
+}
+
+export interface FilterMultiSelectProps {
+  label: string
+  data: readonly { value: string; label: string }[]
+  value: readonly string[]
+  searchable?: boolean
+  onChange: (values: string[]) => void
+}
+
 export interface ModTableProps {
   rows: readonly ModRow[]
   onOpen: (modRef: string) => void
@@ -319,6 +335,13 @@ export interface ToggleCellProps {
 export interface RowMenuProps {
   row: ModRow
   onManage: ManageRows
+}
+
+export interface RowContextMenuProps {
+  rows: readonly ModRow[]
+  onManage: ManageRows
+  // The list; each of its rows carries its ref in `data-mod-ref`.
+  children: ReactElement<{ onContextMenu: (event: MouseEvent) => void }>
 }
 
 export interface ActionBarProps {

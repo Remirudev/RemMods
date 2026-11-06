@@ -8,3 +8,13 @@
   background: var(--mantine-color-default-hover);
   color: var(--qc-text-2);
 }
+
+.preview {
+  position: fixed;
+  overflow: hidden;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-xl);
+  pointer-events: none;
+}

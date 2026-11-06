@@ -5,7 +5,8 @@ export const queryKeys = {
   mods: ['mods'] as const,
   repair: ['repair'] as const,
   profiles: ['profiles'] as const,
-  profileDiff: (id: string, direction: string) => ['profiles', 'diff', id, direction] as const,
+  profileDiff: (ids: readonly string[], direction: string) =>
+    ['profiles', 'diff', ids.join(','), direction] as const,
   watchStatus: ['watchStatus'] as const,
   updateChannel: ['update-channel'] as const,
   graphics: ['graphics'] as const,

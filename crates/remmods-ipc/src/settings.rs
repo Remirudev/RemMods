@@ -25,6 +25,7 @@ pub struct Appearance {
     pub ui_scale: f64,
     pub title_bar: TitleBarMode,
     pub hide_pictures: bool,
+    pub hover_preview: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, specta::Type)]
@@ -48,6 +49,8 @@ pub struct AppearanceUpdate {
     pub title_bar: Option<TitleBarMode>,
     #[specta(optional)]
     pub hide_pictures: Option<bool>,
+    #[specta(optional)]
+    pub hover_preview: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, specta::Type)]
@@ -102,6 +105,7 @@ impl From<core::Appearance> for Appearance {
             ui_scale: appearance.ui_scale,
             title_bar: appearance.title_bar.into(),
             hide_pictures: appearance.hide_pictures,
+            hover_preview: appearance.hover_preview,
         }
     }
 }
@@ -124,6 +128,7 @@ impl From<AppearanceUpdate> for core::AppearanceUpdate {
             ui_scale: update.ui_scale,
             title_bar: update.title_bar.map(Into::into),
             hide_pictures: update.hide_pictures,
+            hover_preview: update.hover_preview,
         }
     }
 }

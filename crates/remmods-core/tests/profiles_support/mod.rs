@@ -53,9 +53,19 @@ pub fn switch(
     id: &str,
     direction: ApplyDirection,
 ) -> Result<ApplyOutcome, CoreError> {
-    let diff = fixture.core.profiles_diff(id, direction).expect("diff");
+    switch_together(fixture, &[id], direction)
+}
+
+/// `switch` for several groups in one batch.
+pub fn switch_together(
+    fixture: &ToggleFixture,
+    ids: &[&str],
+    direction: ApplyDirection,
+) -> Result<ApplyOutcome, CoreError> {
+    let ids: Vec<String> = ids.iter().map(|id| (*id).to_owned()).collect();
+    let diff = fixture.core.profiles_diff(&ids, direction).expect("diff");
     fixture.core.profiles_apply(&ApplyRequest {
-        profile_id: id.to_owned(),
+        profile_ids: ids,
         fingerprint: diff.fingerprint,
         apply_while_running: false,
         direction,

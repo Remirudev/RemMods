@@ -2,6 +2,7 @@ import { Image } from '@mantine/core'
 import { IconPhotoOff } from '@tabler/icons-react'
 import { useItemPicture } from '../item-picture'
 import { useHidePictures } from '../use-hide-pictures'
+import { usePicturePreview } from '../use-picture-preview'
 import classes from './item-picture.module.css'
 import type { ItemPictureProps } from './types'
 
@@ -10,6 +11,7 @@ import type { ItemPictureProps } from './types'
 export function ItemPicture({ id, label, width, height }: ItemPictureProps) {
   const hidden = useHidePictures()
   const picture = useItemPicture(hidden ? null : id)
+  const preview = usePicturePreview()
   const box = { width, height }
 
   if (!picture.data) {
@@ -20,7 +22,7 @@ export function ItemPicture({ id, label, width, height }: ItemPictureProps) {
     )
   }
   return (
-    <div className={classes.tile} style={box}>
+    <div className={classes.tile} style={box} {...preview}>
       <Image src={picture.data} alt={label} fit="contain" h="100%" draggable={false} />
     </div>
   )

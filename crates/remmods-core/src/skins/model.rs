@@ -87,7 +87,15 @@ pub struct SkinCopy {
 /// What switching a group on did to its linked skin set.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LinkedSkins {
-    Switched { name: String },
-    GameRunning { name: String },
-    Failed { name: String },
+    Switched {
+        name: String,
+    },
+    GameRunning {
+        name: String,
+    },
+    Failed {
+        name: String,
+    },
+    /// Groups switched on together link different sets: none was switched.
+    Several,
 }

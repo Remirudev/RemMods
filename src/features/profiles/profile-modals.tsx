@@ -58,18 +58,33 @@ export function openSnapshots(): void {
   )
 }
 
-// The change list before a switch. `title` names what is applied when it is not a user group
-// (a snapshot's label).
-export function openSwitchDiff(profile: Profile, direction: ApplyDirection, title?: string): void {
+function switchTitle(profiles: readonly Profile[], direction: ApplyDirection): string {
   const t = profilesT()
-  const name = titleOf(profile)
+  const [only] = profiles
+  if (profiles.length === 1 && only) {
+    const name = titleOf(only)
+    return direction === 'on'
+      ? t(($) => $.diff.titleOn, { name })
+      : t(($) => $.diff.titleOff, { name })
+  }
+  const count = profiles.length
+  return direction === 'on'
+    ? t(($) => $.diff.titleOnMany, { count })
+    : t(($) => $.diff.titleOffMany, { count })
+}
+
+// The change list before a switch of one group or several. `title` names what is applied when it
+// is not a user group (a snapshot's label).
+export function openSwitchDiff(
+  profiles: readonly Profile[],
+  direction: ApplyDirection,
+  title?: string,
+): void {
+  const ids = profiles.map((profile) => profile.id)
   openWith(
-    title ??
-      (direction === 'on'
-        ? t(($) => $.diff.titleOn, { name })
-        : t(($) => $.diff.titleOff, { name })),
+    title ?? switchTitle(profiles, direction),
     (close, modalId) => (
-      <ProfileDiffModal profile={profile} direction={direction} onClose={close} modalId={modalId} />
+      <ProfileDiffModal ids={ids} direction={direction} onClose={close} modalId={modalId} />
     ),
     'lg',
   )

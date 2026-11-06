@@ -31,7 +31,7 @@ export function renderWithProviders(
   const gameStatus = withDefault(options.gameStatus, makeGameStatus())
   if (gameStatus) queryClient.setQueryData(queryKeys.gameStatus, gameStatus)
 
-  render(
+  const { unmount } = render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} env="test">
         <ModalsProvider>{ui}</ModalsProvider>
@@ -39,5 +39,5 @@ export function renderWithProviders(
     </QueryClientProvider>,
   )
 
-  return { queryClient }
+  return { queryClient, unmount }
 }

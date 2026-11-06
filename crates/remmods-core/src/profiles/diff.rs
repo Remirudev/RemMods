@@ -128,6 +128,29 @@ pub fn diff_profile(profile: &Profile, content: &ScanContent) -> ProfileDiff {
     diff
 }
 
+/// `profiles` as the one profile their switch applies, under the first one's id. A key any of them
+/// switches on stays on, and one Exclusive profile makes the whole switch Exclusive. `None` for an
+/// empty list.
+pub(crate) fn switched_together(profiles: &[&Profile]) -> Option<Profile> {
+    let (first, rest) = profiles.split_first()?;
+    let mut together = (*first).clone();
+    for profile in rest {
+        if profile.mode == ProfileMode::Exclusive {
+            together.mode = ProfileMode::Exclusive;
+        }
+        for (key, entry) in &profile.mods {
+            match together.mods.get_mut(key) {
+                Some(kept) if entry.state == EntryState::Enabled => kept.state = entry.state,
+                Some(_) => {}
+                None => {
+                    together.mods.insert(key.clone(), entry.clone());
+                }
+            }
+        }
+    }
+    Some(together)
+}
+
 /// `diff_profile` in the given direction. Pure.
 pub fn diff_switch(
     profile: &Profile,

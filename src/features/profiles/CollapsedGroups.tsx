@@ -5,7 +5,7 @@ import classes from './groups.module.css'
 import type { CollapsedGroupsProps } from './types'
 
 // The folded sidebar: one round button per group, filled while the group is on.
-export function CollapsedGroups({ items, busyId, readOnly, onSwitch }: CollapsedGroupsProps) {
+export function CollapsedGroups({ items, busyIds, readOnly, onSwitch }: CollapsedGroupsProps) {
   const { t } = useTranslation('profiles')
 
   return (
@@ -17,7 +17,7 @@ export function CollapsedGroups({ items, busyId, readOnly, onSwitch }: Collapsed
               radius="xl"
               size="lg"
               variant={item.lit ? 'filled' : 'default'}
-              loading={busyId === item.summary.profile.id}
+              loading={busyIds.includes(item.summary.profile.id)}
               disabled={readOnly}
               aria-pressed={item.lit}
               aria-label={

@@ -176,14 +176,37 @@ function fingerprintOf(changes: readonly DiffChange[]): string {
   return changes.map((change) => `${change.enable ? '+' : '-'}${change.key}\n`).join('')
 }
 
-export function diffProfile(state: MockState, id: string, direction: ApplyDirection): ProfileDiff {
-  const profile = inDirection(profileById(state, id), direction)
+// Several profiles as one: a key any of them switches on stays on, one exclusive makes it exclusive.
+function together(state: MockState, ids: readonly string[]): Profile {
+  const [first, ...rest] = ids.map((id) => profileById(state, id))
+  if (!first) fail({ kind: 'profileNotFound' })
+  const states = new Map(first.mods.map((entry) => [entry.key, entry.state]))
+  for (const profile of rest) {
+    for (const entry of profile.mods) {
+      if (entry.state === 'enabled' || !states.has(entry.key)) states.set(entry.key, entry.state)
+    }
+  }
+  return {
+    ...first,
+    mode: [first, ...rest].some((profile) => profile.mode === 'exclusive')
+      ? 'exclusive'
+      : first.mode,
+    mods: [...states].map(([key, state]): ProfileEntryDto => ({ key, state })),
+  }
+}
+
+export function diffProfile(
+  state: MockState,
+  ids: readonly string[],
+  direction: ApplyDirection,
+): ProfileDiff {
+  const profile = inDirection(together(state, ids), direction)
   const changes = changesFor(state, profile)
   const missing = profile.mods
     .filter((entry) => !state.rows.some((row) => row.key === entry.key))
     .map((entry) => entry.key)
   return {
-    profileId: id,
+    profileId: profile.id,
     mode: profile.mode,
     changes,
     missing,
@@ -195,7 +218,7 @@ export function diffProfile(state: MockState, id: string, direction: ApplyDirect
 
 // The diff must still be the one the user saw; a snapshot of the current state comes first.
 export function applyProfile(state: MockState, request: ApplyRequest): ApplyOutcome {
-  const stored = profileById(state, request.profileId)
+  const stored = together(state, request.profileIds)
   const profile = inDirection(stored, request.direction)
   const changes = changesFor(state, profile)
   if (fingerprintOf(changes) !== request.fingerprint) fail({ kind: 'stale' })
@@ -215,7 +238,7 @@ export function applyProfile(state: MockState, request: ApplyRequest): ApplyOutc
     if (row) setEnabled(row, change.enable)
   }
   if (request.direction === 'on') {
-    stored.lastApplied = now
+    for (const id of request.profileIds) profileById(state, id).lastApplied = now
     state.lastApplied = { profileId: stored.id, at: now }
   }
   return {

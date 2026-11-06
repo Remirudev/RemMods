@@ -25,7 +25,10 @@ export function ApplyToast({ notificationId, outcome }: ApplyToastProps) {
     outcome.skipped.length > 0
       ? t(($) => $.apply.skipped, { count: outcome.skipped.length })
       : null,
-    skins ? t(($) => $.apply.skins[skins.kind], { name: skins.name }) : null,
+    skins?.kind === 'several' ? t(($) => $.apply.skins.several) : null,
+    skins && skins.kind !== 'several'
+      ? t(($) => $.apply.skins[skins.kind], { name: skins.name })
+      : null,
   ]
     .filter(Boolean)
     .join(' ')
@@ -33,7 +36,7 @@ export function ApplyToast({ notificationId, outcome }: ApplyToastProps) {
   const undo = () => {
     if (snapshotId === null) return
     setUndoing(true)
-    void applyDirect(mutateAsync, snapshotId, 'on', {
+    void applyDirect(mutateAsync, [snapshotId], 'on', {
       onDone: (next) => {
         notifications.hide(notificationId)
         showApplyToast(next)

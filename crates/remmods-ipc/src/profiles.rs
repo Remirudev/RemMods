@@ -183,7 +183,7 @@ pub struct ProfileDiff {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ApplyRequest {
-    pub profile_id: String,
+    pub profile_ids: Vec<String>,
     pub fingerprint: String,
     pub apply_while_running: bool,
     pub direction: ApplyDirection,
@@ -485,7 +485,7 @@ impl From<&core::ProfileDiff> for ProfileDiff {
 impl From<&ApplyRequest> for core::ApplyRequest {
     fn from(request: &ApplyRequest) -> Self {
         Self {
-            profile_id: request.profile_id.clone(),
+            profile_ids: request.profile_ids.clone(),
             fingerprint: request.fingerprint.clone(),
             apply_while_running: request.apply_while_running,
             direction: request.direction.into(),

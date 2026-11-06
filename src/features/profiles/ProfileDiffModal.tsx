@@ -13,9 +13,10 @@ import { useProfileDiff, useProfiles } from './queries'
 import type { ProfileDiffModalProps } from './types'
 import { useApplyProfile } from './use-profile-mutations'
 
-export function ProfileDiffModal({ profile, direction, onClose, modalId }: ProfileDiffModalProps) {
+export function ProfileDiffModal({ ids, direction, onClose, modalId }: ProfileDiffModalProps) {
   const { t } = useTranslation('profiles')
-  const diff = useProfileDiff(profile.id, direction)
+  const diff = useProfileDiff(ids, direction)
+  const count = ids.length
   const readOnly = useProfiles().data?.readOnly ?? false
   const apply = useApplyProfile()
   const [changedNotice, setChangedNotice] = useState(false)
@@ -26,7 +27,7 @@ export function ProfileDiffModal({ profile, direction, onClose, modalId }: Profi
   const run = (applyWhileRunning: boolean) => {
     if (!data) return
     apply.mutate(
-      { profileId: profile.id, fingerprint: data.fingerprint, applyWhileRunning, direction },
+      { profileIds: [...ids], fingerprint: data.fingerprint, applyWhileRunning, direction },
       {
         onSuccess: (outcome) => {
           showApplyToast(outcome)
@@ -68,7 +69,9 @@ export function ProfileDiffModal({ profile, direction, onClose, modalId }: Profi
   return (
     <Stack gap="sm" data-testid="profile-diff">
       <Text size="sm">
-        {direction === 'off' ? t(($) => $.diff.offHint) : t(($) => $.mode[data.mode].hint)}
+        {direction === 'off'
+          ? t(($) => $.diff.offHint, { count })
+          : t(($) => $.mode[data.mode].hint, { count })}
       </Text>
       {changedNotice && (
         <Alert color="yellow" role="status">
@@ -97,7 +100,7 @@ export function ProfileDiffModal({ profile, direction, onClose, modalId }: Profi
                 {change.reason === 'unlisted' && (
                   <Text span size="xs" c="var(--qc-text-2)">
                     {' · '}
-                    {t(($) => $.diff.notInProfile)}
+                    {t(($) => $.diff.notInProfile, { count })}
                   </Text>
                 )}
               </Text>

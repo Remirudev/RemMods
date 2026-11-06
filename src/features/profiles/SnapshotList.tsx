@@ -49,7 +49,7 @@ export function SnapshotList({ view, snapshots }: SnapshotListProps) {
                 <Button
                   size="compact-md"
                   disabled={view.readOnly}
-                  onClick={() => openSwitchDiff(profile, 'on', label)}
+                  onClick={() => openSwitchDiff([profile], 'on', label)}
                 >
                   {t(($) => $.snapshots.restore)}
                 </Button>

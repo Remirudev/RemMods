@@ -8,10 +8,10 @@ export function useProfiles() {
 }
 
 // Never cached: a diff is only valid for the disk it was computed from.
-export function useProfileDiff(profileId: string, direction: ApplyDirection) {
+export function useProfileDiff(profileIds: readonly string[], direction: ApplyDirection) {
   return useQuery({
-    queryKey: queryKeys.profileDiff(profileId, direction),
-    queryFn: () => ipc.profilesDiff(profileId, direction),
+    queryKey: queryKeys.profileDiff(profileIds, direction),
+    queryFn: () => ipc.profilesDiff([...profileIds], direction),
     gcTime: 0,
     staleTime: 0,
   })

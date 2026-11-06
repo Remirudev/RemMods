@@ -12,7 +12,7 @@ use std::sync::atomic::Ordering;
 
 use mods_support::DATA;
 use mods_support::toggle::{Extras, PlannedScan, ToggleFixture};
-use profiles_support::{apply, snapshots, switch};
+use profiles_support::{apply, by_name, snapshots, switch, switch_together};
 use remmods_core::CoreError;
 use remmods_core::assets::PictureProblem;
 use remmods_core::mods::ModsError;
@@ -825,18 +825,22 @@ fn a_set_in_the_game_has_to_be_on_the_list() {
 }
 
 fn linked_group(skins: &Skins, set: Option<&str>) -> String {
+    named_linked_group(skins, "Group", set)
+}
+
+fn named_linked_group(skins: &Skins, name: &str, set: Option<&str>) -> String {
     let view = skins
         .core()
         .profiles_save(&ProfileSave::Picked {
             id: None,
-            name: "Group".to_owned(),
+            name: name.to_owned(),
             description: String::new(),
             mode: Additive,
             mods: vec![("Standard:A".to_owned(), Enabled)],
             skins: set.map(str::to_owned),
         })
         .expect("save group");
-    let group = &view.profiles[0].profile;
+    let group = &by_name(&view, name);
     assert_eq!(group.skin_set(), set);
     group.id.clone()
 }
@@ -905,13 +909,16 @@ fn a_running_game_keeps_the_skins_and_still_switches_the_mods() {
     let skins = skins_with(WITH_MOD);
     let (first, _) = skins.two_sets();
     let group = linked_group(&skins, Some(&first));
-    let diff = skins.core().profiles_diff(&group, On).expect("diff");
+    let diff = skins
+        .core()
+        .profiles_diff(std::slice::from_ref(&group), On)
+        .expect("diff");
     skins.fixture.running.store(true, Ordering::SeqCst);
 
     let outcome = skins
         .core()
         .profiles_apply(&ApplyRequest {
-            profile_id: group.clone(),
+            profile_ids: vec![group.clone()],
             fingerprint: diff.fingerprint,
             apply_while_running: true,
             direction: On,
@@ -925,6 +932,53 @@ fn a_running_game_keeps_the_skins_and_still_switches_the_mods() {
             name: "First".to_owned()
         })
     );
+    assert_eq!(saves(&skins.folder), tagged("second"));
+}
+
+#[test]
+fn groups_with_different_sets_leave_the_skins_alone_and_still_switch_the_mods() {
+    let skins = skins_with(WITH_MOD);
+    let (first, second) = skins.two_sets();
+    let one = named_linked_group(&skins, "One", Some(&first));
+    let other = named_linked_group(&skins, "Other", Some(&second));
+
+    let outcome = switch_together(&skins.fixture, &[&one, &other], On).expect("switch");
+
+    assert_eq!(outcome.changed, 1);
+    assert_eq!(outcome.skins, Some(LinkedSkins::Several));
+    assert_eq!(saves(&skins.folder), tagged("second"));
+}
+
+#[test]
+fn groups_that_agree_on_a_set_bring_it_along() {
+    let skins = skins_with(WITH_MOD);
+    let (first, _) = skins.two_sets();
+    let one = named_linked_group(&skins, "One", Some(&first));
+    let other = named_linked_group(&skins, "Other", Some(&first));
+    let plain = named_linked_group(&skins, "Plain", None);
+
+    let outcome = switch_together(&skins.fixture, &[&one, &other, &plain], On).expect("switch");
+
+    assert_eq!(
+        outcome.skins,
+        Some(LinkedSkins::Switched {
+            name: "First".to_owned()
+        })
+    );
+    assert_eq!(saves(&skins.folder), tagged("first"));
+}
+
+#[test]
+fn a_deleted_set_among_several_links_does_not_count() {
+    let skins = skins_with(WITH_MOD);
+    let (first, second) = skins.two_sets();
+    let one = named_linked_group(&skins, "One", Some(&first));
+    let other = named_linked_group(&skins, "Other", Some(&second));
+    skins.core().skins_delete(&first).expect("delete");
+
+    let outcome = switch_together(&skins.fixture, &[&one, &other], On).expect("switch");
+
+    assert_eq!(outcome.skins, None, "the set still linked is in the game");
     assert_eq!(saves(&skins.folder), tagged("second"));
 }
 

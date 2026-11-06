@@ -73,6 +73,7 @@ fn update_round_trips_through_disk_as_pretty_json() {
             ui_scale: Some(1.25),
             title_bar: Some(TitleBarMode::System),
             hide_pictures: None,
+            hover_preview: None,
         }))
         .expect("update settings");
 
@@ -315,6 +316,29 @@ fn update_is_busy_while_another_process_holds_the_app_lock() {
 
     assert!(matches!(result, Err(SettingsError::Fs(FsError::Busy))));
     assert!(!paths.settings_file.exists());
+}
+
+#[test]
+fn hover_preview_is_on_by_default_and_saved_only_while_off() {
+    let (_dir, root) = support::temp_root();
+    let paths = AppPaths::under(&root);
+    let store = SettingsStore::load(&paths);
+    assert!(store.snapshot().settings.appearance.hover_preview);
+    let update = |hover_preview| {
+        appearance(AppearanceUpdate {
+            hover_preview: Some(hover_preview),
+            ..AppearanceUpdate::default()
+        })
+    };
+
+    let off = store.update(&update(false)).expect("turn off");
+    assert!(!off.settings.appearance.hover_preview);
+    let text = fs::read_to_string(&paths.settings_file).expect("read settings");
+    assert!(text.contains("\"hoverPreview\": false"), "{text}");
+
+    store.update(&update(true)).expect("turn on");
+    let text = fs::read_to_string(&paths.settings_file).expect("read settings");
+    assert!(!text.contains("hoverPreview"), "{text}");
 }
 
 #[test]

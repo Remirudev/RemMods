@@ -16,7 +16,8 @@ import { StateBadge } from './StateBadge'
 import { ToggleCell } from './ToggleCell'
 import type { ModCardProps } from './types'
 
-const PICTURE_HEIGHT = 170
+// An empty line keeps its height, so every card's picture has the same size.
+const EMPTY_LINE = '\u00a0'
 
 export function ModCard({
   row,
@@ -36,27 +37,39 @@ export function ModCard({
     const names = replacedNames(items?.items ?? [], character, locale)
     return names.length > 0 ? names : row.content.slots.map((hint) => slotLabel(hint, t))
   }, [items, character, locale, row.content.slots, t])
-  const off = displayState(row) === 'disabled'
+  const characters = characterSummary(row.content.characters, t, locale)
+  const state = displayState(row)
+  const off = state === 'disabled'
 
   return (
     <Table.Td
       id={`mods-card-${index}`}
       data-testid="mods-card"
+      data-mod-ref={row.modRef}
       className={classes.card}
       aria-selected={selected}
       mod={{ active, selected, off }}
       onClick={(event) => onClick(index, event)}
     >
-      <div className={classes.cardPicture}>
-        <ItemPicture
-          id={picture}
-          label={t(($) => $.cover.alt, { name: row.name })}
-          width="100%"
-          height={PICTURE_HEIGHT}
-        />
-      </div>
-      <div className={classes.cardMenu}>
-        <RowMenu row={row} onManage={onManage} />
+      <div className={classes.cardPictureArea}>
+        <div className={classes.cardPicture}>
+          <ItemPicture
+            id={picture}
+            label={t(($) => $.cover.alt, { name: row.name })}
+            width="100%"
+            height="100%"
+          />
+        </div>
+        <Group gap={4} wrap="nowrap" className={classes.cardBadges}>
+          {/* The switch already says on or off; only the other states need words. */}
+          {state !== 'enabled' && !off && <StateBadge row={row} />}
+          <ConflictBadge row={row} />
+          <ContentConflictBadge row={row} />
+          <IssueBadge row={row} />
+        </Group>
+        <div className={classes.cardMenu}>
+          <RowMenu row={row} onManage={onManage} />
+        </div>
       </div>
       <div className={classes.cardBody}>
         <Group gap="xs" justify="space-between" wrap="nowrap">
@@ -66,17 +79,11 @@ export function ModCard({
           <ToggleCell row={row} onToggle={onToggle} />
         </Group>
         <Text size="xs" truncate="end" title={replaces.join(', ')}>
-          <bdi>{replaces.join(', ')}</bdi>
+          <bdi>{replaces.join(', ') || EMPTY_LINE}</bdi>
         </Text>
         <Text size="xs" c="var(--qc-text-2)" truncate="end">
-          <bdi>{characterSummary(row.content.characters, t, locale)}</bdi>
+          <bdi>{characters || EMPTY_LINE}</bdi>
         </Text>
-        <Group gap={4} wrap="nowrap" className={classes.cardBadges}>
-          <StateBadge row={row} />
-          <ConflictBadge row={row} />
-          <ContentConflictBadge row={row} />
-          <IssueBadge row={row} />
-        </Group>
       </div>
     </Table.Td>
   )

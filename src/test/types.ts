@@ -37,4 +37,5 @@ export interface RenderOptions {
 
 export interface RenderedWithProviders {
   queryClient: QueryClient
+  unmount: () => void
 }

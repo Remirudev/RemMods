@@ -1,5 +1,7 @@
 import type { ModRow, Profile, ProfileSummary, ProfilesView } from '../../lib/ipc/types'
 import { outfitConflicts } from '../../shared/outfit-conflicts'
+import { applyClick } from '../../shared/selection'
+import type { ClickModifiers, SelectionState } from '../../shared/types'
 import { profileTitle, splitProfiles } from './profile-label'
 import type { Clash, GroupItem } from './types'
 
@@ -49,6 +51,41 @@ export function groupItems(
       clashes: groupClashes(rows, onKeys),
     }
   })
+}
+
+// A click on a group's name: Ctrl adds or removes it and Shift takes everything from the last click
+// on, like a file list. A plain click on the only picked group shows all mods again.
+export function picksAfterClick(
+  picked: readonly string[],
+  anchor: string | null,
+  ids: readonly string[],
+  id: string,
+  modifiers: ClickModifiers,
+): SelectionState {
+  const plain = !modifiers.shift && !modifiers.ctrl
+  if (plain && picked.length === 1 && picked[0] === id) return { selection: [], anchor: null }
+  return applyClick(picked, anchor, ids, id, modifiers)
+}
+
+function pickedItems(items: readonly GroupItem[], picked: readonly string[]): GroupItem[] {
+  return items.filter((item) => picked.includes(item.summary.profile.id))
+}
+
+// A switch acts on a selection the way a file list does: on all picked groups when its group is one
+// of several, else on its group alone.
+export function switchTargets(
+  items: readonly GroupItem[],
+  picked: readonly string[],
+  item: GroupItem,
+): GroupItem[] {
+  const among = picked.length > 1 && picked.includes(item.summary.profile.id)
+  return among ? pickedItems(items, picked) : [item]
+}
+
+// All on, All off: the picked groups when there are several, else every group. One picked group is
+// the list's filter, not a selection.
+export function bulkTargets(items: readonly GroupItem[], picked: readonly string[]): GroupItem[] {
+  return picked.length > 1 ? pickedItems(items, picked) : [...items]
 }
 
 // Up to two letters for the collapsed sidebar: the first letters of the first two words.

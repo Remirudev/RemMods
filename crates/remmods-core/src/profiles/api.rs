@@ -4,7 +4,9 @@
 use std::collections::BTreeMap;
 
 use super::capture::capture_states;
-use super::diff::{ApplyDirection, DiffSkip, ProfileDiff, diff_profile, diff_switch};
+use super::diff::{
+    ApplyDirection, DiffSkip, ProfileDiff, diff_profile, diff_switch, switched_together,
+};
 use super::error::ProfileError;
 use super::model::{
     EntryState, LastApplied, Profile, ProfileEntry, ProfileMode, ProfileSource, ProfilesFile,
@@ -70,7 +72,8 @@ pub struct ProfilesView {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ApplyRequest {
-    pub profile_id: String,
+    /// Switched together in one batch, in this order.
+    pub profile_ids: Vec<String>,
     pub fingerprint: String,
     pub apply_while_running: bool,
     pub direction: ApplyDirection,
@@ -131,18 +134,13 @@ impl Core {
 
     pub fn profiles_diff(
         &self,
-        id: &str,
+        ids: &[String],
         direction: ApplyDirection,
     ) -> Result<ProfileDiff, CoreError> {
         let fresh = self.mods_refresh()?;
         let loaded = self.profiles.load();
-        let profile = loaded
-            .file
-            .profiles
-            .iter()
-            .find(|profile| profile.id == id)
-            .ok_or(ProfileError::NotFound)?;
-        Ok(diff_switch(profile, &fresh.snapshot.content, direction))
+        let profile = switched_profile(&loaded.file, ids)?;
+        Ok(diff_switch(&profile, &fresh.snapshot.content, direction))
     }
 
     /// RemMods' own folders only (store writes that need no game).
@@ -157,6 +155,18 @@ pub(crate) fn position(file: &ProfilesFile, id: &str) -> Result<usize, ProfileEr
         .iter()
         .position(|profile| profile.id == id)
         .ok_or(ProfileError::NotFound)
+}
+
+/// The profile a switch of `ids` applies: one or several, never none.
+pub(crate) fn switched_profile(
+    file: &ProfilesFile,
+    ids: &[String],
+) -> Result<Profile, ProfileError> {
+    let picked = ids
+        .iter()
+        .map(|id| position(file, id).map(|index| &file.profiles[index]))
+        .collect::<Result<Vec<_>, _>>()?;
+    switched_together(&picked).ok_or(ProfileError::NotFound)
 }
 
 fn apply_save(

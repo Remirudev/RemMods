@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { ModKind, ModRow } from '../../lib/ipc/types'
 import { makeModRow } from '../../test/fixtures'
-import { characterHints, EMPTY_FILTER, filterMods, isFilterActive } from './filter-mods'
+import {
+  authorChoices,
+  characterHints,
+  EMPTY_FILTER,
+  filterMods,
+  isFilterActive,
+} from './filter-mods'
 import type { ModFilter } from './types'
 
 const KIND_LABELS: Record<ModKind, string> = {
@@ -164,5 +170,48 @@ describe('the character filter', () => {
 
   it('offers each character once and no "everyone" entry', () => {
     expect(characterHints(rows).map((hint) => hint.code)).toEqual(['ker', 'zbr'])
+  })
+})
+
+describe('the author filter', () => {
+  const unknown = makeModRow('x').info
+  const by = (author: string) => ({
+    ...unknown,
+    author,
+    defaulted: { ...unknown.defaulted, author: false },
+  })
+  const rows = [
+    makeModRow('First', { info: by('Rem') }),
+    makeModRow('Second', { info: by('Kiro') }),
+    makeModRow('Third', { info: by('Rem') }),
+    makeModRow('Fourth'),
+  ]
+  const names = (authors: string[]) =>
+    filterMods(rows, { ...EMPTY_FILTER, authors }, kindLabel, 'en').map((row) => row.name)
+
+  it('keeps the mods of the chosen authors', () => {
+    expect(names(['Rem'])).toEqual(['First', 'Third'])
+    expect(names(['Rem', 'Kiro'])).toEqual(['First', 'Second', 'Third'])
+  })
+
+  it('finds mods without an author under the default', () => {
+    expect(names([unknown.author])).toEqual(['Fourth'])
+  })
+
+  it('keeps everything while nothing is chosen', () => {
+    expect(names([])).toHaveLength(4)
+  })
+
+  it('counts as an active filter', () => {
+    expect(isFilterActive({ ...EMPTY_FILTER, authors: ['Rem'] })).toBe(true)
+  })
+
+  it('offers each author once, with the label for what the list shows', () => {
+    const label = (info: { author: string }) => `~${info.author}`
+    expect(authorChoices(rows, label)).toEqual([
+      { value: 'Rem', label: '~Rem' },
+      { value: 'Kiro', label: '~Kiro' },
+      { value: unknown.author, label: `~${unknown.author}` },
+    ])
   })
 })

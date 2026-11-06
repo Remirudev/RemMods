@@ -12,6 +12,7 @@ import { modTableFeatures } from './mod-table-features'
 import { buildModColumns } from './mod-table-model'
 import classes from './mods.module.css'
 import { useModsUiStore } from './mods-ui-store'
+import { RowContextMenu } from './RowContextMenu'
 import type { ModTableProps } from './types'
 import { useModListControls } from './use-mod-list-controls'
 
@@ -113,63 +114,66 @@ export function ModTable({ rows, onOpen, onToggle, onManage, onBulk }: ModTableP
         className={classes.tableContainer}
         scrollAreaProps={{ viewportRef }}
       >
-        <Table
-          stickyHeader
-          layout="fixed"
-          highlightOnHover
-          className={classes.table}
-          style={nameFills ? undefined : { width: totalWidth }}
-          role="grid"
-          tabIndex={0}
-          aria-multiselectable="true"
-          aria-rowcount={sortedRows.length + 1}
-          aria-activedescendant={activeRendered ? `mods-row-${activeIndex}` : undefined}
-          aria-label={t(($) => $.table.label)}
-          onKeyDown={onKeyDown}
-        >
-          <Table.Thead>
-            {table.getHeaderGroups().map((group) => (
-              <Table.Tr key={group.id}>
-                {group.headers.map((header) => (
-                  <ModHeaderCell
-                    key={header.id}
-                    header={header}
-                    fills={nameFills && header.column.id === 'name'}
-                  />
-                ))}
-              </Table.Tr>
-            ))}
-          </Table.Thead>
-          <Table.Tbody>
-            {topSpace > 0 && spacerRow('top', topSpace, columnCount)}
-            {items.map((item) => {
-              const row = sortedRows[item.index]
-              if (!row) return null
-              return (
-                <Table.Tr
-                  key={row.id}
-                  id={`mods-row-${item.index}`}
-                  data-testid="mods-row"
-                  className={classes.row}
-                  aria-rowindex={item.index + 2}
-                  aria-selected={selected.has(row.id)}
-                  mod={{ active: item.index === activeIndex, selected: selected.has(row.id) }}
-                  onClick={(event) => onItemClick(item.index, event)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <Table.Td
-                      key={cell.id}
-                      ta={cell.column.columnDef.meta?.align === 'right' ? 'right' : undefined}
-                    >
-                      <table.FlexRender cell={cell} />
-                    </Table.Td>
+        <RowContextMenu rows={rows} onManage={onManage}>
+          <Table
+            stickyHeader
+            layout="fixed"
+            highlightOnHover
+            className={classes.table}
+            style={nameFills ? undefined : { width: totalWidth }}
+            role="grid"
+            tabIndex={0}
+            aria-multiselectable="true"
+            aria-rowcount={sortedRows.length + 1}
+            aria-activedescendant={activeRendered ? `mods-row-${activeIndex}` : undefined}
+            aria-label={t(($) => $.table.label)}
+            onKeyDown={onKeyDown}
+          >
+            <Table.Thead>
+              {table.getHeaderGroups().map((group) => (
+                <Table.Tr key={group.id}>
+                  {group.headers.map((header) => (
+                    <ModHeaderCell
+                      key={header.id}
+                      header={header}
+                      fills={nameFills && header.column.id === 'name'}
+                    />
                   ))}
                 </Table.Tr>
-              )
-            })}
-            {bottomSpace > 0 && spacerRow('bottom', bottomSpace, columnCount)}
-          </Table.Tbody>
-        </Table>
+              ))}
+            </Table.Thead>
+            <Table.Tbody>
+              {topSpace > 0 && spacerRow('top', topSpace, columnCount)}
+              {items.map((item) => {
+                const row = sortedRows[item.index]
+                if (!row) return null
+                return (
+                  <Table.Tr
+                    key={row.id}
+                    id={`mods-row-${item.index}`}
+                    data-testid="mods-row"
+                    data-mod-ref={row.id}
+                    className={classes.row}
+                    aria-rowindex={item.index + 2}
+                    aria-selected={selected.has(row.id)}
+                    mod={{ active: item.index === activeIndex, selected: selected.has(row.id) }}
+                    onClick={(event) => onItemClick(item.index, event)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <Table.Td
+                        key={cell.id}
+                        ta={cell.column.columnDef.meta?.align === 'right' ? 'right' : undefined}
+                      >
+                        <table.FlexRender cell={cell} />
+                      </Table.Td>
+                    ))}
+                  </Table.Tr>
+                )
+              })}
+              {bottomSpace > 0 && spacerRow('bottom', bottomSpace, columnCount)}
+            </Table.Tbody>
+          </Table>
+        </RowContextMenu>
       </Table.ScrollContainer>
     </div>
   )

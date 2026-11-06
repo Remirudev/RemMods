@@ -28,6 +28,16 @@ export const profiles = {
     clashes_other:
       '{{count}} pairs of mods in this group replace the same items. Only one of each pair shows in game.',
     rowMenu: 'Options for “{{name}}”',
+    allOn: 'All on',
+    allOff: 'All off',
+    allOnHint: 'Switch on every group',
+    allOffHint: 'Switch off every group',
+    selectedOn: 'On',
+    selectedOff: 'Off',
+    selectedOnHint: 'Switch on the {{amount}} selected groups',
+    selectedOffHint: 'Switch off the {{amount}} selected groups',
+    selected: '{{amount}} selected',
+    clearSelection: 'Clear the selection',
   },
   menu: {
     saveCurrent: 'Save current state as a group…',
@@ -46,10 +56,15 @@ export const profiles = {
   },
   mode: {
     additive: {
-      hint: 'Turns on the mods the group lists as on and turns off the ones it lists as off. Other mods stay as they are.',
+      hint_one:
+        'Turns on the mods the group lists as on and turns off the ones it lists as off. Other mods stay as they are.',
+      hint_other:
+        'Turns on the mods any of these groups lists as on and turns off the ones they only list as off. Other mods stay as they are.',
     },
     exclusive: {
-      hint: 'Turns on the mods the group lists as on and turns off every other mod.',
+      hint_one: 'Turns on the mods the group lists as on and turns off every other mod.',
+      hint_other:
+        'Turns on the mods any of these groups lists as on and turns off every other mod.',
     },
   },
   form: {
@@ -99,7 +114,12 @@ export const profiles = {
   diff: {
     titleOn: 'Switch on “{{name}}”',
     titleOff: 'Switch off “{{name}}”',
-    offHint: 'Turns off the mods this group lists as on. Nothing else changes.',
+    titleOnMany_one: 'Switch on {{count}} group',
+    titleOnMany_other: 'Switch on {{count}} groups',
+    titleOffMany_one: 'Switch off {{count}} group',
+    titleOffMany_other: 'Switch off {{count}} groups',
+    offHint_one: 'Turns off the mods this group lists as on. Nothing else changes.',
+    offHint_other: 'Turns off the mods these groups list as on. Nothing else changes.',
     error: 'The changes could not be calculated.',
     changed: 'The mods changed on disk. The list below is up to date; check it and apply again.',
     enable_one: 'Enable ({{count}})',
@@ -110,7 +130,8 @@ export const profiles = {
     skipped_other: 'Skipped ({{count}})',
     missing_one: 'Not installed ({{count}})',
     missing_other: 'Not installed ({{count}})',
-    notInProfile: 'not in this group',
+    notInProfile_one: 'not in this group',
+    notInProfile_other: 'not in these groups',
     skipReason: {
       ambiguous: 'several mods share this name',
       linked: 'linked folder',
@@ -132,6 +153,7 @@ export const profiles = {
       switched: 'Skins switched to {{name}}.',
       gameRunning: 'Skins stay as they are while the game runs: switch to {{name}} afterwards.',
       failed: 'The skin set {{name}} could not be switched.',
+      several: 'The skins stay as they are, because these groups link different skin sets.',
     },
     undo: 'Undo',
   },

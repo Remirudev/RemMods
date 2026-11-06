@@ -33,6 +33,7 @@ export const TEST_SETTINGS: Settings = {
     uiScale: 1,
     titleBar: 'custom',
     hidePictures: false,
+    hoverPreview: true,
   },
   readOnly: false,
   recovered: false,

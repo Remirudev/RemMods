@@ -16,7 +16,7 @@ const ROWS: ModRow[] = [
   makeModRow('Charlie'),
 ]
 
-function renderGrid() {
+function renderGrid(rows: ModRow[] = ROWS) {
   const handlers = {
     onOpen: vi.fn(),
     onToggle: vi.fn(),
@@ -32,7 +32,7 @@ function renderGrid() {
       }),
     },
   })
-  renderWithProviders(<ModGrid rows={ROWS} {...handlers} />)
+  renderWithProviders(<ModGrid rows={rows} {...handlers} />)
   return { ...handlers, ipc }
 }
 
@@ -129,6 +129,34 @@ describe('ModGrid', () => {
     await user.keyboard('{Shift>}{ArrowDown}{/Shift}')
     expect(useModsUiStore.getState().selection).toEqual(['m:bravo', 'm:charlie'])
     await user.keyboard('{Escape}')
+    expect(useModsUiStore.getState().selection).toEqual([])
+  })
+
+  it('leaves on and off to the switch and names only the other states', async () => {
+    renderGrid([
+      makeModRow('On'),
+      makeModRow('Off', { state: 'disabled' }),
+      makeModRow('Half', { state: 'partial' }),
+    ])
+    const [half, off, on] = await screen.findAllByTestId('mods-card')
+    if (!half || !off || !on) throw new Error('no cards')
+
+    expect(within(on).queryByText('Enabled')).not.toBeInTheDocument()
+    expect(within(off).queryByText('Disabled')).not.toBeInTheDocument()
+    expect(within(half).getByText('Partial')).toBeVisible()
+  })
+
+  it('opens the row menu at the pointer on a right-click and leaves the selection alone', async () => {
+    const user = userEvent.setup()
+    const { onOpen, onManage } = renderGrid()
+    const [card] = await screen.findAllByTestId('mods-card')
+    if (!card) throw new Error('no card')
+
+    await user.pointer({ keys: '[MouseRight]', target: card })
+    await user.click(await screen.findByRole('menuitem', { name: /Rename/ }))
+
+    expect(onManage).toHaveBeenCalledWith('rename', expect.objectContaining({ name: 'Alpha' }))
+    expect(onOpen).not.toHaveBeenCalled()
     expect(useModsUiStore.getState().selection).toEqual([])
   })
 

@@ -57,6 +57,7 @@ function applySettings(settings: Settings, update: SettingsUpdate): Settings {
       uiScale: patch.uiScale ?? settings.appearance.uiScale,
       titleBar: patch.titleBar ?? settings.appearance.titleBar,
       hidePictures: patch.hidePictures ?? settings.appearance.hidePictures,
+      hoverPreview: patch.hoverPreview ?? settings.appearance.hoverPreview,
     },
   }
 }
@@ -79,9 +80,9 @@ function pluginAnswer(cmd: string): unknown {
   return null
 }
 
-// One transparent pixel: enough for the page to show an <img>.
-const TINY_PICTURE =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+// As large as a stored picture, so the big preview has something to scale.
+const PICTURE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Crect width='512' height='512' fill='%237c5cff'/%3E%3C/svg%3E"
 
 function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unknown {
   switch (cmd) {
@@ -106,7 +107,7 @@ function settingsCommand(state: MockState, cmd: string, args: CommandArgs): unkn
     case 'assets_refresh':
       return { pictures: 12, bytes: 480_000, names: 120, failed: 0 }
     case 'assets_picture':
-      return TINY_PICTURE
+      return PICTURE
     case 'pick_picture':
       return { id: 'src-picture', name: 'look.png', kind: 'image' }
     case 'pick_screenshots':
@@ -231,7 +232,7 @@ function profilesCommand(state: MockState, cmd: string, args: CommandArgs): unkn
     case 'profiles_delete':
       return deleteProfile(state, arg<string>(args, 'id'))
     case 'profiles_diff':
-      return diffProfile(state, arg<string>(args, 'id'), arg<ApplyDirection>(args, 'direction'))
+      return diffProfile(state, arg<string[]>(args, 'ids'), arg<ApplyDirection>(args, 'direction'))
     case 'profiles_apply':
       return applyProfile(state, arg<ApplyRequest>(args, 'request'))
     case 'profiles_transfer':

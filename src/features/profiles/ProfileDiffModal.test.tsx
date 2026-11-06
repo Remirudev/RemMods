@@ -23,14 +23,16 @@ const OUTCOME = {
   skipped: [],
 }
 
-function renderModal(handlers: Record<string, IpcHandler>, direction: ApplyDirection = 'on') {
+function renderModal(
+  handlers: Record<string, IpcHandler>,
+  direction: ApplyDirection = 'on',
+  ids: readonly string[] = ['p1'],
+) {
   const onClose = vi.fn()
   const ipc = installIpcMock(undefined, {
     handlers: { profiles_list: () => makeView([makeSummary(PROFILE)]), ...handlers },
   })
-  renderWithProviders(
-    <ProfileDiffModal profile={PROFILE} direction={direction} onClose={onClose} />,
-  )
+  renderWithProviders(<ProfileDiffModal ids={ids} direction={direction} onClose={onClose} />)
   return { ipc, onClose }
 }
 
@@ -54,10 +56,44 @@ describe('ProfileDiffModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
       request: {
-        profileId: 'p1',
+        profileIds: ['p1'],
         fingerprint: '+alpha\n-beta\n',
         applyWhileRunning: false,
         direction: 'on',
+      },
+    })
+  })
+
+  it('shows several groups as one change list and applies them together', async () => {
+    const user = userEvent.setup()
+    const { ipc, onClose } = renderModal(
+      {
+        profiles_diff: () =>
+          makeDiff({
+            changes: [makeChange('alpha', false)],
+            fingerprint: '-alpha\n',
+          }),
+        profiles_apply: () => OUTCOME,
+      },
+      'off',
+      ['p1', 'p2'],
+    )
+
+    expect(await screen.findByText(/Turns off the mods these groups list as on/)).toBeVisible()
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({
+      ids: ['p1', 'p2'],
+      direction: 'off',
+    })
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(ipc.callsOf('profiles_apply')).toHaveLength(1)
+    expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
+      request: {
+        profileIds: ['p1', 'p2'],
+        fingerprint: '-alpha\n',
+        applyWhileRunning: false,
+        direction: 'off',
       },
     })
   })
@@ -98,13 +134,13 @@ describe('ProfileDiffModal', () => {
     )
 
     expect(await screen.findByText(/Turns off the mods this group lists as on/)).toBeVisible()
-    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ id: 'p1', direction: 'off' })
+    expect(ipc.callsOf('profiles_diff')[0]?.payload).toEqual({ ids: ['p1'], direction: 'off' })
     await user.click(screen.getByRole('button', { name: 'Apply' }))
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(ipc.callsOf('profiles_apply')[0]?.payload).toEqual({
       request: {
-        profileId: 'p1',
+        profileIds: ['p1'],
         fingerprint: '-alpha\n',
         applyWhileRunning: false,
         direction: 'off',

@@ -6,6 +6,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   uiScale: 1,
   titleBar: 'custom',
   hidePictures: false,
+  hoverPreview: true,
 }
 
 export function appearanceUpdate(patch: AppearancePatch): SettingsUpdate {
@@ -22,6 +23,7 @@ export function applySettingsUpdate(settings: Settings, update: SettingsUpdate):
       uiScale: patch.uiScale ?? settings.appearance.uiScale,
       titleBar: patch.titleBar ?? settings.appearance.titleBar,
       hidePictures: patch.hidePictures ?? settings.appearance.hidePictures,
+      hoverPreview: patch.hoverPreview ?? settings.appearance.hoverPreview,
     },
   }
 }

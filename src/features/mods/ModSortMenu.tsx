@@ -18,7 +18,8 @@ export function ModSortMenu() {
     <Group gap={4} wrap="nowrap">
       <Select
         size="xs"
-        w={150}
+        w={120}
+        comboboxProps={{ width: 200, position: 'bottom-end' }}
         aria-label={t(($) => $.grid.sortBy)}
         allowDeselect={false}
         data={MOD_COLUMN_IDS.map((id) => ({ value: id, label: t(($) => $.columns[id]) }))}

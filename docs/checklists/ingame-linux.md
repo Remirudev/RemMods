@@ -475,6 +475,21 @@ without the backup of step 1.
    line.
    Result:
 
+## Groups steps, several at once
+
+Same backup rule as above: this switches mods. Make at least three groups first, each with its own
+mods on and every other mod left alone.
+
+1. Click a group's name, then Ctrl+click another: the list shows both groups' mods, the Groups filter
+   shows the first and "+1", and "2 selected" appears above the groups. A plain click goes back to one.
+   Result:
+2. Shift+click two groups: everything between them is picked too. Click a switch inside the selection:
+   one change list names the mods of all picked groups. Apply: one toast, and Undo puts every mod back.
+   Result:
+3. Clear the selection and press "All on", then "All off": every group moves in one step. Launch, and
+   confirm the mods are off in the game. Quit.
+   Result:
+
 ## Replaces steps (details drawer)
 
 Only reading: the app reads the game and mods, and nothing in Paks changes. No backup needed, and the
@@ -521,6 +536,22 @@ Only looking: nothing in Paks changes and the game stays closed. Each step ends 
    Result:
 5. In Settings turn "Hide pictures" on: the list and the details show empty tiles. Turn it off again.
    Result:
+6. Maximize the window: the mods use the whole width, and the grid's pictures fill their cards. Resize
+   it down to the smallest size: the checkboxes, sort and view switch stay on one row.
+   Result:
+7. With the game closed, open RemMods once: the pictures fill in again at 512 px within a few seconds
+   or so. In Settings, note the size "Item pictures and names" now shows (it was about 46 MB). Scroll
+   the table and the grid as in steps 1 and 2: both stay as smooth as before.
+   Result:
+8. Rest the mouse on a picture: after half a second it shows large beside it, and it goes when the
+   mouse leaves, on a wheel turn and on a key. Note how sharp a game picture and a mod's picture look.
+   Turn "Big picture on hover" off in Settings: nothing shows any more. Turn it on again.
+   Result:
+9. Right-click a card and a table row: the three-dots menu opens at the pointer, the details stay
+   closed and the selection stays as it was.
+   Result:
+10. Open the Authors filter: the authors of your mods are listed, mods without one under "Unknown".
+    Result:
 
 ## Skin sets steps (saves)
 

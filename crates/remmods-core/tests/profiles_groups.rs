@@ -8,7 +8,7 @@ mod support;
 
 use mods_support::DATA;
 use mods_support::manage::{ToggleFixture, core_with_trash, tree};
-use profiles_support::{apply, by_name, custom, snapshots, state, switch};
+use profiles_support::{apply, by_name, custom, snapshots, state, switch, switch_together};
 use remmods_core::CoreError;
 use remmods_core::mods::ModState;
 use remmods_core::profiles::{
@@ -216,7 +216,10 @@ fn switching_off_turns_off_only_the_listed_on_mods() {
             ("Standard:B", Disabled),
         ],
     );
-    let diff = fixture.core.profiles_diff(&id, Off).expect("diff off");
+    let diff = fixture
+        .core
+        .profiles_diff(std::slice::from_ref(&id), Off)
+        .expect("diff off");
     let changes: Vec<(&str, bool, ChangeReason)> = diff
         .changes
         .iter()
@@ -256,11 +259,14 @@ fn switching_off_with_nothing_on_changes_nothing() {
 fn an_off_fingerprint_never_applies_on() {
     let fixture = core_with_trash(BASE);
     let id = custom(&fixture, "G", Additive, &[("Standard:A", Enabled)]);
-    let off = fixture.core.profiles_diff(&id, Off).expect("diff off");
+    let off = fixture
+        .core
+        .profiles_diff(std::slice::from_ref(&id), Off)
+        .expect("diff off");
     assert_eq!(off.fingerprint, "-Standard:A\n");
     let before = tree(&fixture);
     let refused = fixture.core.profiles_apply(&ApplyRequest {
-        profile_id: id,
+        profile_ids: vec![id],
         fingerprint: off.fingerprint,
         apply_while_running: false,
         direction: On,
@@ -311,4 +317,141 @@ fn on_then_off_then_undo_restores_the_tree() {
     apply(&fixture, &off.snapshot_id.expect("snapshot")).expect("undo");
     assert_eq!(tree(&fixture), on_state);
     assert_ne!(tree(&fixture), original);
+}
+
+#[test]
+fn groups_switched_together_are_one_batch_with_one_snapshot() {
+    let fixture = core_with_trash(BASE);
+    let first = custom(&fixture, "First", Additive, &[("Standard:A", Disabled)]);
+    let second = custom(&fixture, "Second", Additive, &[("Standard:C", Enabled)]);
+
+    let outcome = switch_together(&fixture, &[&first, &second], On).expect("switch");
+
+    assert_eq!(outcome.changed, 2);
+    assert_eq!(
+        snapshots(&fixture).len(),
+        1,
+        "one Undo for the whole switch"
+    );
+    assert_eq!(state(&fixture, "Standard:A"), ModState::Disabled);
+    assert_eq!(state(&fixture, "Standard:C"), ModState::Enabled);
+    assert_eq!(last_applied_id(&fixture), Some(second.clone()));
+    let view = fixture.core.profiles_list().expect("profiles");
+    assert!(by_name(&view, "First").last_applied.is_some());
+    assert!(by_name(&view, "Second").last_applied.is_some());
+}
+
+#[test]
+fn undo_of_a_switch_together_restores_the_tree() {
+    let fixture = core_with_trash(BASE);
+    let first = custom(&fixture, "First", Additive, &[("Standard:A", Disabled)]);
+    let second = custom(&fixture, "Second", Additive, &[("Standard:C", Enabled)]);
+    let original = tree(&fixture);
+
+    let outcome = switch_together(&fixture, &[&first, &second], On).expect("switch");
+    apply(&fixture, &outcome.snapshot_id.expect("snapshot")).expect("undo");
+
+    assert_eq!(tree(&fixture), original);
+}
+
+#[test]
+fn a_mod_one_group_switches_on_stays_on_when_another_lists_it_off() {
+    let fixture = core_with_trash(BASE);
+    let wants_on = custom(&fixture, "On", Additive, &[("Standard:C", Enabled)]);
+    let wants_off = custom(&fixture, "Off", Additive, &[("Standard:C", Disabled)]);
+
+    for ids in [[&wants_on, &wants_off], [&wants_off, &wants_on]] {
+        let ids = ids.map(String::as_str);
+        switch_together(&fixture, &ids, On).expect("switch");
+        assert_eq!(state(&fixture, "Standard:C"), ModState::Enabled);
+        switch(&fixture, &wants_off, On).expect("back off");
+    }
+}
+
+#[test]
+fn one_exclusive_group_turns_off_what_no_group_lists() {
+    let fixture = core_with_trash(BASE);
+    let plain = custom(&fixture, "Plain", Additive, &[("Standard:A", Enabled)]);
+    let exclusive = custom(&fixture, "Only", Exclusive, &[("Standard:C", Enabled)]);
+
+    let ids = [plain.clone(), exclusive.clone()];
+    let diff = fixture.core.profiles_diff(&ids, On).expect("diff");
+    let changes: Vec<(&str, bool, ChangeReason)> = diff
+        .changes
+        .iter()
+        .map(|change| (change.key.as_str(), change.enable, change.reason))
+        .collect();
+    assert_eq!(
+        changes,
+        [
+            ("Standard:C", true, ChangeReason::Listed),
+            ("Logic:L", false, ChangeReason::Unlisted),
+            ("Standard:B", false, ChangeReason::Unlisted),
+        ]
+    );
+
+    switch_together(&fixture, &[&plain, &exclusive], On).expect("switch");
+    assert_eq!(state(&fixture, "Standard:A"), ModState::Enabled);
+    assert_eq!(state(&fixture, "Standard:B"), ModState::Disabled);
+}
+
+#[test]
+fn switching_groups_off_together_turns_off_what_any_of_them_lists_as_on() {
+    let fixture = core_with_trash(BASE);
+    let first = custom(&fixture, "First", Exclusive, &[("Standard:A", Enabled)]);
+    let second = custom(
+        &fixture,
+        "Second",
+        Additive,
+        &[("Standard:B", Enabled), ("Logic:L", Disabled)],
+    );
+
+    let outcome = switch_together(&fixture, &[&first, &second], Off).expect("switch off");
+
+    assert_eq!(outcome.changed, 2);
+    assert_eq!(snapshots(&fixture).len(), 1);
+    assert_eq!(state(&fixture, "Standard:A"), ModState::Disabled);
+    assert_eq!(state(&fixture, "Standard:B"), ModState::Disabled);
+    assert_eq!(
+        state(&fixture, "Logic:L"),
+        ModState::Enabled,
+        "listed as off"
+    );
+    assert_eq!(last_applied_id(&fixture), None);
+}
+
+#[test]
+fn a_fingerprint_counts_only_for_the_groups_it_was_made_for() {
+    let fixture = core_with_trash(BASE);
+    let first = custom(&fixture, "First", Additive, &[("Standard:A", Disabled)]);
+    let second = custom(&fixture, "Second", Additive, &[("Standard:C", Enabled)]);
+    let both = [first.clone(), second];
+    let diff = fixture.core.profiles_diff(&both, On).expect("diff");
+    let before = tree(&fixture);
+
+    let refused = fixture.core.profiles_apply(&ApplyRequest {
+        profile_ids: vec![first],
+        fingerprint: diff.fingerprint,
+        apply_while_running: false,
+        direction: On,
+    });
+
+    assert!(matches!(
+        refused,
+        Err(CoreError::Profiles(ProfileError::DiffChanged))
+    ));
+    assert_eq!(tree(&fixture), before);
+}
+
+#[test]
+fn a_switch_needs_groups_that_exist() {
+    let fixture = core_with_trash(BASE);
+    let real = custom(&fixture, "Real", Additive, &[("Standard:C", Enabled)]);
+
+    for ids in [Vec::new(), vec![real, "gone".to_owned()]] {
+        assert!(matches!(
+            fixture.core.profiles_diff(&ids, On),
+            Err(CoreError::Profiles(ProfileError::NotFound))
+        ));
+    }
 }

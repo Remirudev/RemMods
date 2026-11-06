@@ -29,7 +29,7 @@ export function GroupRow({ item, rows, active, busy, readOnly, onSwitch, onShow 
       <Tooltip label={count} openDelay={400} position="right" withinPortal>
         <UnstyledButton
           className={classes.name}
-          onClick={() => onShow(item)}
+          onClick={(event) => onShow(item, event)}
           aria-pressed={active}
           aria-label={t(($) => $.sidebar.showMods, { name: title })}
         >

@@ -4,25 +4,28 @@ import {
   IconLayoutSidebarLeftExpand,
   IconPlus,
 } from '@tabler/icons-react'
-import { useEffect, useMemo } from 'react'
+import { type MouseEvent, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { ApplyDirection } from '../../lib/ipc/types'
 import { useGroupFilterStore } from '../../shared/group-filter-store'
 import { CollapsedGroups } from './CollapsedGroups'
+import { GroupBulkBar } from './GroupBulkBar'
 import { GroupRow } from './GroupRow'
 import { GroupsMenu } from './GroupsMenu'
 import { useGroupPrefs } from './group-prefs-store'
-import { groupItems } from './group-state'
+import { bulkTargets, groupItems, picksAfterClick, switchTargets } from './group-state'
 import classes from './groups.module.css'
 import { openGroupDialog } from './profile-modals'
 import { useProfiles } from './queries'
 import type { GroupItem, GroupsSidebarProps } from './types'
 import { useGroupSwitch } from './use-group-switch'
 
-function sameKeys(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((key, index) => key === b[index])
+function profilesOf(items: readonly GroupItem[]) {
+  return items.map((item) => item.summary.profile)
 }
 
-// Groups beside the mod list: one switch per group, the name narrows the list to its mods.
+// Groups beside the mod list: one switch per group, the name narrows the list to its mods. Ctrl and
+// Shift pick several, like a file list, and a switch then moves all of them.
 export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
   const { t, i18n } = useTranslation('profiles')
   const profiles = useProfiles()
@@ -30,30 +33,41 @@ export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
   const readOnly = view?.readOnly ?? true
   const collapsed = useGroupPrefs((state) => state.collapsed)
   const setCollapsed = useGroupPrefs((state) => state.setCollapsed)
-  const shown = useGroupFilterStore((state) => state.group)
-  const { showGroup, clearGroup } = useGroupFilterStore.getState()
-  const { switchGroup, busyId } = useGroupSwitch()
+  const picked = useGroupFilterStore((state) => state.picked)
+  const { setGroups, pickGroups, clearPicks } = useGroupFilterStore.getState()
+  const { switchGroups, busyIds } = useGroupSwitch()
   const unnamed = t(($) => $.unnamed)
   const items = useMemo(
     () => groupItems(view, rows, i18n.language, unnamed),
     [view, rows, i18n.language, unnamed],
   )
 
-  // The list filter follows edits of its group and ends when the group is deleted.
+  // The list filter follows edits of its groups, and a deleted group leaves it.
   useEffect(() => {
-    if (shown === null || !view) return
-    const item = items.find((candidate) => candidate.summary.profile.id === shown.id)
-    if (!item) clearGroup()
-    else if (item.title !== shown.name || !sameKeys(item.onKeys, shown.keys)) {
-      showGroup({ id: shown.id, name: item.title, keys: item.onKeys })
-    }
-  }, [items, shown, view, showGroup, clearGroup])
+    if (!view) return
+    setGroups(
+      items.map((item) => ({
+        id: item.summary.profile.id,
+        name: item.title,
+        keys: item.onKeys,
+      })),
+    )
+  }, [items, view, setGroups])
 
-  const onSwitch = (item: GroupItem) => switchGroup(item.summary.profile, item.lit ? 'off' : 'on')
-  const onShow = (item: GroupItem) => {
-    const { id } = item.summary.profile
-    if (shown?.id === id) clearGroup()
-    else showGroup({ id, name: item.title, keys: item.onKeys })
+  const direction = (item: GroupItem): ApplyDirection => (item.lit ? 'off' : 'on')
+  const onSwitchOne = (item: GroupItem) => switchGroups(profilesOf([item]), direction(item))
+  const onSwitch = (item: GroupItem) =>
+    switchGroups(profilesOf(switchTargets(items, picked, item)), direction(item))
+  const onSwitchAll = (wanted: ApplyDirection) =>
+    switchGroups(profilesOf(bulkTargets(items, picked)), wanted)
+  const onShow = (item: GroupItem, event: MouseEvent) => {
+    const { picked: current, anchor } = useGroupFilterStore.getState()
+    const ids = profilesOf(items).map((profile) => profile.id)
+    const next = picksAfterClick(current, anchor, ids, item.summary.profile.id, {
+      shift: event.shiftKey,
+      ctrl: event.ctrlKey || event.metaKey,
+    })
+    pickGroups(next.selection, next.anchor)
   }
 
   if (collapsed) {
@@ -73,7 +87,12 @@ export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
             <IconLayoutSidebarLeftExpand size={18} stroke={1.8} />
           </ActionIcon>
         </Tooltip>
-        <CollapsedGroups items={items} busyId={busyId} readOnly={readOnly} onSwitch={onSwitch} />
+        <CollapsedGroups
+          items={items}
+          busyIds={busyIds}
+          readOnly={readOnly}
+          onSwitch={onSwitchOne}
+        />
       </nav>
     )
   }
@@ -128,6 +147,14 @@ export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
           {t(($) => $.sidebar.loadError)}
         </Text>
       )}
+      {items.length > 1 && (
+        <GroupBulkBar
+          selected={picked.length}
+          disabled={readOnly || busyIds.length > 0}
+          onSwitch={onSwitchAll}
+          onClear={clearPicks}
+        />
+      )}
       <ScrollArea className={classes.list} type="hover">
         {view && items.length === 0 ? (
           <Stack gap="sm" align="flex-start">
@@ -151,8 +178,8 @@ export function GroupsSidebar({ rows, footer }: GroupsSidebarProps) {
                 key={item.summary.profile.id}
                 item={item}
                 rows={rows}
-                active={shown?.id === item.summary.profile.id}
-                busy={busyId === item.summary.profile.id}
+                active={picked.includes(item.summary.profile.id)}
+                busy={busyIds.includes(item.summary.profile.id)}
                 readOnly={readOnly}
                 onSwitch={onSwitch}
                 onShow={onShow}

@@ -1,7 +1,10 @@
 //! Applying a profile (spec §5.8): one batch under one write guard, after an auto snapshot.
-//! Switching a group off goes the same way; only switching on records `last_applied`.
+//! Switching a group off goes the same way; only switching on records `last_applied`. Several
+//! groups switched together are one batch, one snapshot and one Undo.
 
-use super::api::{ApplyOutcome, ApplyRequest, position};
+use std::collections::BTreeSet;
+
+use super::api::{ApplyOutcome, ApplyRequest, position, switched_profile};
 use super::capture::capture_states;
 use super::diff::{ApplyDirection, DiffSkip, ProfileDiff, diff_switch};
 use super::error::ProfileError;
@@ -10,6 +13,7 @@ use super::model::{
 };
 use crate::mods::{ModRow, ScanContent, ScanInput, plan_rows};
 use crate::safe_fs::WriteGuard;
+use crate::skins::LinkedSkins;
 use crate::{Core, CoreError};
 
 const APPLY_LABEL: &str = "profile_apply";
@@ -18,8 +22,8 @@ struct Applied {
     changed: u32,
     snapshot_id: Option<String>,
     skipped: Vec<DiffSkip>,
-    /// The group's linked skin set, when it was switched on.
-    skin_set: Option<String>,
+    /// The skin sets the switched-on groups link.
+    skin_sets: BTreeSet<String>,
 }
 
 impl Core {
@@ -27,9 +31,7 @@ impl Core {
         let (applied, refreshed) = self.run_managed(|guard, input, content| {
             self.apply_under_guard(guard, input, content, request)
         })?;
-        let skins = applied
-            .skin_set
-            .and_then(|id| self.switch_linked_skins(&id));
+        let skins = self.linked_skins(&applied.skin_sets);
         Ok(ApplyOutcome {
             refreshed,
             changed: applied.changed,
@@ -48,38 +50,39 @@ impl Core {
     ) -> Result<Applied, CoreError> {
         let retry = self.running_retry(request.apply_while_running)?;
         let loaded = self.profiles.load();
-        let profile = loaded
-            .file
-            .profiles
-            .iter()
-            .find(|profile| profile.id == request.profile_id)
-            .ok_or(ProfileError::NotFound)?;
-        let diff = diff_switch(profile, content, request.direction);
+        let profile = switched_profile(&loaded.file, &request.profile_ids)?;
+        let diff = diff_switch(&profile, content, request.direction);
         if diff.fingerprint != request.fingerprint {
             return Err(ProfileError::DiffChanged.into());
         }
         let switching_on = request.direction == ApplyDirection::On;
-        let skin_set = switching_on
-            .then(|| profile.skin_set().map(str::to_owned))
-            .flatten();
+        let skin_sets = if switching_on {
+            linked_sets(&loaded.file, &request.profile_ids)
+        } else {
+            BTreeSet::new()
+        };
         if diff.changes.is_empty() {
             if switching_on {
-                self.record_last_applied(guard, &request.profile_id);
+                self.record_last_applied(guard, &request.profile_ids);
             }
             return Ok(Applied {
                 changed: 0,
                 snapshot_id: None,
                 skipped: diff.skipped,
-                skin_set,
+                skin_sets,
             });
         }
         // Undo applies this snapshot, so it remembers the skins to go back to.
-        let skins_before = skin_set.as_ref().and_then(|_| self.active_skin_set());
+        let skins_before = if skin_sets.is_empty() {
+            None
+        } else {
+            self.active_skin_set()
+        };
         let snapshot_id = self.profiles.update(guard, |file| {
             Ok(add_snapshot(
                 file,
                 content,
-                &request.profile_id,
+                &profile.id,
                 skins_before.as_deref(),
             ))
         })?;
@@ -98,32 +101,59 @@ impl Core {
             self.write_records(guard, &records);
         }
         if switching_on {
-            self.record_last_applied(guard, &request.profile_id);
+            self.record_last_applied(guard, &request.profile_ids);
         }
         Ok(Applied {
             changed: u32::try_from(diff.changes.len()).unwrap_or(u32::MAX),
             snapshot_id: Some(snapshot_id),
             skipped: diff.skipped,
-            skin_set,
+            skin_sets,
         })
     }
 
+    /// The game holds one set, so groups that link different sets leave the skins alone. A link to
+    /// a set that is gone means nothing.
+    fn linked_skins(&self, skin_sets: &BTreeSet<String>) -> Option<LinkedSkins> {
+        if skin_sets.is_empty() {
+            return None;
+        }
+        let view = self.skins_view();
+        let mut existing = skin_sets
+            .iter()
+            .filter(|id| view.sets.iter().any(|set| set.set.id == **id));
+        match (existing.next(), existing.next()) {
+            (Some(id), None) => self.switch_linked_skins(id),
+            (Some(_), Some(_)) => Some(LinkedSkins::Several),
+            (None, _) => None,
+        }
+    }
+
     /// After the renames stand; a failure is only logged.
-    fn record_last_applied(&self, guard: &WriteGuard<'_>, profile_id: &str) {
+    fn record_last_applied(&self, guard: &WriteGuard<'_>, profile_ids: &[String]) {
         let written = self.profiles.update(guard, |file| {
             let at = now_rfc3339();
-            let index = position(file, profile_id)?;
-            file.profiles[index].last_applied = Some(at.clone());
-            file.last_applied = Some(LastApplied {
-                profile_id: profile_id.to_owned(),
-                at,
-            });
+            for id in profile_ids {
+                let index = position(file, id)?;
+                file.profiles[index].last_applied = Some(at.clone());
+                file.last_applied = Some(LastApplied {
+                    profile_id: id.clone(),
+                    at: at.clone(),
+                });
+            }
             Ok(())
         });
         if let Err(error) = written {
             log::error!("profiles.json: last applied not recorded: {error}");
         }
     }
+}
+
+fn linked_sets(file: &ProfilesFile, profile_ids: &[String]) -> BTreeSet<String> {
+    file.profiles
+        .iter()
+        .filter(|profile| profile_ids.contains(&profile.id))
+        .filter_map(|profile| profile.skin_set().map(str::to_owned))
+        .collect()
 }
 
 /// The rows of the diff's changes, split into (enable, disable).

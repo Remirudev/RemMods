@@ -399,7 +399,7 @@ fn skip_reasons_are_camel_case() {
 #[test]
 fn apply_request_passes_the_fingerprint_and_direction_unchanged() {
     let json = json!({
-        "profileId": "p1",
+        "profileIds": ["p1", "p2"],
         "fingerprint": "-Mods/Y\n+Mods/X\n",
         "applyWhileRunning": false,
         "direction": "off",
@@ -409,7 +409,7 @@ fn apply_request_passes_the_fingerprint_and_direction_unchanged() {
     assert_eq!(
         core::ApplyRequest::from(&request),
         core::ApplyRequest {
-            profile_id: "p1".into(),
+            profile_ids: vec!["p1".into(), "p2".into()],
             fingerprint: "-Mods/Y\n+Mods/X\n".into(),
             apply_while_running: false,
             direction: core::ApplyDirection::Off,
