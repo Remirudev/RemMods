@@ -41,7 +41,7 @@ unicode-normalization = { version = "=0.1.26" }
 notify = { version = "=8.2.1", default-features = false }
 uuid = { version = "=1.29.0", default-features = false, features = ["std", "v4"] }
 
-zip = { version = "=9.2.0", default-features = false, features = ["deflate-flate2-zlib-rs", "deflate64", "bzip2", "lzma", "xz", "ppmd"] }
+zip = { version = "=9.3.0", default-features = false, features = ["deflate-flate2-zlib-rs", "deflate64", "bzip2", "lzma", "xz", "ppmd"] }
 sevenz-rust2 = { version = "=0.24.2", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
 rars = { version = "=0.12.3", default-features = false }
 encoding_rs = { version = "=0.8.44" }
