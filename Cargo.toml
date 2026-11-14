@@ -39,7 +39,7 @@ same-file = { version = "=1.0.6" }
 unicase = { version = "=2.10.0" }
 unicode-normalization = { version = "=0.1.26" }
 notify = { version = "=8.2.1", default-features = false }
-uuid = { version = "=1.29.0", default-features = false, features = ["std", "v4"] }
+uuid = { version = "=1.29.2", default-features = false, features = ["std", "v4"] }
 
 zip = { version = "=9.2.0", default-features = false, features = ["deflate-flate2-zlib-rs", "deflate64", "bzip2", "lzma", "xz", "ppmd"] }
 sevenz-rust2 = { version = "=0.24.2", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
