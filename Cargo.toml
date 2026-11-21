@@ -15,11 +15,11 @@ remmods-pak = { path = "crates/remmods-pak" }
 remmods-unpack = { path = "crates/remmods-unpack" }
 
 tauri = { version = "=2.12.5" }
-tauri-build = { version = "=2.7.4" }
+tauri-build = { version = "=2.7.5" }
 tauri-plugin-single-instance = { version = "=2.5.5" }
-tauri-plugin-log = { version = "=2.10.1" }
+tauri-plugin-log = { version = "=2.10.2" }
 tauri-plugin-window-state = { version = "=2.5.0" }
-tauri-plugin-opener = { version = "=2.7.2" }
+tauri-plugin-opener = { version = "=2.7.3" }
 tauri-plugin-dialog = { version = "=2.8.4", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["native-tls", "system-proxy"] }
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
